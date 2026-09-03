@@ -304,12 +304,12 @@ elif menu == "🏠 Phase 2: Master Household Survey":
     with st.form("phase2_complete_form"):
         t_meta, t_vitals, t_socio, t_dec, t_morb, t_mch, t_yakap = st.tabs([
             "📋 Metadata & Roster",
-            "🩺 Adult Vitals (Adults 1–5)",
-            "🌾 Socio-Econ, Environmental Hazard & WASH",
+            "🩺 Adult Profiling & Vitals (Adults 1–5)",
+            "🌾 Socio-Econ, Food Insecurity, Housing & WASH",
             "🤝 Decision-Making Patterns",
             "🤒 Complete Morbidity & Chronic Care",
             "👶 Complete Maternal, EPI & Nutrition",
-            "🏥 PhilHealth YAKAP & Access"
+            "🏥 Healthcare Access & PhilHealth YAKAP"
         ])
 
         with t_meta:
@@ -340,31 +340,46 @@ elif menu == "🏠 Phase 2: Master Household Survey":
             head_civil = c4.selectbox("Head Civil Status", ["Single", "Married", "Widowed", "Separated", "Cohabiting"])
 
         with t_vitals:
-            st.markdown("**Module B: Adult & Ill Member Physical Screening (Objective Vitals for Adults 1 to 5)**")
+            st.markdown("**Module B: Adult Profiling & Physical Screening (Adults 1 to 5)**")
             adults_data = []
             
             for i in range(1, 6):
                 st.markdown(f"<div class='adult-card'><strong>Adult Member {i} Profiling & Physical Vitals</strong></div>", unsafe_allow_html=True)
+                
+                # Demographics, Education, Occupation, PhilHealth Category
                 c1, c2, c3, c4, c5 = st.columns(5)
                 a_name = c1.text_input(f"Adult {i} Name / Initials", key=f"a_name_{i}")
                 a_age = c2.number_input(f"Adult {i} Age", 18, 120, 30, key=f"a_age_{i}")
-                a_sys = c3.number_input(f"Adult {i} Systolic BP", 50, 250, 120, key=f"a_sys_{i}")
-                a_dia = c4.number_input(f"Adult {i} Diastolic BP", 30, 150, 80, key=f"a_dia_{i}")
-                a_spo2 = c5.number_input(f"Adult {i} SpO2 (%)", 50, 100, 98, key=f"a_spo2_{i}")
+                a_edu = c3.selectbox(f"Adult {i} Educational Level", [
+                    "No Formal Education", "Elementary Unfinished", "Elementary Graduate", 
+                    "High School Unfinished", "High School Graduate", 
+                    "Vocational / College Unfinished", "College Graduate", "Post-Graduate"
+                ], key=f"a_edu_{i}")
+                a_occ = c4.text_input(f"Adult {i} Primary Occupation", key=f"a_occ_{i}")
+                a_ph_cat = c5.selectbox(f"Adult {i} PhilHealth Category", [
+                    "Indigent", "Formal", "Informal", "Dependent", "Unenrolled"
+                ], key=f"a_ph_{i}")
 
-                c1, c2, c3, c4 = st.columns(4)
-                a_pulse = c1.number_input(f"Adult {i} Pulse Rate (bpm)", 30, 200, 75, key=f"a_pulse_{i}")
-                a_temp = c2.number_input(f"Adult {i} Temp (°C)", 30.0, 42.0, 36.5, key=f"a_temp_{i}")
-                a_symptoms = c3.multiselect(f"Adult {i} Current Complaints", ["None", "Headache", "Cough", "Chest Pain", "Shortness of Breath"], default=["None"], key=f"a_sym_{i}")
-                a_risk = c4.selectbox(f"Adult {i} Risk Assessment", ["Normal", "Hypertensive Risk", "Hypoxemic (<95%)"], key=f"a_risk_{i}")
+                # Clinical Vitals
+                c1, c2, c3, c4, c5 = st.columns(5)
+                a_sys = c1.number_input(f"Adult {i} Systolic BP", 50, 250, 120, key=f"a_sys_{i}")
+                a_dia = c2.number_input(f"Adult {i} Diastolic BP", 30, 150, 80, key=f"a_dia_{i}")
+                a_spo2 = c3.number_input(f"Adult {i} SpO2 (%)", 50, 100, 98, key=f"a_spo2_{i}")
+                a_pulse = c4.number_input(f"Adult {i} Pulse Rate (bpm)", 30, 200, 75, key=f"a_pulse_{i}")
+                a_temp = c5.number_input(f"Adult {i} Temp (°C)", 30.0, 42.0, 36.5, key=f"a_temp_{i}")
+
+                c1, c2 = st.columns(2)
+                a_symptoms = c1.multiselect(f"Adult {i} Current Complaints", ["None", "Headache", "Cough", "Chest Pain", "Shortness of Breath"], default=["None"], key=f"a_sym_{i}")
+                a_risk = c2.selectbox(f"Adult {i} Risk Assessment", ["Normal", "Hypertensive Risk", "Hypoxemic (<95%)"], key=f"a_risk_{i}")
 
                 adults_data.append({
-                    "ID": f"Adult {i}", "Name": a_name, "Age": a_age, "BP": f"{a_sys}/{a_dia}",
-                    "Sys": a_sys, "SpO2": a_spo2, "Pulse": a_pulse, "Temp": a_temp, "Risk": a_risk
+                    "ID": f"Adult {i}", "Name": a_name, "Age": a_age, "Edu": a_edu, "Occupation": a_occ,
+                    "PhilHealth_Cat": a_ph_cat, "BP": f"{a_sys}/{a_dia}", "Sys": a_sys, "SpO2": a_spo2, 
+                    "Pulse": a_pulse, "Temp": a_temp, "Risk": a_risk
                 })
 
         with t_socio:
-            st.markdown("**C1. Livelihood & Economic Stability**")
+            st.markdown("**C1. Livelihood, Economic Stability & Domestic Assets**")
             c1, c2, c3 = st.columns(3)
             income_cat = c1.selectbox("Average Family Income / Month", ["≤ ₱10,000 (Q1)", "₱10,001–₱20,000 (Q2)", "₱20,001–₱35,000 (Q3)", "₱35,001–₱50,000 (Q4)", "> ₱50,000 (Q5)"])
             livelihood = c2.selectbox("Primary Livelihood Source", ["Farming (Owned)", "Farming (Tenanted)", "Laborer", "Carpentry", "Fishing", "Peddling", "Gov't Employee", "Small Industry/Sari-Sari", "Other"])
@@ -374,13 +389,32 @@ elif menu == "🏠 Phase 2: Master Household Survey":
             emergency_5k = c1.selectbox("Emergency Cushion: Raise ₱5,000 in 24 hrs?", ["Yes", "No"])
             p4ps_status = c2.selectbox("Active 4Ps Beneficiary?", ["Yes", "No"])
 
-            st.markdown("**C2. Housing & Environmental Geohazards**")
+            # Domestic Ownership & Utilities
+            st.markdown("**Domestic Assets, Utilities & Transportation Owned**")
+            c1, c2, c3 = st.columns(3)
+            transpo_owned = c1.multiselect("Type of Transportation Owned", ["None", "Bicycle", "Motorcycle / Tricycle", "Private Car / Van", "Motorized Banca / Boat"], default=["None"])
+            utilities_avail = c2.multiselect("Utilities / Services Available", ["Grid Electricity", "Solar Power", "Piped Water Connection", "Cellular Signal", "Internet / Broadband", "Garbage Collection Service"], default=["Grid Electricity"])
+            appliances_owned = c3.multiselect("Appliances Owned", ["Refrigerator", "Television", "Washing Machine", "Electric Fan", "Gas / Electric Stove", "Air Conditioner"], default=["Electric Fan"])
+
+            st.markdown("---")
+            st.markdown("**C2. Household Food Insecurity Assessment (Past 30 Days)**")
+            c1, c2, c3 = st.columns(3)
+            food_skip = c1.selectbox("In the past 30 days, did any adult member skip a meal or reduce portion size due to lack of money?", ["No", "Yes"])
+            food_worry = c2.selectbox("In the past 30 days, did your household worry about running out of food before having money to buy more?", ["No", "Yes"])
+            food_fullday = c3.selectbox("In the past 30 days, did any household member go a full day without eating due to lack of food/money?", ["No", "Yes"])
+
+            st.markdown("---")
+            st.markdown("**C3. Housing, Built Environment & Indoor Air Risk**")
             c1, c2, c3 = st.columns(3)
             tenure = c1.selectbox("Tenurial / Property Status", ["Residential lot with house", "Residential House without Lot", "Renting", "Shared", "Farm Land", "Informal Settler / Caretaker"])
             house_type = c2.selectbox("Housing Construction Type", ["Light (Nipa, bamboo, cogon)", "Medium (Wooden floors/walls, G.I. roof)", "Heavy / Permanent (Concrete/hardwood)"])
-            is_flood_prone = c3.selectbox("🌊 Is Household Located in a Flood-Prone Zone?", ["No", "Yes"])
+            cook_fuel = c3.selectbox("Indoor Air Risk (Cooking Fuel)", ["LPG", "Charcoal", "Wood", "Kerosene", "Electric"])
 
-            st.markdown("**C3. WASH Infrastructure & Environmental Health**")
+            c1, c2 = st.columns(2)
+            is_flood_prone = c1.selectbox("🌊 Is Household Located in a Flood-Prone Zone?", ["No", "Yes"])
+
+            st.markdown("---")
+            st.markdown("**C4. WASH Infrastructure & Environmental Health**")
             c1, c2, c3 = st.columns(3)
             water_source = c1.selectbox("Drinking Water Source Level", ["Level 1: Protected Well / Spring", "Level 2: Piped network & communal faucet", "Level 3: Individual household tap", "Unsafe: Shallow Well / River / Surface", "Commercial Refill Station"])
             toilet_type = c2.selectbox("Sanitation / Toilet Facility Type", ["Pour/Flush to Septic Tank", "Ventilated Improved Pit (VIP) Latrine", "Open Defecation / None"])
@@ -437,10 +471,31 @@ elif menu == "🏠 Phase 2: Master Household Survey":
             st.info(f"💡 **Automated Child Nutritional Diagnosis:** BMI: {child_diag['BMI']} | **Wasting:** {child_diag['Wasting']} | **Stunting:** {child_diag['Stunting']} | **Underweight:** {child_diag['Underweight']}")
 
         with t_yakap:
-            st.markdown("**Module H & I: PhilHealth YAKAP & 3-Delay Framework**")
+            st.markdown("**Module H & I: Healthcare Access, PhilHealth YAKAP & Barriers**")
+            
             c1, c2 = st.columns(2)
-            yakap_reg = c1.selectbox("PhilHealth YAKAP Registration Status", ["Yes, All Members", "Yes, Some Members", "No One Registered", "Unaware of YAKAP"])
-            first_fac = c2.selectbox("First Facility Visited When Sick", ["BHS", "RHU", "Gov't Hospital", "Private Clinic", "Pharmacy/Self-Care", "Traditional Healer (Albularyo)"])
+            first_fac = c1.selectbox("Where does the household usually go first when someone becomes sick?", [
+                "BHS", "RHU", "Government Hospital", "Private Clinic/Hospital", "Self-medication", "Traditional Healer"
+            ])
+            travel_time = c2.selectbox("Average one-way travel time to the nearest RHU/health center?", [
+                "Less than 15 mins", "15–30 mins", "30–60 mins", "More than 1 hour"
+            ])
+
+            c1, c2 = st.columns(2)
+            transpo_cost = c1.number_input("Approximate one-way transportation cost to the RHU (₱)", min_value=0.0, value=20.0, step=5.0)
+            yakap_reg = c2.selectbox("PhilHealth YAKAP Registration Status", ["Yes, All Members", "Yes, Some Members", "No One Registered", "Unaware of YAKAP"])
+
+            st.markdown("---")
+            st.markdown("**Barriers to Healthcare Seeking**")
+            health_barriers = st.multiselect("What are the household’s main barriers to seeking medical care?", [
+                "Transportation cost",
+                "Distance/travel time",
+                "Long waiting time",
+                "Cost of medicines/laboratory tests",
+                "Loss of daily wage/work disruption",
+                "Unfriendly staff/lack of trust",
+                "Belief that illness will resolve on its own"
+            ], default=["Cost of medicines/laboratory tests"])
 
         submit_master = st.form_submit_button("Save Complete Master Household Record")
 
@@ -462,6 +517,12 @@ elif menu == "🏠 Phase 2: Master Household Survey":
                 "BP": primary_bp, "Risk": "Hypertensive Risk" if has_htn else "Normal",
                 "Flood_Prone": is_flood_prone,
                 "Income_Tier": income_cat,
+                "Food_Insecurity_Skip": food_skip,
+                "Cooking_Fuel": cook_fuel,
+                "First_Facility": first_fac,
+                "Travel_Time_RHU": travel_time,
+                "Transpo_Cost_RHU": transpo_cost,
+                "Health_Barriers": ", ".join(health_barriers),
                 "WASH_Level": water_source,
                 "House_Type": house_type,
                 "Child_Nutritional_Status": child_diag["Wasting"], "Color": color_code
