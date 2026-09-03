@@ -2,7 +2,6 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import pydeck as pdk
-import base64
 
 # Page Configuration
 st.set_page_config(
@@ -11,93 +10,87 @@ st.set_page_config(
     layout="wide"
 )
 
-# Embedded Base64 Image Sources (SHS Seal on Left, UPM Seal on Right)
-# Replace these placeholders with your base64 strings or local file paths if preferred
+# Image Sources (SHS Seal on Left, UPM Seal on Right)
 LOGO_SHS_URL = "https://upload.wikimedia.org/wikipedia/commons/thumb/1/18/UP_School_of_Health_Sciences_seal.png/600px-UP_School_of_Health_Sciences_seal.png"
 LOGO_UPM_URL = "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c8/University_of_the_Philippines_Manila_logo.svg/600px-University_of_the_Philippines_Manila_logo.svg.png"
 
-# Custom UP Maroon, Green & Gold Styling
-st.markdown("""
-    <style>
-    .up-navbar {
-        background-color: #7B1113;
-        border-bottom: 4px solid #1E4D2B;
-        padding: 16px 24px;
-        border-radius: 10px;
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 20px;
-        margin-bottom: 24px;
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.15);
-    }
-    .up-navbar img {
-        height: 85px;
-        width: auto;
-        object-fit: contain;
-    }
-    .up-navbar-text {
-        text-align: center;
-        flex-grow: 1;
-    }
-    .up-navbar-title {
-        color: #FFFFFF !important;
-        font-size: 24px !important;
-        font-weight: 800 !important;
-        margin: 0 !important;
-        line-height: 1.2;
-        letter-spacing: 0.5px;
-    }
-    .up-navbar-sub {
-        color: #FACC15 !important;
-        font-size: 15px !important;
-        font-weight: 600 !important;
-        margin: 4px 0 0 0 !important;
-    }
-    .up-navbar-detail {
-        color: #E2E8F0 !important;
-        font-size: 12px !important;
-        margin-top: 2px !important;
-    }
-    div[data-testid="stForm"] {
-        border: 1px solid #CBD5E1;
-        border-radius: 10px;
-        background-color: #FFFFFF;
-        padding: 24px;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.03);
-    }
-    section[data-testid="stSidebar"] {
-        background-color: #F1F5F9;
-        border-right: 1px solid #E2E8F0;
-    }
-    .adult-card {
-        background-color: #F8FAFC;
-        border: 1px solid #E2E8F0;
-        border-left: 4px solid #7B1113;
-        padding: 12px 15px;
-        border-radius: 6px;
-        margin-bottom: 12px;
-    }
-    </style>
-""", unsafe_allow_html=True)
+# Custom UP Maroon, Green & Gold Styling (No empty lines inside HTML block)
+CSS_STYLE = """<style>
+.up-navbar {
+    background-color: #7B1113;
+    border-bottom: 4px solid #1E4D2B;
+    padding: 16px 24px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+    margin-bottom: 24px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.15);
+}
+.up-navbar img {
+    height: 85px;
+    width: auto;
+    object-fit: contain;
+}
+.up-navbar-text {
+    text-align: center;
+    flex-grow: 1;
+}
+.up-navbar-title {
+    color: #FFFFFF !important;
+    font-size: 24px !important;
+    font-weight: 800 !important;
+    margin: 0 !important;
+    line-height: 1.2;
+    letter-spacing: 0.5px;
+}
+.up-navbar-sub {
+    color: #FACC15 !important;
+    font-size: 15px !important;
+    font-weight: 600 !important;
+    margin: 4px 0 0 0 !important;
+}
+.up-navbar-detail {
+    color: #E2E8F0 !important;
+    font-size: 12px !important;
+    margin-top: 2px !important;
+}
+div[data-testid="stForm"] {
+    border: 1px solid #CBD5E1;
+    border-radius: 10px;
+    background-color: #FFFFFF;
+    padding: 24px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.03);
+}
+section[data-testid="stSidebar"] {
+    background-color: #F1F5F9;
+    border-right: 1px solid #E2E8F0;
+}
+.adult-card {
+    background-color: #F8FAFC;
+    border: 1px solid #E2E8F0;
+    border-left: 4px solid #7B1113;
+    padding: 12px 15px;
+    border-radius: 6px;
+    margin-bottom: 12px;
+}
+</style>"""
 
-# UP Header Banner with Dual Logos
-st.markdown(f"""
-    <div class="up-navbar">
-        <!-- Left Logo: Yellow School of Health Sciences Seal -->
-        <img src="{LOGO_SHS_URL}" alt="UP SHS Seal">
-        
-        <!-- Center Header Text -->
-        <div class="up-navbar-text">
-            <div class="up-navbar-title">UNIVERSITY OF THE PHILIPPINES MANILA</div>
-            <div class="up-navbar-sub">School of Health Sciences — Comprehensive Community Health Field Portal</div>
-            <div class="up-navbar-detail">Full System Framework: Complete Protocols for Phases 1, 2, 3, & 4</div>
-        </div>
-        
-        <!-- Right Logo: White UP Manila Seal -->
-        <img src="{LOGO_UPM_URL}" alt="UP Manila Seal">
-    </div>
-""", unsafe_allow_html=True)
+st.markdown(CSS_STYLE, unsafe_allow_html=True)
+
+# UP Header Banner with Dual Logos (Clean single block)
+HEADER_HTML = f"""<div class="up-navbar">
+<img src="{LOGO_SHS_URL}" alt="UP SHS Seal">
+<div class="up-navbar-text">
+<div class="up-navbar-title">UNIVERSITY OF THE PHILIPPINES MANILA</div>
+<div class="up-navbar-sub">School of Health Sciences — Comprehensive Community Health Field Portal</div>
+<div class="up-navbar-detail">Full System Framework: Complete Protocols for Phases 1, 2, 3, & 4</div>
+</div>
+<img src="{LOGO_UPM_URL}" alt="UP Manila Seal">
+</div>"""
+
+st.markdown(HEADER_HTML, unsafe_allow_html=True)
 
 # Child Nutritional Status Calculation Engine
 def compute_child_nutrition(age_months, weight_kg, height_cm):
@@ -164,9 +157,7 @@ menu = st.sidebar.radio(
     ]
 )
 
-# ------------------------------------------------------------------------------
 # MODULE 1: INTERACTIVE SPOT MAP
-# ------------------------------------------------------------------------------
 if menu == "🗺️ Interactive Spot Map":
     st.subheader("📍 Interactive Barangay Health & Risk Spot Map")
     if len(st.session_state.hh_records) == 0:
@@ -196,9 +187,7 @@ if menu == "🗺️ Interactive Spot Map":
         layer = pdk.Layer("ScatterplotLayer", data=filt_df, get_position=["Lon", "Lat"], get_color="Color", get_radius=14, pickable=True)
         st.pydeck_chart(pdk.Deck(layers=[layer], initial_view_state=view, tooltip={"text": "HH: {HH_ID}\nPurok: {Purok}\nBP: {BP}\nRisk: {Risk}"}))
 
-# ------------------------------------------------------------------------------
-# MODULE 2: PHASE 1 BHB GOVERNANCE SCORECARD (COMPLETE 100-POINT MATRIX)
-# ------------------------------------------------------------------------------
+# MODULE 2: PHASE 1 BHB GOVERNANCE SCORECARD
 elif menu == "📋 Phase 1: Full Governance Scorecard":
     st.subheader("Phase 1: Barangay Health Board (BHB) Governance Scorecard (100-Point Instrument)")
     
@@ -277,9 +266,7 @@ elif menu == "📋 Phase 1: Full Governance Scorecard":
             })
             st.success(f"Scorecard Saved! Total Score: {total_score}/100 — Status: {rating}")
 
-# ------------------------------------------------------------------------------
-# MODULE 3: PHASE 2 MASTER HOUSEHOLD SURVEY (FULLY COMPREHENSIVE)
-# ------------------------------------------------------------------------------
+# MODULE 3: PHASE 2 MASTER HOUSEHOLD SURVEY
 elif menu == "🏠 Phase 2: Master Household Survey":
     st.subheader("Phase 2: Master Household Survey Instrument (Tool 2.1 Complete)")
     
@@ -294,7 +281,6 @@ elif menu == "🏠 Phase 2: Master Household Survey":
             "🏥 PhilHealth YAKAP & Access"
         ])
 
-        # TAB 1: METADATA
         with t_meta:
             st.markdown("**Survey Metadata Control Block**")
             c1, c2, c3, c4 = st.columns(4)
@@ -322,7 +308,6 @@ elif menu == "🏠 Phase 2: Master Household Survey":
             hh_head_name = c3.text_input("Household Head Full Name")
             head_civil = c4.selectbox("Head Civil Status", ["Single", "Married", "Widowed", "Separated", "Cohabiting"])
 
-        # TAB 2: ADULT VITALS (5 ADULTS)
         with t_vitals:
             st.markdown("**Module B: Adult & Ill Member Physical Screening (Objective Vitals for Adults 1 to 5)**")
             adults_data = []
@@ -347,7 +332,6 @@ elif menu == "🏠 Phase 2: Master Household Survey":
                     "Sys": a_sys, "SpO2": a_spo2, "Pulse": a_pulse, "Temp": a_temp, "Risk": a_risk
                 })
 
-        # TAB 3: SOCIO-ECONOMIC & WASH
         with t_socio:
             st.markdown("**C1. Livelihood & Economic Stability**")
             c1, c2, c3 = st.columns(3)
@@ -377,14 +361,12 @@ elif menu == "🏠 Phase 2: Master Household Survey":
             toilet_type = c2.selectbox("Sanitation / Toilet Facility Type", ["Pour/Flush to Septic Tank", "Ventilated Improved Pit (VIP) Latrine", "Open Defecation / None"])
             solid_disposal = c3.selectbox("Solid Waste Disposal Method", ["Municipal/Barangay Collection", "Composting", "Burying", "Burning (Siga)", "Open Dumping", "River Disposal"])
 
-        # TAB 4: DECISIONS
         with t_dec:
             st.markdown("**Module D: Decision-Making Pattern & Community Participation**")
             c1, c2 = st.columns(2)
             dec_expenses = c1.multiselect("Who decides on Family Expenses?", ["Father", "Mother", "Children", "Single Member", "Others"], default=["Father", "Mother"])
             dec_health = c2.multiselect("Who decides on Health & Medical Care?", ["Father", "Mother", "Children", "Single Member", "Others"], default=["Mother"])
 
-        # TAB 5: COMPLETE MORBIDITY & CHRONIC CARE (EXPANDED FULL MODULE E)
         with t_morb:
             st.markdown("**Module E1: Acute Infectious Diseases & Illnesses (Past 12 Months)**")
             c1, c2, c3 = st.columns(3)
@@ -420,7 +402,6 @@ elif menu == "🏠 Phase 2: Master Household Survey":
                 d_cause = c2.text_input("Cause of Death (Medical/Suspected)")
                 d_attended = c3.selectbox("Attended by Health Worker / Physician?", ["Yes", "No"])
 
-        # TAB 6: COMPLETE MATERNAL, EPI & NUTRITION (EXPANDED FULL MODULE F)
         with t_mch:
             st.markdown("**Module F1: Maternal & Reproductive Health Protocols**")
             c1, c2, c3 = st.columns(3)
@@ -464,7 +445,6 @@ elif menu == "🏠 Phase 2: Master Household Survey":
             child_diag = compute_child_nutrition(c_age, c_weight, c_height)
             st.info(f"💡 **Automated Child Nutritional Diagnosis:** BMI: {child_diag['BMI']} | **Wasting:** {child_diag['Wasting']} | **Stunting:** {child_diag['Stunting']} | **Underweight:** {child_diag['Underweight']}")
 
-        # TAB 7: PHILHEALTH YAKAP & ACCESS
         with t_yakap:
             st.markdown("**Module H & I: PhilHealth YAKAP & 3-Delay Framework**")
             c1, c2 = st.columns(2)
@@ -489,9 +469,7 @@ elif menu == "🏠 Phase 2: Master Household Survey":
             })
             st.success(f"Master Household Survey Record {hh_id} stored successfully!")
 
-# ------------------------------------------------------------------------------
-# MODULE 4: PHASE 3 QUALITATIVE FIELD TOOLS (COMPLETE INTERVIEW GUIDES)
-# ------------------------------------------------------------------------------
+# MODULE 4: PHASE 3 QUALITATIVE FIELD TOOLS
 elif menu == "🗣️ Phase 3: Qualitative Field Tools":
     st.subheader("Phase 3: Qualitative Assessment Instruments (Tools 3.1, 3.2, & 3.3 Complete)")
     
@@ -538,9 +516,7 @@ elif menu == "🗣️ Phase 3: Qualitative Field Tools":
             })
             st.success("Qualitative Assessment Protocol Recorded Successfully!")
 
-# ------------------------------------------------------------------------------
 # MODULE 5: PHASE 4 COMPLETE WINDSHIELD & PERI INSTRUMENT
-# ------------------------------------------------------------------------------
 elif menu == "🔍 Phase 4: Full PERI Windshield Tool":
     st.subheader("Phase 4: Windshield & PERI Environmental Assessment (12 Complete Parameters)")
     
@@ -592,9 +568,7 @@ elif menu == "🔍 Phase 4: Full PERI Windshield Tool":
             })
             st.warning(f"PERI Composite Index: **{peri_index:.2f} / 3.00** — Action Status: **{tier}**")
 
-# ------------------------------------------------------------------------------
 # MODULE 6: AUTOMATED COMMUNITY DIAGNOSIS
-# ------------------------------------------------------------------------------
 elif menu == "🩺 Diagnostic Summary & Analytics":
     st.subheader("Automated Community Health Diagnosis & Analytics")
     tot = len(st.session_state.hh_records)
@@ -613,9 +587,7 @@ elif menu == "🩺 Diagnostic Summary & Analytics":
         if htn_rate >= 15.0:
             st.error(f"🔴 **Cardiovascular Health Risk:** High prevalence of hypertensive risk ({htn_rate:.1f}%) identified across surveyed households. Initiate regular BHS monitoring and facilitate PhilHealth YAKAP enrollment.")
 
-# ------------------------------------------------------------------------------
 # MODULE 7: EXPORT MASTER DATA
-# ------------------------------------------------------------------------------
 elif menu == "💾 Data Management & Export":
     st.subheader("💾 Export Full Assessment Datasets")
     if len(st.session_state.hh_records) > 0:
@@ -623,3 +595,4 @@ elif menu == "💾 Data Management & Export":
         st.download_button("Download Phase 2 Master Survey Data (CSV)", df_out.to_csv(index=False).encode('utf-8'), "UPM_SHS_Phase2_Master.csv", "text/csv")
     else:
         st.caption("No household records available to export yet.")
+        
