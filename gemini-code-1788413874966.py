@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import pydeck as pdk
+import base64
 
 # Page Configuration
 st.set_page_config(
@@ -10,23 +11,34 @@ st.set_page_config(
     layout="wide"
 )
 
-# Custom UP Maroon & Gray Styling
+# Embedded Base64 Image Sources (SHS Seal on Left, UPM Seal on Right)
+# Replace these placeholders with your base64 strings or local file paths if preferred
+LOGO_SHS_URL = "https://upload.wikimedia.org/wikipedia/commons/thumb/1/18/UP_School_of_Health_Sciences_seal.png/600px-UP_School_of_Health_Sciences_seal.png"
+LOGO_UPM_URL = "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c8/University_of_the_Philippines_Manila_logo.svg/600px-University_of_the_Philippines_Manila_logo.svg.png"
+
+# Custom UP Maroon, Green & Gold Styling
 st.markdown("""
     <style>
     .up-navbar {
         background-color: #7B1113;
-        border-bottom: 4px solid #4A5568;
+        border-bottom: 4px solid #1E4D2B;
         padding: 16px 24px;
         border-radius: 10px;
         display: flex;
         align-items: center;
+        justify-content: space-between;
         gap: 20px;
         margin-bottom: 24px;
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.15);
     }
     .up-navbar img {
-        height: 75px;
+        height: 85px;
         width: auto;
+        object-fit: contain;
+    }
+    .up-navbar-text {
+        text-align: center;
+        flex-grow: 1;
     }
     .up-navbar-title {
         color: #FFFFFF !important;
@@ -34,11 +46,18 @@ st.markdown("""
         font-weight: 800 !important;
         margin: 0 !important;
         line-height: 1.2;
+        letter-spacing: 0.5px;
     }
     .up-navbar-sub {
+        color: #FACC15 !important;
+        font-size: 15px !important;
+        font-weight: 600 !important;
+        margin: 4px 0 0 0 !important;
+    }
+    .up-navbar-detail {
         color: #E2E8F0 !important;
-        font-size: 14px !important;
-        margin: 2px 0 0 0 !important;
+        font-size: 12px !important;
+        margin-top: 2px !important;
     }
     div[data-testid="stForm"] {
         border: 1px solid #CBD5E1;
@@ -62,15 +81,21 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# UP Manila Header Banner
-st.markdown("""
+# UP Header Banner with Dual Logos
+st.markdown(f"""
     <div class="up-navbar">
-        <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/c/c8/University_of_the_Philippines_Manila_logo.svg/1200px-University_of_the_Philippines_Manila_logo.svg.png" alt="UP Manila Seal">
-        <div>
+        <!-- Left Logo: Yellow School of Health Sciences Seal -->
+        <img src="{LOGO_SHS_URL}" alt="UP SHS Seal">
+        
+        <!-- Center Header Text -->
+        <div class="up-navbar-text">
             <div class="up-navbar-title">UNIVERSITY OF THE PHILIPPINES MANILA</div>
             <div class="up-navbar-sub">School of Health Sciences — Comprehensive Community Health Field Portal</div>
-            <div style="font-size: 12px; color: #CBD5E1; margin-top: 3px;">Full System Framework: Complete Protocols for Phases 1, 2, 3, & 4</div>
+            <div class="up-navbar-detail">Full System Framework: Complete Protocols for Phases 1, 2, 3, & 4</div>
         </div>
+        
+        <!-- Right Logo: White UP Manila Seal -->
+        <img src="{LOGO_UPM_URL}" alt="UP Manila Seal">
     </div>
 """, unsafe_allow_html=True)
 
