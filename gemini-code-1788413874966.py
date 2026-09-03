@@ -10,8 +10,20 @@ st.set_page_config(
     layout="wide"
 )
 
-# Custom UP Maroon, Green & Gold Styling
+# Custom UP Maroon, Green & Gold Styling with Sticky Progress Bar CSS
 CSS_STYLE = """<style>
+/* Sticky Phase Completion Tracker in Sidebar */
+.sticky-progress-container {
+    position: sticky;
+    top: 0;
+    z-index: 99999;
+    background-color: #F1F5F9;
+    padding: 14px 10px;
+    margin-bottom: 15px;
+    border-bottom: 2px solid #CBD5E1;
+    border-radius: 0 0 8px 8px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.08);
+}
 .up-navbar {
     background-color: #7B1113;
     border-bottom: 4px solid #1E4D2B;
@@ -72,13 +84,6 @@ section[data-testid="stSidebar"] {
     border-radius: 8px;
     padding: 16px;
     margin-bottom: 16px;
-}
-.progress-card {
-    background-color: #FFFFFF;
-    border: 1px solid #E2E8F0;
-    border-radius: 8px;
-    padding: 12px;
-    margin-bottom: 10px;
 }
 </style>"""
 
@@ -151,18 +156,23 @@ p1_status = len(st.session_state.gov_records) > 0
 p2_status = len(st.session_state.hh_records) > 0
 p3_status = len(st.session_state.qual_records) > 0
 p4_status = len(st.session_state.windshield_records) > 0
-p5_status = p2_status  # Analytics generated upon HH data
+p5_status = p2_status
 p6_status = len(st.session_state.diag_records) > 0
 
 completed_phases = sum([p1_status, p2_status, p3_status, p4_status, p5_status, p6_status])
 overall_progress_pct = int((completed_phases / 6) * 100)
 
-# Sidebar - Progress & Navigation
-st.sidebar.markdown("### 📊 Phase Completion Tracker")
-st.sidebar.progress(overall_progress_pct / 100)
-st.sidebar.markdown(f"**Overall Progress: `{overall_progress_pct}%` Completed**")
+# Sidebar - Sticky Progress Tracker
+st.sidebar.markdown(f"""
+<div class="sticky-progress-container">
+    <div style="font-weight: 700; color: #1E293B; font-size: 15px; margin-bottom: 6px;">📊 Phase Completion Tracker</div>
+    <div style="font-weight: 800; color: #7B1113; font-size: 18px; margin-bottom: 4px;">{overall_progress_pct}% Completed</div>
+</div>
+""", unsafe_allow_html=True)
 
-with st.sidebar.expander("🔍 View Phase Completion Details", expanded=False):
+st.sidebar.progress(overall_progress_pct / 100)
+
+with st.sidebar.expander("🔍 View Detailed Phase Status", expanded=False):
     st.write(f"{'✅' if p1_status else '🔴'} **Phase 1 (Governance):** {'100%' if p1_status else '0%'}")
     st.write(f"{'✅' if p2_status else '🔴'} **Phase 2 (Master Survey):** {'100%' if p2_status else '0%'}")
     st.write(f"{'✅' if p3_status else '🔴'} **Phase 3 (Qualitative):** {'100%' if p3_status else '0%'}")
@@ -208,7 +218,6 @@ if menu == "🗺️ Interactive Spot Map":
         st.markdown("**Map Controls & Filters**")
         puroks = list(map_df["Purok"].unique())
         sel_puroks = st.multiselect("Filter Puroks", options=puroks, default=puroks)
-        
         flood_filter = st.selectbox("Flood Risk Filter", ["Show All Households", "Flood-Prone Zones Only", "Non-Flood Zones Only"])
         
         st.markdown("---")
@@ -276,17 +285,17 @@ elif menu == "📋 Phase 1: Full Governance Scorecard":
             st.markdown("**Domain 1: Legal Structure & Reconstitution (Max 10 Points)**")
             c1, c2 = st.columns(2)
             g1_1 = c1.number_input("1.1 Updated Executive Order reconstituting BHB with mandate terms (0–5 pts)", 0, 5, 0)
-            g1_2 = c2.number_input("1.2 Mandatory multi-sectoral reps active (NGO, BHW, Senior, Youth) (0–5 pts)", 0, 5, 0)
+            g1_2 = c2.number_input("1.2 Mandatory multi-sectoral reps active (0–5 pts)", 0, 5, 0)
 
             st.markdown("**Domain 2: Meeting Regularity & Quorum Compliance (Max 20 Points)**")
             c1, c2, c3 = st.columns(3)
-            g2_1 = c1.number_input("2.1 Quarterly meetings in past 12 mos (3 pts/meeting, Max 12 pts)", 0, 12, 0)
+            g2_1 = c1.number_input("2.1 Quarterly meetings in past 12 mos (0–12 pts)", 0, 12, 0)
             g2_2 = c2.number_input("2.2 Official quorum met during every meeting (0–4 pts)", 0, 4, 0)
             g2_3 = c3.number_input("2.3 Signed minutes and attendance records filed (0–4 pts)", 0, 4, 0)
 
             st.markdown("**Domain 3: Health Policies & Ordinance Enactment (Max 20 Points)**")
             c1, c2, c3 = st.columns(3)
-            g3_1 = c1.number_input("3.1 Local health/sanitation ordinances enacted in past 24 mos (0–10 pts)", 0, 10, 0)
+            g3_1 = c1.number_input("3.1 Local health/sanitation ordinances enacted (0–10 pts)", 0, 10, 0)
             g3_2 = c2.number_input("3.2 Active task force enforcing local health laws (0–5 pts)", 0, 5, 0)
             g3_3 = c3.number_input("3.3 Local policies aligned with DOH UHC mandates (0–5 pts)", 0, 5, 0)
 
@@ -294,7 +303,7 @@ elif menu == "📋 Phase 1: Full Governance Scorecard":
             st.markdown("**Domain 4: AIP Budget Allocation & Financial Execution (Max 20 Points)**")
             c1, c2, c3 = st.columns(3)
             g4_1 = c1.number_input("4.1 Dedicated health line-items in AIP (0–8 pts)", 0, 8, 0)
-            g4_2 = c2.number_input("4.2 Budget for BHW honoraria, emergency response, medicines (0–6 pts)", 0, 6, 0)
+            g4_2 = c2.number_input("4.2 Budget for BHW honoraria, emergency response (0–6 pts)", 0, 6, 0)
             g4_3 = c3.number_input("4.3 Health budget execution rate >75% last fiscal year (0–6 pts)", 0, 6, 0)
 
             st.markdown("**Domain 5: Health Reporting & Transparency (Max 15 Points)**")
@@ -305,9 +314,9 @@ elif menu == "📋 Phase 1: Full Governance Scorecard":
 
             st.markdown("**Domain 6: Working Committees & Mobilization (Max 15 Points)**")
             c1, c2, c3 = st.columns(3)
-            g6_1 = c1.number_input("6.1 Active technical working committees (Dengue, WASH, Nutrition) (0–6 pts)", 0, 6, 0)
+            g6_1 = c1.number_input("6.1 Active technical working committees (0–6 pts)", 0, 6, 0)
             g6_2 = c2.number_input("6.2 Monthly committee reports to BHB (0–6 pts)", 0, 6, 0)
-            g6_3 = c3.number_input("6.3 Community health mobilization events completed in past year (0–3 pts)", 0, 3, 0)
+            g6_3 = c3.number_input("6.3 Community health mobilization events completed (0–3 pts)", 0, 3, 0)
 
         with t4:
             gap_summary = st.text_area("Identify primary governance bottlenecks & legislative gaps:")
@@ -339,7 +348,7 @@ elif menu == "🏠 Phase 2: Master Household Survey":
             "🌾 Socio-Econ, Food Insecurity, Housing & WASH",
             "🤝 Decision-Making Patterns",
             "🤒 Complete Morbidity & Chronic Care",
-            "👶 Complete Maternal, Delivery, FP, Mortality & Child Nutrition",
+            "👶 Complete Maternal, Delivery, FP, Mortality & Child Profiling",
             "🏥 Healthcare Access & PhilHealth YAKAP"
         ])
 
@@ -377,7 +386,6 @@ elif menu == "🏠 Phase 2: Master Household Survey":
             for i in range(1, 6):
                 st.markdown(f"<div class='adult-card'><strong>Adult Member {i} Profiling & Physical Vitals</strong></div>", unsafe_allow_html=True)
                 
-                # Demographics, Education, Occupation, PhilHealth Category
                 c1, c2, c3, c4, c5 = st.columns(5)
                 a_name = c1.text_input(f"Adult {i} Name / Initials", key=f"a_name_{i}")
                 a_age = c2.number_input(f"Adult {i} Age", 18, 120, 30, key=f"a_age_{i}")
@@ -391,7 +399,6 @@ elif menu == "🏠 Phase 2: Master Household Survey":
                     "Indigent", "Formal", "Informal", "Dependent", "Unenrolled"
                 ], key=f"a_ph_{i}")
 
-                # Clinical Vitals
                 c1, c2, c3, c4, c5 = st.columns(5)
                 a_sys = c1.number_input(f"Adult {i} Systolic BP", 50, 250, 120, key=f"a_sys_{i}")
                 a_dia = c2.number_input(f"Adult {i} Diastolic BP", 30, 150, 80, key=f"a_dia_{i}")
@@ -420,7 +427,6 @@ elif menu == "🏠 Phase 2: Master Household Survey":
             emergency_5k = c1.selectbox("Emergency Cushion: Raise ₱5,000 in 24 hrs?", ["Yes", "No"])
             p4ps_status = c2.selectbox("Active 4Ps Beneficiary?", ["Yes", "No"])
 
-            # Domestic Ownership & Utilities
             st.markdown("**Domestic Assets, Utilities & Transportation Owned**")
             c1, c2, c3 = st.columns(3)
             transpo_owned = c1.multiselect("Type of Transportation Owned", ["None", "Bicycle", "Motorcycle / Tricycle", "Private Car / Van", "Motorized Banca / Boat"], default=["None"])
@@ -533,30 +539,40 @@ elif menu == "🏠 Phase 2: Master Household Survey":
             mortality_records = []
 
             if mortality_yesno == "Yes":
-                st.markdown("*Record details of preventable deaths in the household below:*")
-                for m_i in range(1, 3):
-                    st.caption(f"**Mortality Entry {m_i}**")
-                    mc1, mc2, mc3, mc4, mc5 = st.columns(5)
+                st.markdown("*Record details of preventable deaths in the household below (Includes Reason of Death):*")
+                for m_i in range(1, 4):
+                    st.caption(f"**Mortality Entry #{m_i}**")
+                    mc1, mc2, mc3, mc4, mc5, mc6 = st.columns(6)
                     m_cause = mc1.text_input(f"Cause of Disease #{m_i}", key=f"m_cause_{m_i}")
-                    m_age = mc2.number_input(f"Age #{m_i}", 0, 120, 0, key=f"m_age_{m_i}")
-                    m_sex = mc3.selectbox(f"Sex #{m_i}", ["Male", "Female"], key=f"m_sex_{m_i}")
-                    m_attended = mc4.selectbox(f"Health Worker Attended? #{m_i}", ["Physician", "Nurse", "Midwife", "None / Unattended"], key=f"m_att_{m_i}")
-                    m_treatment = mc5.text_input(f"Treatment Used #{m_i}", key=f"m_tx_{m_i}")
+                    m_reason = mc2.text_input(f"Reason of Death #{m_i}", key=f"m_reason_{m_i}")
+                    m_age = mc3.number_input(f"Age #{m_i}", 0, 120, 0, key=f"m_age_{m_i}")
+                    m_sex = mc4.selectbox(f"Sex #{m_i}", ["Male", "Female"], key=f"m_sex_{m_i}")
+                    m_attended = mc5.selectbox(f"Health Worker Attended? #{m_i}", ["Physician", "Nurse", "Midwife", "None / Unattended"], key=f"m_att_{m_i}")
+                    m_treatment = mc6.text_input(f"Treatment Used #{m_i}", key=f"m_tx_{m_i}")
                     
                     mortality_records.append({
-                        "Cause": m_cause, "Age": m_age, "Sex": m_sex, "Attended": m_attended, "Treatment": m_treatment
+                        "Cause": m_cause, "Reason_of_Death": m_reason, "Age": m_age, "Sex": m_sex, "Attended": m_attended, "Treatment": m_treatment
                     })
 
             st.markdown("---")
-            st.markdown("**Module F5: Infant & Young Child Nutrition Calculator (0–59 Months)**")
-            c1, c2, c3, c4 = st.columns(4)
-            c_id = c1.text_input("Child Member ID / Name", "Child 1")
-            c_age = c2.number_input("Child Age (Months: 0–59)", 0, 59, 24)
-            c_weight = c3.number_input("Weight (kg)", 0.0, 50.0, 11.5, step=0.1)
-            c_height = c4.number_input("Height (cm)", 0.0, 150.0, 85.0, step=0.5)
+            st.markdown("**Module F5: Infant & Young Child Profiling & Nutrition Calculator (Profiles for 4 Children)**")
+            
+            children_profiles = []
+            for c_i in range(1, 5):
+                st.markdown(f"<div class='adult-card'><strong>Child Member {c_i} Profile & Nutritional Screening (0–59 Months)</strong></div>", unsafe_allow_html=True)
+                cc1, cc2, cc3, cc4, cc5 = st.columns(5)
+                c_name = cc1.text_input(f"Child {c_i} Name / ID", f"Child {c_i}", key=f"c_name_{c_i}")
+                c_sex = cc2.selectbox(f"Child {c_i} Sex", ["Male", "Female"], key=f"c_sex_{c_i}")
+                c_age = cc3.number_input(f"Age (Months 0–59) #{c_i}", 0, 59, 12 * c_i if c_i <= 4 else 24, key=f"c_age_{c_i}")
+                c_weight = cc4.number_input(f"Weight (kg) #{c_i}", 0.0, 50.0, 3.5 + (c_age * 0.35), step=0.1, key=f"c_wt_{c_i}")
+                c_height = cc5.number_input(f"Height (cm) #{c_i}", 0.0, 150.0, 50.0 + (c_age * 1.1), step=0.5, key=f"c_ht_{c_i}")
 
-            child_diag = compute_child_nutrition(c_age, c_weight, c_height)
-            st.info(f"💡 **Automated Child Nutritional Diagnosis:** BMI: {child_diag['BMI']} | **Wasting:** {child_diag['Wasting']} | **Stunting:** {child_diag['Stunting']} | **Underweight:** {child_diag['Underweight']}")
+                child_diag = compute_child_nutrition(c_age, c_weight, c_height)
+                st.caption(f"💡 **Child {c_i} Diagnosis:** BMI: `{child_diag['BMI']}` | **Wasting:** `{child_diag['Wasting']}` | **Stunting:** `{child_diag['Stunting']}` | **Underweight:** `{child_diag['Underweight']}`")
+                
+                children_profiles.append({
+                    "Name": c_name, "Sex": c_sex, "Age_Months": c_age, "Weight": c_weight, "Height": c_height, "Diagnosis": child_diag
+                })
 
         with t_yakap:
             st.markdown("**Module H & I: Healthcare Access, PhilHealth YAKAP & Barriers**")
@@ -617,9 +633,12 @@ elif menu == "🏠 Phase 2: Master Household Survey":
                 "FP_Practicing": fp_practice,
                 "FP_Method": fp_method,
                 "Preventable_Mortality": mortality_yesno,
+                "Mortality_Details": mortality_records,
+                "Children_Profiles": children_profiles,
                 "WASH_Level": water_source,
                 "House_Type": house_type,
-                "Child_Nutritional_Status": child_diag["Wasting"], "Color": color_code
+                "Child_Nutritional_Status": children_profiles[0]["Diagnosis"]["Wasting"] if children_profiles else "N/A", 
+                "Color": color_code
             })
             st.success(f"Master Household Survey Record {hh_id} stored successfully by {enum_name}!")
 
@@ -721,7 +740,6 @@ elif menu == "📈 Phase 5: Spatial & Statistical Analytics":
         "📋 Analytics Framework Summary Table"
     ])
 
-    # SECTION 6.1: SPOT MAPPING & GEOLOCATION
     with t_geo:
         st.markdown("**6.1 Spot Mapping & Mobile Address Geocoding Protocol**")
         st.markdown("""
@@ -742,7 +760,6 @@ elif menu == "📈 Phase 5: Spatial & Statistical Analytics":
         else:
             st.warning(f"⚠️ **Weak GPS Signal:** Accuracy is {input_acc}m. Re-calibrate GPS on KoboToolbox before committing geocode.")
 
-    # SECTION 6.2: MULTI-LAYER GIS ENGINE
     with t_gis:
         st.markdown("**6.2 Multi-Layer GIS Visualization Framework**")
         
@@ -778,7 +795,7 @@ elif menu == "📈 Phase 5: Spatial & Statistical Analytics":
             st.pydeck_chart(pdk.Deck(layers=[kde_layer], initial_view_state=view_state))
 
         elif "Layer 2" in layer_option:
-            st.caption("🌊 **Layer 2: Environmental SDOH Overlay:** Superimpose disease hotspots over layers of unsafe water sources (Level I/unprotected), flood risk zones, and open waste dumping areas.")
+            st.caption("🌊 **Layer 2: Environmental SDOH Overlay:** Superimpose disease hotspots over layers of unsafe water sources, flood risk zones, and open waste dumping areas.")
             sdoh_layer = pdk.Layer(
                 "ScatterplotLayer",
                 data=gis_data,
@@ -790,7 +807,7 @@ elif menu == "📈 Phase 5: Spatial & Statistical Analytics":
             st.pydeck_chart(pdk.Deck(layers=[sdoh_layer], initial_view_state=view_state, tooltip={"text": "HH ID: {HH_ID}\nDiagnosed Disease: {Disease}\nWASH Source: {WASH}\nFlood Zone: {Flood}"}))
 
         elif "Layer 3" in layer_option:
-            st.caption("🥗 **Layer 3: Food Desert Identification:** Perform buffer analysis (500-meter walking radius) around fresh food markets versus sari-sari store density to map food deserts against childhood malnutrition.")
+            st.caption("🥗 **Layer 3: Food Desert Identification:** Perform buffer analysis (500-meter walking radius) around fresh food markets versus sari-sari store density.")
             market_point = pd.DataFrame([{"Lat": 11.1560, "Lon": 124.9915, "Name": "Barangay Public Market (Fresh Produce)"}])
             
             market_layer = pdk.Layer(
@@ -808,7 +825,7 @@ elif menu == "📈 Phase 5: Spatial & Statistical Analytics":
             st.pydeck_chart(pdk.Deck(layers=[market_layer, hh_layer], initial_view_state=view_state, tooltip={"text": "Fresh Market 500m Buffer Zone (Walking Radius)"}))
 
         else:
-            st.caption("🚑 **Layer 4: Catchment Isochrone Modeling:** Generate 15-minute and 30-minute travel time contours around the BHS/RHU to identify geographically isolated and disadvantaged areas (GIDAs).")
+            st.caption("🚑 **Layer 4: Catchment Isochrone Modeling:** Generate 15-minute and 30-minute travel time contours around the BHS/RHU to identify GIDAs.")
             bhs_center = pd.DataFrame([{"Lat": 11.1560, "Lon": 124.9915}])
             
             iso_15 = pdk.Layer("ScatterplotLayer", data=bhs_center, get_position=["Lon", "Lat"], get_color=[59, 130, 246, 100], get_radius=400)
@@ -816,7 +833,6 @@ elif menu == "📈 Phase 5: Spatial & Statistical Analytics":
             st.pydeck_chart(pdk.Deck(layers=[iso_30, iso_15], initial_view_state=view_state))
             st.markdown("🔵 **Inner Ring:** 15-Min Travel Isochrone | 🟡 **Outer Ring:** 30-Min Travel Isochrone | 🔴 **Beyond Outer Ring:** GIDA Classification Risk")
 
-    # SECTION 6.3: ADVANCED STATISTICAL MODELING
     with t_stat:
         st.markdown("**6.3 Statistical Analysis & Advanced Analytical Modeling Plan**")
         
@@ -824,7 +840,7 @@ elif menu == "📈 Phase 5: Spatial & Statistical Analytics":
 
         with col_a:
             st.markdown("<div class='stat-card'><strong>A. Descriptive Analysis (Measuring the Social Gradient)</strong>", unsafe_allow_html=True)
-            st.write("Cross-tabulate clinical health outcomes across income quintiles, educational attainment levels, and geographic zones. Calculate Odds Ratios (OR) and Relative Risks (RR) to quantify how disease burdens increase along lower socio-economic tiers.")
+            st.write("Cross-tabulate clinical health outcomes across income quintiles, educational attainment levels, and geographic zones.")
             
             low_inc_htn = st.number_input("Low Income Tier (Q1) - Disease Positive", value=28, key="stat_q1_pos")
             low_inc_norm = st.number_input("Low Income Tier (Q1) - Disease Negative", value=12, key="stat_q1_neg")
@@ -845,8 +861,6 @@ elif menu == "📈 Phase 5: Spatial & Statistical Analytics":
             st.write("Social determinants rarely occur in isolation; compounding social risks produce exponential health detriments.")
             
             st.markdown("**1. Principal Component & Factor Analysis (PCA):**")
-            st.caption("Collapse correlated environmental and economic variables (wall material, toilet type, income, water level) into latent factor scores to measure overall structural vulnerability.")
-            
             w1 = st.slider("PCA Factor Weight: Structural Housing Quality", 0.0, 1.0, 0.35)
             w2 = st.slider("PCA Factor Weight: WASH Infrastructure Level", 0.0, 1.0, 0.40)
             w3 = st.slider("PCA Factor Weight: Monthly Household Income", 0.0, 1.0, 0.25)
@@ -856,8 +870,6 @@ elif menu == "📈 Phase 5: Spatial & Statistical Analytics":
             st.markdown("</div>", unsafe_allow_html=True)
 
         st.markdown("<div class='stat-card'><strong>2. Latent Class Analysis (LCA): Discrete Risk Cluster Engine</strong>", unsafe_allow_html=True)
-        st.write("Groups households into discrete vulnerability classes based on overlapping social risks and models direct chronic disease probability.")
-        
         lc1, lc2, lc3 = st.columns(3)
         with lc1:
             st.markdown("🟢 **Class 1: High Income / High Access**\n* Estimated Prevalence: **45%**\n* Piped Water + Concrete Housing\n* Disease Probability: **8.2%**")
@@ -867,7 +879,6 @@ elif menu == "📈 Phase 5: Spatial & Statistical Analytics":
             st.markdown("🔴 **Class 3: Severe Multi-Risk Cluster**\n* Estimated Prevalence: **20%**\n* Severe Food Insecurity + Housing Instability + No Piped Water\n* Disease Probability: **61.4%**")
         st.markdown("</div>", unsafe_allow_html=True)
 
-    # SECTION TABLE: SUMMARY OF STATISTICAL METHODS
     with t_ref:
         st.markdown("**Core Statistical Methodologies & Target Public Health Intelligence Outputs**")
         
@@ -928,8 +939,6 @@ elif menu == "📋 Phase 6: Community Diagnosis & Action Plan":
 
     with t_auto:
         st.markdown("**Automated Community Diagnosis Matrix Engine**")
-        st.write("Generates baseline action plans synthesized from Phase 1-5 empirical findings and localized SDOH metrics.")
-
         st.table(pd.DataFrame(default_diag_data))
 
         if st.button("Commit Baseline Diagnosis Matrix into Portal Database"):
