@@ -554,6 +554,19 @@ elif menu == "🏠 Phase 2: Master Household Survey":
     )
 
     if mode_p2 == "➕ New Household Survey Entry":
+        st.markdown("#### ⚙️ Profile Roster Count Configuration")
+        st.info("💡 Adjust the number of adult and child members below **before** filling out the form tabs. Pressing Enter here will dynamically render the requested profiling cards without submitting the household record.")
+        
+        c_cnt1, c_cnt2 = st.columns(2)
+        num_adults = c_cnt1.number_input(
+            "Specify Number of Adult Members to Profile in this Household",
+            min_value=0, max_value=15, value=1, step=1, key="num_adults_counter"
+        )
+        num_children = c_cnt2.number_input(
+            "Specify Number of Children (<5 yrs / eligible) to Profile",
+            min_value=0, max_value=10, value=0, step=1, key="num_children_counter"
+        )
+
         with st.form("phase2_complete_form"):
             t_meta, t_vitals, t_socio, t_dec, t_morb, t_mch, t_child, t_yakap = st.tabs([
                 "📋 Metadata & Roster",
@@ -596,8 +609,7 @@ elif menu == "🏠 Phase 2: Master Household Survey":
 
             # --- TAB 2: DYNAMIC ADULT PROFILING ---
             with t_vitals:
-                st.markdown("**Module B: Adult Profiling & Physical Screening**")
-                num_adults = st.number_input("Specify Number of Adult Members to Profile in this Household", min_value=0, max_value=15, value=1, step=1)
+                st.markdown(f"**Module B: Adult Profiling & Physical Screening ({num_adults} Adult(s) Specified)**")
                 
                 adults_data = []
                 for i in range(1, int(num_adults) + 1):
@@ -738,8 +750,7 @@ elif menu == "🏠 Phase 2: Master Household Survey":
 
             # --- TAB 7: DYNAMIC CHILD PROFILING ---
             with t_child:
-                st.markdown("**Module F4: Expanded Child Anthropometric & Immunization Record Profiling**")
-                num_children = st.number_input("Specify Number of Children (<5 yrs / eligible) to Profile", min_value=0, max_value=10, value=0, step=1)
+                st.markdown(f"**Module F4: Expanded Child Anthropometric & Immunization Record Profiling ({num_children} Child(ren) Specified)**")
                 
                 children_records = []
                 for c_i in range(1, int(num_children) + 1):
@@ -1078,44 +1089,273 @@ elif menu == "🗣️ Phase 3: Qualitative Field Tools":
 
 # MODULE 5: PHASE 4 EXPANDED PERI WINDSHIELD TOOL
 elif menu == "🔍 Phase 4: Expanded PERI Windshield Tool":
-    st.subheader("Phase 4: Expanded PERI Environmental Observation Matrices & Scoring System")
+    st.subheader("Phase 4: Separated & Expanded Environmental Observation Matrices & PERI Index Manual")
 
-    mode_p4 = st.radio("Select Operation", ["➕ New PERI Assessment Entry", "📂 Review, Edit & Delete Submitted PERI Records"], horizontal=True)
+    p4_tab1, p4_tab2, p4_tab3 = st.tabs([
+        "📋 Field Survey Assessment Matrix",
+        "📖 Comprehensive Result Interpretation & Manual",
+        "📂 Review & Delete Saved Field Assessments"
+    ])
 
-    if mode_p4 == "➕ New PERI Assessment Entry":
-        with st.form("phase4_expanded_form"):
-            purok_eval = st.selectbox("Target Purok Evaluated", [f"Purok {i}" for i in range(1, 8)])
-            eval_date = st.date_input("Evaluation Date")
-            evaluator_name = st.selectbox("Lead Evaluator", ["Jan Art Serna, RMT", "Aubrey Maye Arrieta", "Leila Projimo, PTRP"])
+    with p4_tab1:
+        with st.form("phase4_expanded_observation_form"):
+            st.markdown("### 📌 Field Survey Metadata")
+            c1, c2, c3 = st.columns(3)
+            purok_eval = c1.selectbox("Target Purok Evaluated", [f"Purok {i}" for i in range(1, 8)])
+            eval_date = c2.date_input("Evaluation Date")
+            evaluator_name = c3.selectbox("Lead Evaluator", ["Jan Art Serna, RMT", "Aubrey Maye Arrieta", "Leila Projimo, PTRP"])
 
-            ds1 = st.slider("Domain 1: Sanitation & Waste Score (1.0 - 3.0)", 1.0, 3.0, 1.5)
-            ds2 = st.slider("Domain 2: Food Environment Score (1.0 - 3.0)", 1.0, 3.0, 1.5)
-            ds3 = st.slider("Domain 3: Built Environment Score (1.0 - 3.0)", 1.0, 3.0, 1.5)
-            ds4 = st.slider("Domain 4: Health Infrastructure Score (1.0 - 3.0)", 1.0, 3.0, 1.5)
-            ds5 = st.slider("Domain 5: DRR & Climate Safety Score (1.0 - 3.0)", 1.0, 3.0, 1.5)
-            ds6 = st.slider("Domain 6: Vector Control Score (1.0 - 3.0)", 1.0, 3.0, 1.5)
+            def render_rating(col1, col2, col3, label, choices, default_idx=0):
+                rating = col2.radio(label, choices, index=default_idx, key=f"r_{label}")
+                notes = col3.text_input("Hotspot / Landmark Notes", key=f"n_{label}")
+                score_val = 1.0 if "1" in rating else (2.0 if "2" in rating else 3.0)
+                return score_val, rating, notes
+
+            # DOMAIN 1
+            st.markdown("<div class='peri-domain-header'>Domain 1: Sanitation & Waste Management Assessment</div>", unsafe_allow_html=True)
+            st.caption("Evaluates solid waste collection efficiency, drainage cleanliness, wastewater pooling, vector hazards, and overall public hygiene across target Puroks.")
+            
+            d1_scores = []
+            d1_data = {}
+            
+            d1_params = [
+                ("1.1 Uncollected Household Solid Waste", "Presence of uncollected trash piles, scattered plastic, household waste heaps on road shoulders or vacant lots.", ["Clean (1)", "Moderate (2)", "Severe Risk (3)"]),
+                ("1.2 Open Drainage & Canal Integrity", "Condition of roadside canals: clogged with refuse, unpaved ditching, dark stagnant greywater, or uncovered open channels.", ["Adequate (1)", "Substandard (2)", "Hazardous (3)"]),
+                ("1.3 Stagnant Water & Pooling", "Pools of standing water in road depressions, unpaved alleys, or tires/containers holding water >48 hrs (mosquito risk).", ["Low Risk (1)", "Moderate (2)", "Severe Risk (3)"]),
+                ("1.4 Stray & Unattended Animals", "Free-roaming dogs, cats, or livestock (pigs/goats) scavenging around uncontained waste or public pathways.", ["Controlled (1)", "Moderate (2)", "Uncontrolled (3)"]),
+                ("1.5 Material Recovery & Garbage Hubs", "Condition of Purok MRF or communal collection points: overflowing bins, lack of waste segregation, lack of covers.", ["Clean / Segregated (1)", "Overflowing (2)", "Dilapidated / None (3)"]),
+                ("1.6 Open Waste Burning (Siga)", "Visual evidence or smell of open garbage/plastic/leaf burning in backyards, vacant plots, or road edges.", ["Absent (1)", "Occasional (2)", "Frequent/Severe (3)"]),
+                ("1.7 Odor & Airborne Emissions", "Pungent or offensive odor emanating from decomposed waste, open sewage, or livestock pens near residential homes.", ["Odor-Free (1)", "Moderate Odor (2)", "Severe / Noxious (3)"]),
+                ("1.8 Fecal Contamination Exposure", "Visible animal feces or human defecation marks along walkways, drainage channels, or play areas.", ["None Visible (1)", "Isolated (2)", "Widespread Risk (3)"]),
+                ("1.9 Commercial / Market Waste", "Accumulation of rotting produce, fish water, or commercial trash around sari-sari stores, bakeries, or talipapa.", ["Sanitary (1)", "Substandard (2)", "Severe Risk (3)"])
+            ]
+
+            for param, indicator, options in d1_params:
+                c1, c2, c3 = st.columns([2, 1.2, 1.8])
+                c1.markdown(f"**{param}**\n\n*{indicator}*")
+                s_val, r_txt, n_txt = render_rating(c1, c2, c3, param, options)
+                d1_scores.append(s_val)
+                d1_data[param] = {"Rating": r_txt, "Notes": n_txt}
+
+            # DOMAIN 2
+            st.markdown("<div class='peri-domain-header'>Domain 2: Food Environment & Nutritional Accessibility Assessment</div>", unsafe_allow_html=True)
+            st.caption("Evaluates the physical accessibility and ratio of nutrient-dense fresh foods vs. highly processed, ultra-palatable junk foods (identifying 'Food Deserts' and 'Food Swamps').")
+            
+            d2_scores = []
+            d2_data = {}
+            d2_params = [
+                ("2.1 Fresh Produce Access (Talipapa / Markets)", "Presence of permanent or satellite fresh fruit, vegetable, and fresh protein (fish/meat) markets within 300m walking distance.", ["High Access (1)", "Limited Access (2)", "Food Desert (3)"]),
+                ("2.2 Sari-Sari Store Food Profile", "Dominance of ultra-processed salty snacks, sugary carbonated beverages, and instant noodles displayed prominently at eye level.", ["Balanced / Healthy (1)", "Junk-Dominant (2)", "Unhealthy Swamp (3)"]),
+                ("2.3 Produce Quality & Freshness", "Physical condition of available fruits/vegetables at local outlets: fresh, crisp vs. wilted, decaying, or insect-damaged.", ["High Quality (1)", "Mixed Quality (2)", "Poor / Spoiled (3)"]),
+                ("2.4 Street Food Vending Hygiene", "Prepared street food stalls: use of food covers, glass displays, clean water for utensil washing, hairnets/gloves, fly presence.", ["Sanitary (1)", "Substandard (2)", "Unsanitary / High Risk (3)"]),
+                ("2.5 Child-Targeted Marketing", "Prominent advertising banners or eye-level store displays targeting school children with sugary drinks, candies, and sodium snacks.", ["Low Exposure (1)", "Moderate (2)", "High / Aggressive (3)"]),
+                ("2.6 Tobacco & Alcohol Visibility", "Prominent display and sale of cigarettes/e-cigarettes and alcoholic beverages near youth gathering points or school zones.", ["Restricted / Far (1)", "Moderate (2)", "Highly Visible (3)"]),
+                ("2.7 Safe Drinking Water Refilling Outlets", "Availability and physical sanitary condition of commercial water refilling stations or public potable water taps in the Purok.", ["Accessible & Clean (1)", "Scarcely Available (2)", "Unsightly / Risky (3)"])
+            ]
+
+            for param, indicator, options in d2_params:
+                c1, c2, c3 = st.columns([2, 1.2, 1.8])
+                c1.markdown(f"**{param}**\n\n*{indicator}*")
+                s_val, r_txt, n_txt = render_rating(c1, c2, c3, param, options)
+                d2_scores.append(s_val)
+                d2_data[param] = {"Rating": r_txt, "Notes": n_txt}
+
+            # DOMAIN 3
+            st.markdown("<div class='peri-domain-header'>Domain 3: Built Environment, Housing Quality & Infrastructure</div>", unsafe_allow_html=True)
+            st.caption("Assesses structural housing vulnerability, pedestrian safety, public illumination, electrical hazards, and recreational space adequacy.")
+            
+            d3_scores = []
+            d3_data = {}
+            d3_params = [
+                ("3.1 Housing Structural Integrity", "Proportion of concrete/permanent housing vs. makeshift, tarpaulin, light bamboo, or deteriorated wood structures.", ["Mostly Concrete (1)", "Mixed Structural (2)", "Predominantly Makeshift (3)"]),
+                ("3.2 Pedestrian Walkways & Sidewalks", "Availability of paved, unblocked sidewalks or footpaths separated from vehicle traffic vs. pedestrians walking on main road shoulders.", ["Safe / Paved (1)", "Partial / Blocked (2)", "Absent / Dangerous (3)"]),
+                ("3.3 Street Lighting & Night Illumination", "Density and functioning status of streetlights along primary thoroughfares, inner alleyways, and public footbridges.", ["Fully Lit (1)", "Dim / Partial (2)", "Dark / Unlit Alleys (3)"]),
+                ("3.4 Public Open Spaces & Youth Parks", "Presence of safe, clean public plazas, basketball courts, or green parks free from trash, broken glass, or structural hazards.", ["Safe & Accessible (1)", "Dilapidated / Unkept (2)", "None / Unsafe (3)"]),
+                ("3.5 Universal Physical Accessibility", "Presence of smooth ramps, unblocked curb cuts, and level walkways for PWDs, senior citizens, wheelchairs, and strollers.", ["Barrier-Free (1)", "Partially Barrier-Free (2)", "Severe Barriers (3)"]),
+                ("3.6 Electrical Wiring & Power Line Safety", "Condition of overhead utility wires: neatly bundled vs. entangled 'octopus' wiring, low-hanging lines, or sparking transformers.", ["Orderly / Safe (1)", "Cluttered / Low (2)", "Hazardous 'Octopus' (3)"]),
+                ("3.7 Road Surface & Speed Management", "Quality of road paving (paved concrete vs. potholed/muddy dirt roads) and presence of speed humps near pedestrian areas.", ["Well-Paved / Safe (1)", "Unpaved / Potholes (2)", "Severely Broken / Muddy (3)"])
+            ]
+
+            for param, indicator, options in d3_params:
+                c1, c2, c3 = st.columns([2, 1.2, 1.8])
+                c1.markdown(f"**{param}**\n\n*{indicator}*")
+                s_val, r_txt, n_txt = render_rating(c1, c2, c3, param, options)
+                d3_scores.append(s_val)
+                d3_data[param] = {"Rating": r_txt, "Notes": n_txt}
+
+            # DOMAIN 4
+            st.markdown("<div class='peri-domain-header'>Domain 4: Health Infrastructure & Primary Care Accessibility</div>", unsafe_allow_html=True)
+            st.caption("Evaluates physical state, operational transparency, emergency accessibility, and visibility of primary healthcare facilities.")
+            
+            d4_scores = []
+            d4_data = {}
+            d4_params = [
+                ("4.1 Barangay Health Station (BHS) State", "Physical appearance of BHS/Health Center: clean, repainted, intact roof/windows vs. cracked walls, rust, water leaks, or clutter.", ["Well-Maintained (1)", "Substandard / Wear (2)", "Dilapidated / Blighted (3)"]),
+                ("4.2 Facility Visibility & Operational Signage", "Prominent signage outside BHS detailing facility name, list of free health services, operating hours, and emergency contacts.", ["Clear & Complete (1)", "Faded / Incomplete (2)", "Missing / No Signage (3)"]),
+                ("4.3 Public Transport Proximity (<100m)", "Distance from BHS entrance to nearest tricycle terminal, jeepney stop, or paved road where public transport is readily available.", ["High Access (<50m) (1)", "Moderate (50-150m) (2)", "Isolated (>150m) (3)"]),
+                ("4.4 Pharmacy / Essential Medicine Access", "Proximity of BHS dispensing room or private community pharmacy (Botika) stocking essential maintenance and emergency drugs.", ["Co-located / Nearby (1)", "Limited / Distant (2)", "Absent in Zone (3)"]),
+                ("4.5 Emergency Vehicle Access Corridors", "Width and clarity of access roads leading to BHS or deep Puroks to allow full-sized ambulance or fire truck entry without blocking.", ["Unobstructed Wide (1)", "Narrow / Tight Turn (2)", "Blocked / Inaccessible (3)"]),
+                ("4.6 Health Promotion Advisory Display", "Visibility of outdoor bulletin boards displaying updated health warnings (Dengue, TB, Maternal Health, COVID, Immunization dates).", ["Updated & Visible (1)", "Outdated Posters (2)", "Blank / Damaged (3)"]),
+                ("4.7 BHS Sanitation & Basic Utilities", "Presence of functioning handwashing sink with soap, clean patient toilet facility, running water, and reliable power at BHS.", ["Fully Functional (1)", "Partial / Defective (2)", "Non-Functional / None (3)"])
+            ]
+
+            for param, indicator, options in d4_params:
+                c1, c2, c3 = st.columns([2, 1.2, 1.8])
+                c1.markdown(f"**{param}**\n\n*{indicator}*")
+                s_val, r_txt, n_txt = render_rating(c1, c2, c3, param, options)
+                d4_scores.append(s_val)
+                d4_data[param] = {"Rating": r_txt, "Notes": n_txt}
+
+            # DOMAIN 5
+            st.markdown("<div class='peri-domain-header'>Domain 5: Disaster Risk Reduction & Climate Environmental Safety</div>", unsafe_allow_html=True)
+            st.caption("Evaluates physical vulnerability of residential clusters to natural hazards (floods, landslides, coastal surges) and readiness of escape corridors.")
+            
+            d5_scores = []
+            d5_data = {}
+            d5_params = [
+                ("5.1 High-Hazard Proximity (Geohazards)", "Residential dwellings constructed directly along steep unstable slopes, active riverbanks, sea walls, or landslide easements.", ["Low Exposure (1)", "Moderate Buffer (2)", "High Hazard Zone (3)"]),
+                ("5.2 Flood Vulnerability & High-Water Marks", "Visible watermark lines on house walls, recent mud silt on pavements, or low-lying basin topography prone to rapid inundation.", ["Flood-Free / High (1)", "Ankle-Deep / Slow (2)", "Rapid Deep Inundation (3)"]),
+                ("5.3 Evacuation Route Signage & Clarity", "Presence of reflectorized, clearly marked evacuation directional signs along major Purok footpaths and intersections.", ["Clearly Marked (1)", "Faded / Sparse (2)", "No Signage Found (3)"]),
+                ("5.4 Evacuation Center Readiness", "Structural condition, roof integrity, and accessibility of designated evacuation hubs (e.g., Covered Court, Barangay Hall, School).", ["Ready & Accessible (1)", "Minor Maintenance (2)", "Unsafe / Restricted (3)"]),
+                ("5.5 Major Drainage Outfalls & Waterways", "Condition of river outlets, major creek channels, or floodgates: free-flowing vs. choked with thick silt, water hyacinths, or trash.", ["Clear Outflow (1)", "Moderately Clogged (2)", "Severely Choked (3)"]),
+                ("5.6 Urban Fire Hazard & Density", "Extremely dense wooden housing clusters separated by narrow (<1.5m) alleys preventing fire tender hose penetration.", ["Low Fire Risk (1)", "Moderate Density (2)", "High Fire Trap (3)"]),
+                ("5.7 Slope Protection & Retaining Walls", "Presence and structural condition of concrete retaining walls, gabions, or vegetation cover along steep roadside cuts or embankments.", ["Intact Protection (1)", "Cracking / Eroded (2)", "Unprotected Slope (3)"])
+            ]
+
+            for param, indicator, options in d5_params:
+                c1, c2, c3 = st.columns([2, 1.2, 1.8])
+                c1.markdown(f"**{param}**\n\n*{indicator}*")
+                s_val, r_txt, n_txt = render_rating(c1, c2, c3, param, options)
+                d5_scores.append(s_val)
+                d5_data[param] = {"Rating": r_txt, "Notes": n_txt}
+
+            # DOMAIN 6
+            st.markdown("<div class='peri-domain-header'>Domain 6: Vector Control & Environmental Exposure Hazards</div>", unsafe_allow_html=True)
+            st.caption("Evaluates micro-environmental exposure factors including mosquito breeding reservoirs, rodent activity, and localized industrial/noise pollution.")
+            
+            d6_scores = []
+            d6_data = {}
+            d6_params = [
+                ("6.1 Dengue Vector Breeding Sites", "Density of discarded motor vehicle tires, uncovered rain barrels, open tin cans, or plastic containers containing stagnant water.", ["Rare / Clean (1)", "Moderate Sites (2)", "Prolific Breeding (3)"]),
+                ("6.2 Rodent & Fly Infestation Signs", "Visible signs of rat burrows along canal banks, swarms of flies near open waste or food stalls, or pest damage to structures.", ["Low / Unnoticed (1)", "Moderate Signs (2)", "Severe Infestation (3)"]),
+                ("6.3 Commercial / Workshop Pollution", "Proximity of residential homes to auto-repair shops dumping waste motor oil, junk yards, welding shops, or noisy small factories.", ["Buffer Compliant (1)", "Moderate Nuisance (2)", "Severe Toxic Exposure (3)"]),
+                ("6.4 Dust, Exhaust & Air Quality", "Heavy airborne dust generated by unpaved dirt roads or intense diesel exhaust fumes along congested transport stops.", ["Clean Air (1)", "Moderate Dust/Fumes (2)", "High Particulate Dust (3)"])
+            ]
+
+            for param, indicator, options in d6_params:
+                c1, c2, c3 = st.columns([2, 1.2, 1.8])
+                c1.markdown(f"**{param}**\n\n*{indicator}*")
+                s_val, r_txt, n_txt = render_rating(c1, c2, c3, param, options)
+                d6_scores.append(s_val)
+                d6_data[param] = {"Rating": r_txt, "Notes": n_txt}
+
+            # DOMAIN SCORE CALCULATIONS
+            ds1 = sum(d1_scores) / len(d1_scores)
+            ds2 = sum(d2_scores) / len(d2_scores)
+            ds3 = sum(d3_scores) / len(d3_scores)
+            ds4 = sum(d4_scores) / len(d4_scores)
+            ds5 = sum(d5_scores) / len(d5_scores)
+            ds6 = sum(d6_scores) / len(d6_scores)
 
             peri_index = (ds1 + ds2 + ds3 + ds4 + ds5 + ds6) / 6.0
-            tier_cat = "CATEGORY C: Critical Hazard (Red)" if peri_index >= 2.30 else ("CATEGORY B: Moderate Concern (Amber)" if peri_index >= 1.50 else "CATEGORY A: Low Risk (Green)")
+            
+            if peri_index >= 2.30:
+                tier_cat = "CATEGORY C: Critical Hazard (Red)"
+            elif peri_index >= 1.50:
+                tier_cat = "CATEGORY B: Moderate Concern (Amber)"
+            else:
+                tier_cat = "CATEGORY A: Low Risk (Green)"
 
-            st.info(f"Calculated PERI Index: **{peri_index:.2f}** | Tier: **{tier_cat}**")
+            st.markdown("---")
+            st.markdown("### 📊 Calculated PERI Assessment Index")
+            st.metric("Composite Purok Environmental Risk Index (PERI)", f"{peri_index:.2f}", tier_cat)
 
-            if st.form_submit_button("Submit & Save PERI Assessment"):
+            if st.form_submit_button("Submit & Save PERI Assessment Record"):
                 st.session_state.windshield_records.append({
                     "Purok": purok_eval, "Date": str(eval_date), "Evaluator": evaluator_name,
                     "DS1_Sanitation": ds1, "DS2_Food": ds2, "DS3_BuiltEnv": ds3, "DS4_HealthInfra": ds4, "DS5_DRR": ds5, "DS6_Vector": ds6,
                     "PERI_Index": peri_index, "Tier_Category": tier_cat,
+                    "Details": {"D1": d1_data, "D2": d2_data, "D3": d3_data, "D4": d4_data, "D5": d5_data, "D6": d6_data}
                 })
                 save_session_to_disk()
-                st.success(f"PERI Assessment for {purok_eval} saved successfully!")
+                st.success(f"Complete PERI Assessment for {purok_eval} successfully saved!")
 
-    else:
+    with p4_tab2:
+        st.markdown("## 3. Comprehensive Result Interpretation & Field Scoring Manual")
+        st.write("To translate windshield observation field findings into actionable public health policies, disaster mitigation plans, and LGU budget allocations, field teams must apply the standardized scoring, index calculation, and risk categorization framework detailed below.")
+
+        st.markdown("### 3.1 Quantitative Scoring & Index Calculation Methodology")
+        st.markdown("""
+        Each evaluated parameter within a domain receives a discrete rating score based on field observation:
+        * **Score 1.0 (Optimal / Clean / Low Risk):** Parameter meets sanitary and structural standards. Minimal or no hazard observed.
+        * **Score 2.0 (Moderate Risk / Substandard):** Parameter displays noticeable deficiencies, wear, or moderate sanitation gaps requiring targeted routine maintenance.
+        * **Score 3.0 (Severe Hazard / Critical):** Parameter presents acute, severe environmental hazards, extreme infrastructure decay, or immediate health risks requiring urgent intervention.
+        """)
+
+        st.markdown("#### Mathematical Calculation Steps:")
+        st.markdown("""
+        **1. Step 1 - Calculate Domain Score (DS):** For each domain, sum the numerical scores of all evaluated items and divide by the total number of items evaluated in that domain.
+        
+        $$\text{Domain Score (DS)} = \\frac{\\sum \\text{Item Ratings in Domain}}{\\text{Total Number of Evaluated Items in Domain}}$$
+        
+        *Example: If Domain 1 (Sanitation) has 9 items and the sum of scores is 18, then $DS = \\frac{18}{9} = 2.00$ (Moderate Risk).*
+        
+        **2. Step 2 - Calculate Purok Environmental Risk Index (PERI):** Sum the Domain Scores across all 6 domains and divide by 6 to determine the overall composite risk index for the specific Purok.
+        
+        $$\text{PERI} = \\frac{DS_1 + DS_2 + DS_3 + DS_4 + DS_5 + DS_6}{6}$$
+        
+        The PERI provides a single, comparative composite score ranging from **1.00 (Lowest Risk)** to **3.00 (Highest Risk)**.
+        """)
+
+        st.markdown("---")
+        st.markdown("### 3.2 Risk Level Classification Matrix & Priority Tiers")
+        risk_matrix_df = pd.DataFrame([
+            {"PERI Score Range": "1.00 – 1.49", "Risk Tier Category": "CATEGORY A: Low Risk (Green)", "Environmental Health Description": "Environment is generally clean, structurally stable, and well-serviced. Minimal health hazard exposure.", "Required Operational Response": "Routine quarterly monitoring; maintain existing Barangay sanitation services."},
+            {"PERI Score Range": "1.50 – 2.29", "Risk Tier Category": "CATEGORY B: Moderate Concern (Amber)", "Environmental Health Description": "Noticeable environmental deficits (e.g., clogged canals, junk food dominance, dim lighting). Moderate risk of localized outbreak.", "Required Operational Response": "Targeted 30-day intervention; schedule clean-up drives, BHW health education, minor repairs."},
+            {"PERI Score Range": "2.30 – 3.00", "Risk Tier Category": "CATEGORY C: Critical Hazard (Red)", "Environmental Health Description": "Severe contamination, acute disaster vulnerability, food desert conditions, or dilapidated health access. Severe threat.", "Required Operational Response": "Immediate Emergency Action (<7 days); escalate to Municipal Mayor, LGU Health Officer, DRRMO."}
+        ])
+        st.table(risk_matrix_df)
+
+        st.markdown("---")
+        st.markdown("### 3.3 Hotspot Spatial Mapping & Analysis Instructions")
+        st.markdown("""
+        1. **Color-Coded Community Base Maps:** Transpose the PERI scores onto an official Barangay base map using green, yellow/amber, and red highlighters for each Purok boundary.
+        2. **Multi-Domain Hotspot Identification:** Identify 'Double Red' or 'Triple Red' Puroks—zones where multiple domains (e.g., Sanitation + Flood Risk + Food Desert) simultaneously score above 2.30. These represent priority zones for integrated socio-economic interventions.
+        3. **Micro-Hotspot Pinpointing:** Utilize the field notes column to physically plot point locations of severe hazards (e.g., 'Octopus' power pole #4 at Purok 3; Clogged canal junction at Purok 1) for direct referral to maintenance teams.
+        """)
+
+        st.markdown("---")
+        st.markdown("### 3.4 Domain-Specific Action Pathways & Trigger Thresholds")
+        st.markdown("""
+        When specific individual domain scores ($DS$) exceed **2.00**, execute the following standardized operational responses:
+        * **Sanitation Trigger ($DS_1 > 2.00$):** Deploy Barangay Tanods and BHWs for a mandatory weekend Purok Clean-Up Drive; issue compliance notices to households with illegal open dumping; request additional garbage truck pickups from LGU solid waste office.
+        * **Food Environment Trigger ($DS_2 > 2.00$):** Partner with local farmers to establish weekly mobile vegetable markets ('Talipapa on Wheels'); conduct nutritional counselling in sari-sari store owner forums to encourage stocking fresh produce.
+        * **Built Environment Trigger ($DS_3 > 2.00$):** Reallocate Barangay Development Funds (BDF) for streetlight solar replacement, footpath concrete paving, and immediate utility pole hazard reporting to local power co-ops.
+        * **Health Access Trigger ($DS_4 > 2.00$):** Re-evaluate BHS operational hours; establish satellite BHW consultation posts in isolated Puroks; request ambulance access lane clearing from barangay council.
+        * **Disaster Safety Trigger ($DS_5 > 2.00$):** Conduct immediate localized evacuation drills; install bright reflectorized signage along escape routes; clear major river outfalls using heavy equipment prior to rainy season.
+        """)
+
+        st.markdown("---")
+        st.markdown("### 3.5 Data Triangulation with Secondary Health Indicators")
+        st.markdown("""
+        Windshield survey findings should not stand alone. Cross-validate field results with the following official health records:
+        1. **Triangulate Sanitation & Vector Scores (Domains 1 & 6)** with BHS FHSIS records on Diarrhea cases, Dengue incidence, and Skin Infection consultations.
+        2. **Triangulate Food Environment Scores (Domain 2)** with Operation Timbang (OPT) Child Malnutrition and Stunting prevalence data.
+        3. **Triangulate Disaster & Built Environment Scores (Domains 3 & 5)** with historical DRRMO casualty and flood damage reports.
+        """)
+
+    with p4_tab3:
         st.markdown("### 📂 Submitted PERI Assessment Records")
         if len(st.session_state.windshield_records) == 0:
             st.info("No PERI records found.")
         else:
-            peri_options = [f"[{i+1}] {r.get('Purok', 'N/A')} - PERI: {r.get('PERI_Index', 0.0):.2f}" for i, r in enumerate(st.session_state.windshield_records)]
-            selected_idx = st.selectbox("Select Record", range(len(peri_options)), format_func=lambda x: peri_options[x])
+            peri_options = [f"[{i+1}] {r.get('Purok', 'N/A')} - PERI Index: {r.get('PERI_Index', 0.0):.2f} ({r.get('Tier_Category', 'N/A')})" for i, r in enumerate(st.session_state.windshield_records)]
+            selected_idx = st.selectbox("Select Assessment Record", range(len(peri_options)), format_func=lambda x: peri_options[x])
+            rec = st.session_state.windshield_records[selected_idx]
+
+            st.write(f"**Evaluator:** {rec.get('Evaluator')}")
+            st.write(f"**Date:** {rec.get('Date')}")
+            st.write(f"**Domain Scores:** Sanitation: {rec.get('DS1_Sanitation'):.2f} | Food: {rec.get('DS2_Food'):.2f} | Built: {rec.get('DS3_BuiltEnv'):.2f} | Health Infra: {rec.get('DS4_HealthInfra'):.2f} | DRR: {rec.get('DS5_DRR'):.2f} | Vector: {rec.get('DS6_Vector'):.2f}")
 
             if st.button("🗑️ Delete Selected PERI Record"):
                 st.session_state.windshield_records.pop(selected_idx)
@@ -1125,34 +1365,119 @@ elif menu == "🔍 Phase 4: Expanded PERI Windshield Tool":
 
 # MODULE 6: PHASE 5 SPATIAL & STATISTICAL ANALYTICS
 elif menu == "📈 Phase 5: Spatial & Statistical Analytics":
-    st.subheader("Phase 5: Integrated Spatial & Cross-Module Analytics Dashboard")
-    
-    total_hhs = len(st.session_state.hh_records)
-    if total_hhs == 0:
-        st.info("No data available for analytics. Please complete Phase 2 Master Surveys.")
-    else:
-        m1, m2, m3, m4 = st.columns(4)
-        m1.metric("Total Surveyed HHs", total_hhs)
+    st.subheader("Phase 5: Spatial Mapping, Geocoding, & Statistical Analytics")
+    st.write("To transform raw community assessment data into high-impact public health intelligence, assessment teams must integrate spatial visualization (GIS) with advanced statistical modeling.")
+
+    p5_tab1, p5_tab2, p5_tab3 = st.tabs([
+        "6.1 Spot Mapping & Geocoding Protocol",
+        "6.2 Multi-Layer GIS Visualization Framework",
+        "6.3 Statistical Analysis & Modeling Plan"
+    ])
+
+    with p5_tab1:
+        st.markdown("### 6.1 Spot Mapping & Mobile Address Geocoding Protocol")
+        st.markdown("""
+        * **Step 1: Participatory BHW Spot Mapping:** Mobilize BHWs to draw baseline community spot maps capturing every residential structure, water source, and health facility.
+        * **Step 2: GPS Mobile Geocoding:** Utilizing handheld GPS devices or mobile survey software (KoboToolbox), capture exact latitude and longitude coordinates $(x, y)$ for every surveyed household.
+        * **Step 3: GIS Layering:** Upload geocoded survey points into QGIS or ArcGIS to convert static addresses into spatial shapefiles.
+        """)
+
+        st.markdown("---")
+        st.markdown("#### 📍 Geocoded Survey Coordinates Preview")
+        if len(st.session_state.hh_records) > 0:
+            geo_df = pd.DataFrame(st.session_state.hh_records)[["HH_ID", "Purok", "Lat", "Lon", "Risk", "Flood_Prone"]]
+            st.dataframe(geo_df, use_container_width=True)
+        else:
+            st.info("No household geocodes stored yet. Complete Phase 2 entries to populate spatial layers.")
+
+    with p5_tab2:
+        st.markdown("### 6.2 Multi-Layer GIS Visualization Framework")
+        st.markdown("""
+        * **Layer 1: Disease Hotspot Mapping:** Apply Kernel Density Estimation (KDE) to plot heatmaps of chronic hypertension, diabetes, and active TB clusters across Puroks.
+        * **Layer 2: Environmental SDOH Overlay:** Superimpose disease hot spots over layers of unsafe water sources (Level I/unprotected), flood risk zones, and open waste dumping areas.
+        * **Layer 3: Food Desert Identification:** Perform buffer analysis (500-meter walking radius) around fresh food markets versus sari-sari store density to map food deserts against childhood malnutrition.
+        * **Layer 4: Catchment Isochrone Modeling:** Generate 15-minute and 30-minute travel time contours around the BHS/RHU to identify geographically isolated and disadvantaged areas (GIDAs).
+        """)
+
+        # Interactive Spatial Visualizer for Layer Overlays
+        st.markdown("---")
+        st.markdown("#### 🗺️ Multi-Layer Overlay Engine")
+        selected_layer = st.selectbox("Select GIS Overlay Simulation Layer", [
+            "Layer 1: Disease Hotspot Mapping (KDE Density)",
+            "Layer 2: Environmental SDOH Overlay (Flood & Waste)",
+            "Layer 3: Food Desert Identification (500m Buffers)",
+            "Layer 4: Catchment Isochrone Modeling (15/30-min Travel contours)"
+        ])
+
+        if len(st.session_state.hh_records) > 0:
+            m_df = pd.DataFrame(st.session_state.hh_records)
+            st.pydeck_chart(pdk.Deck(
+                layers=[
+                    pdk.Layer(
+                        "HexagonLayer" if "Layer 1" in selected_layer else "ScatterplotLayer",
+                        data=m_df,
+                        get_position=["Lon", "Lat"],
+                        get_color="Color" if "Layer 1" not in selected_layer else None,
+                        get_radius=20,
+                        elevation_scale=4,
+                        elevation_range=[0, 1000],
+                        pickable=True,
+                        extruded=True,
+                    )
+                ],
+                initial_view_state=pdk.ViewState(
+                    latitude=m_df["Lat"].mean(),
+                    longitude=m_df["Lon"].mean(),
+                    zoom=15, pitch=40
+                )
+            ))
+        else:
+            st.info("Add household coordinates in Phase 2 to render interactive GIS Spatial layers.")
+
+    with p5_tab3:
+        st.markdown("### 6.3 Statistical Analysis & Advanced Analytical Modeling Plan")
         
-        htn_cnt = sum(1 for hh in st.session_state.hh_records if "140" in hh.get("BP", "") or hh.get("Risk") == "Hypertensive Risk")
-        m2.metric("Hypertension Rate", f"{(htn_cnt/total_hhs)*100:.1f}%")
-        
-        flood_cnt = sum(1 for hh in st.session_state.hh_records if hh.get("Flood_Prone") == "Yes")
-        m3.metric("Flood Exposure Rate", f"{(flood_cnt/total_hhs)*100:.1f}%")
-        
-        yakap_cnt = sum(1 for hh in st.session_state.hh_records if hh.get("Yakap") == "Yes")
-        m4.metric("PhilHealth YAKAP Coverage", f"{(yakap_cnt/total_hhs)*100:.1f}%")
+        st.markdown("#### A. Descriptive Analysis (Measuring the Social Gradient)")
+        st.write("Cross-tabulate clinical health outcomes across income quintiles, educational attainment levels, and geographic zones. Calculate Odds Ratios (OR) and Relative Risks (RR) to quantify how disease burdens increase along lower socio-economic tiers.")
+
+        st.markdown("#### B. Advanced Multivariate Modeling (Factor Analysis & Latent Class Analysis)")
+        st.write("Social determinants rarely occur in isolation; compounding social risks produce exponential health detriments. Two advanced statistical techniques are deployed:")
+        st.markdown("""
+        * **1. Principal Component & Factor Analysis:** Collapse correlated environmental and economic variables (e.g., wall material, toilet type, income, water level) into latent factor scores (e.g., Household Deprivation Index) to measure overall structural vulnerability.
+        * **2. Latent Class Analysis (LCA):** Group households into discrete vulnerability classes based on overlapping social risks (e.g., Class 1: High Income/High Access; Class 2: Severe Food Insecurity + Housing Instability + No Piped Water). Model the direct probability of chronic disease prevalence per class.
+        """)
+
+        st.markdown("---")
+        st.markdown("#### 📊 Statistical Modeling Matrix")
+        stat_plan_df = pd.DataFrame([
+            {
+                "Statistical Method": "Descriptive Cross-Tabulation & Odds Ratios",
+                "Input Variables (Survey/GIS)": "Income Quintiles × Hypertension / Diabetes Prevalence",
+                "Target Public Health Output": "Quantifies the slope of the social gradient in health across income tiers."
+            },
+            {
+                "Statistical Method": "Factor Analysis (PCA)",
+                "Input Variables (Survey/GIS)": "Housing materials, WASH level, Income, Cooking fuel",
+                "Target Public Health Output": "Generates a composite 'Barangay Socio-Economic Vulnerability Index'."
+            },
+            {
+                "Statistical Method": "Latent Class Analysis (LCA)",
+                "Input Variables (Survey/GIS)": "Co-occurring food insecurity, housing instability, distance barrier",
+                "Target Public Health Output": "Identifies multi-risk household clusters requiring integrated LGU social protection."
+            }
+        ])
+        st.table(stat_plan_df)
 
 # MODULE 7: PHASE 6 COMMUNITY DIAGNOSIS & ACTION PLAN
 elif menu == "📋 Phase 6: Community Diagnosis & Action Plan":
     st.subheader("Phase 6: Community Diagnosis Prioritization & Action Planning Matrix")
-    
+
     with st.form("phase6_diag_form"):
         diag_title = st.text_input("Community Health Diagnosis Title", "High Hypertension Risk Burden Compounded by Seasonal Flooding")
         priority_puroks = st.multiselect("Priority Target Puroks", [f"Purok {i}" for i in range(1, 8)], default=["Purok 1", "Purok 3"])
         target_obj = st.text_area("Target Strategic Objectives & Outcomes")
         activities = st.text_area("Recommended Community Health Action Plans & BHS Interventions")
-        
+
         if st.form_submit_button("Save Diagnosis & Action Plan"):
             st.session_state.diag_records.append({
                 "Title": diag_title, "Puroks": priority_puroks, "Objectives": target_obj, "Activities": activities
@@ -1163,7 +1488,7 @@ elif menu == "📋 Phase 6: Community Diagnosis & Action Plan":
 # MODULE 8: DATA MANAGEMENT & EXPORT
 elif menu == "💾 Data Management & Export":
     st.subheader("💾 Shared Master Data Management, Backup & JSON Export")
-    
+
     st.json({
         "Total_HH_Records": len(st.session_state.hh_records),
         "Total_Governance_Records": len(st.session_state.gov_records),
