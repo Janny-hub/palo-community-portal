@@ -3,12 +3,69 @@ import pandas as pd
 import numpy as np
 import pydeck as pdk
 
-# Page Configuration
+# Page Configuration (Must be first Streamlit command)
 st.set_page_config(
     page_title="UP Manila - Community Clerks Portal",
     page_icon="🩺",
     layout="wide"
 )
+
+# Initialize Authentication State
+if "authenticated" not in st.session_state:
+    st.session_state["authenticated"] = False
+
+# Login Form Block
+def show_login_screen():
+    st.markdown("""
+        <style>
+        .login-box {
+            max-width: 400px;
+            margin: 80px auto;
+            padding: 30px;
+            background-color: #FFFFFF;
+            border-radius: 10px;
+            border: 1px solid #CBD5E1;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            text-align: center;
+        }
+        .login-title {
+            color: #7B1113;
+            font-weight: 800;
+            font-size: 22px;
+            margin-bottom: 5px;
+        }
+        .login-sub {
+            color: #475569;
+            font-size: 13px;
+            margin-bottom: 20px;
+        }
+        </style>
+    """, unsafe_allow_html=True)
+
+    st.markdown('<div class="login-box">', unsafe_allow_html=True)
+    st.markdown('<div class="login-title">🩺 UP Manila Clerks Portal</div>', unsafe_allow_html=True)
+    st.markdown('<div class="login-sub">Please log in to access the field portal.</div>', unsafe_allow_html=True)
+    
+    with st.form("login_form"):
+        username_input = st.text_input("Username")
+        password_input = st.text_input("Password", type="password")
+        submit_button = st.form_submit_button("Log In", use_container_width=True)
+
+        if submit_button:
+            if username_input == "palo" and password_input == "1719":
+                st.session_state["authenticated"] = True
+                st.success("Access Granted!")
+                st.rerun()
+            else:
+                st.error("Invalid Username or Password.")
+    st.markdown('</div>', unsafe_allow_html=True)
+
+# Stop execution if user is not authenticated
+if not st.session_state["authenticated"]:
+    show_login_screen()
+    st.stop()
+
+# ================= MAIN APPLICATION LOGIC =================
 
 # Custom UP Maroon, Green & Gold Styling with Sticky Progress Bar CSS
 CSS_STYLE = """<style>
@@ -162,7 +219,7 @@ p6_status = len(st.session_state.diag_records) > 0
 completed_phases = sum([p1_status, p2_status, p3_status, p4_status, p5_status, p6_status])
 overall_progress_pct = int((completed_phases / 6) * 100)
 
-# Sidebar - Sticky Progress Tracker
+# Sidebar - Sticky Progress Tracker & Logout
 st.sidebar.markdown(f"""
 <div class="sticky-progress-container">
     <div style="font-weight: 700; color: #1E293B; font-size: 15px; margin-bottom: 6px;">📊 Phase Completion Tracker</div>
@@ -196,6 +253,10 @@ menu = st.sidebar.radio(
         "💾 Data Management & Export"
     ]
 )
+
+if st.sidebar.button("🔒 Log Out", use_container_width=True):
+    st.session_state["authenticated"] = False
+    st.rerun()
 
 # MODULE 1: INTERACTIVE SPOT MAP
 if menu == "🗺️ Interactive Spot Map":
