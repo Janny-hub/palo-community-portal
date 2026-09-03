@@ -56,7 +56,7 @@ def show_login_screen():
     st.markdown('<div class="login-box">', unsafe_allow_html=True)
     st.markdown('<div class="login-title">🩺 UP Manila Clerks Portal</div>', unsafe_allow_html=True)
     st.markdown('<div class="login-sub">Comprehensive Community Health Field Portal</div>', unsafe_allow_html=True)
-    st.markdown('<div class="dev-badge-login">⭐ Lead System Developer: Jan Art Serna, RMT</div>', unsafe_allow_html=True)
+    st.markdown('<div class="dev-badge-login">⭐ Lead developer Jan Art A. Serna, RMT</div>', unsafe_allow_html=True)
     
     with st.form("login_form"):
         username_input = st.text_input("Username")
@@ -467,8 +467,30 @@ elif menu == "🏠 Phase 2: Master Household Survey":
 
             c1, c2, c3 = st.columns(3)
             surv_status = c1.selectbox("Survey Status", ["Completed", "Partially Completed", "Refused"])
-            dialect = c2.text_input("Primary Dialect Spoken at Home")
-            religion = c3.text_input("Religion")
+            
+            # UPDATED: Primary Dialect options with Waray, Tagalog, English, Mixed, Other
+            dialect = c2.selectbox(
+                "Primary Dialect Spoken at Home", 
+                ["Waray", "Tagalog", "English", "Mixed", "Cebuano / Bisaya", "Ilocano", "Bicolano", "Hiligaynon / Ilonggo", "Pangasinan", "Other Language"]
+            )
+            
+            # UPDATED: Religion choices for the Philippines
+            religion = c3.selectbox(
+                "Religion", 
+                [
+                    "Roman Catholic", 
+                    "Islam", 
+                    "Iglesia ni Cristo (INC)", 
+                    "Evangelical / Protestant", 
+                    "Seventh-day Adventist", 
+                    "Aglipayan (IFI)", 
+                    "Jehovah's Witnesses", 
+                    "Church of Jesus Christ of Latter-day Saints", 
+                    "Born Again Christian", 
+                    "None / Secular", 
+                    "Other Religion"
+                ]
+            )
 
             st.markdown("---")
             st.markdown("**Module A: Household Demographic Roster**")
@@ -507,12 +529,28 @@ elif menu == "🏠 Phase 2: Master Household Survey":
 
                 c1, c2 = st.columns(2)
                 a_symptoms = c1.multiselect(f"Adult {i} Current Complaints", ["None", "Headache", "Cough", "Chest Pain", "Shortness of Breath"], default=["None"], key=f"a_sym_{i}")
-                a_risk = c2.selectbox(f"Adult {i} Risk Assessment", ["Normal", "Hypertensive Risk", "Hypoxemic (<95%)"], key=f"a_risk_{i}")
+                a_risk = c2.selectbox(f"Adult {i} Risk Assessment", ["Normal", "Hypertensive Risk", "Hypoxemic (<95%)", "Fever / Febrile", "Tachycardic / Bradycardic"], key=f"a_risk_{i}")
+
+                # UPDATED: Added Action Taken protocol for abnormal vitals
+                a_action = st.multiselect(
+                    f"🩺 Adult {i} Action Taken (for Abnormal Vitals / Clinical Complaints)",
+                    [
+                        "Referral to RHU / MHO Physician",
+                        "Referral to BHS / Barangay Midwife",
+                        "Health Education & Lifestyle Counseling",
+                        "Medication Compliance Check & Advisal",
+                        "Schedule Re-check / Follow-up Visit",
+                        "Immediate Emergency Hospital Referral",
+                        "None / Normal Vitals"
+                    ],
+                    default=["None / Normal Vitals"] if a_risk == "Normal" else ["Referral to RHU / MHO Physician", "Health Education & Lifestyle Counseling"],
+                    key=f"a_action_{i}"
+                )
 
                 adults_data.append({
                     "ID": f"Adult {i}", "Name": a_name, "Age": a_age, "Edu": a_edu, "Occupation": a_occ,
                     "PhilHealth_Cat": a_ph_cat, "BP": f"{a_sys}/{a_dia}", "Sys": a_sys, "SpO2": a_spo2, 
-                    "Pulse": a_pulse, "Temp": a_temp, "Risk": a_risk
+                    "Pulse": a_pulse, "Temp": a_temp, "Risk": a_risk, "Action_Taken": a_action
                 })
 
         with t_socio:
@@ -609,7 +647,7 @@ elif menu == "🏠 Phase 2: Master Household Survey":
             st.markdown("**Module F3: Mortality Assessment (Jan–Dec)**")
             mortality_yesno = st.selectbox("With deaths in the family due to preventable diseases (Jan-Dec)?", ["No", "Yes"])
 
-        # NEW EXPANDED CHILD PROFILING TAB (UP TO 4 CHILDREN + IMMUNIZATION CHECKLIST)
+        # EXPANDED CHILD PROFILING TAB (UP TO 4 CHILDREN + IMMUNIZATION CHECKLIST + ACTION TAKEN)
         with t_child:
             st.markdown("**Module F4: Expanded Child Anthropometric & Immunization Record Profiling (Up to 4 Children)**")
             children_records = []
@@ -641,9 +679,28 @@ elif menu == "🏠 Phase 2: Master Household Survey":
                 fic_status = "Fully Immunized Child (FIC)" if is_fic else "Partially Immunized / Incomplete"
                 st.markdown(f"**Imm. Summary:** Status = `{fic_status}`")
 
+                # UPDATED: Added Action Taken protocol for abnormal child nutritional status / incomplete immunization
+                is_abnormal_nutr = "Wasted" in c_nutr['Wasting'] or "Stunted" in c_nutr['Stunting'] or "Underweight" in c_nutr['Underweight']
+                
+                c_action = st.multiselect(
+                    f"👶 Child {c_i} Action Taken (for Undernutrition / Incomplete Immunization / Illness)",
+                    [
+                        "Referral to RHU / Municipal Nutrition Officer",
+                        "Referral to BHS / BNS for Supplementary Feeding",
+                        "Health Education & Infant/Young Child Feeding (IYCF) Counseling",
+                        "Schedule Immunization Catch-up at BHS",
+                        "Micro-nutrient Powder (MNP) / Vitamin A Supplementation Referral",
+                        "Deworming Administration / Referral",
+                        "None / Normal Growth & Fully Immunized"
+                    ],
+                    default=["None / Normal Growth & Fully Immunized"] if (not is_abnormal_nutr and is_fic) else ["Referral to RHU / Municipal Nutrition Officer", "Health Education & Infant/Young Child Feeding (IYCF) Counseling"],
+                    key=f"c_action_{c_i}"
+                )
+
                 children_records.append({
                     "Child_Num": f"Child {c_i}", "Name": c_name, "Sex": c_sex, "Age_Months": c_age_m,
-                    "Weight": c_wt_kg, "Height": c_ht_cm, "Nutr": c_nutr, "FIC_Status": fic_status
+                    "Weight": c_wt_kg, "Height": c_ht_cm, "Nutr": c_nutr, "FIC_Status": fic_status,
+                    "Action_Taken": c_action
                 })
 
         with t_yakap:
@@ -675,9 +732,10 @@ elif menu == "🏠 Phase 2: Master Household Survey":
                 "Flood_Prone": is_flood_prone, "Color": marker_color,
                 "Income": income_cat, "Water": water_source, "Sanitation": toilet_type,
                 "Food_Skip": food_skip, "Children": children_records,
+                "Adults": adults_data, "Dialect": dialect, "Religion": religion,
                 "Yakap": yakap_registered
             })
-            st.success(f"Household record '{hh_id}' saved successfully with complete geotagging, adult vitals, and 4 child profiling entries!")
+            st.success(f"Household record '{hh_id}' saved successfully with dialect ({dialect}), religion ({religion}), geotagging, adult vitals with action protocols, and 4 child profiling entries!")
 
 # MODULE 4: PHASE 3 QUALITATIVE FIELD TOOLS
 elif menu == "🗣️ Phase 3: Qualitative Field Tools":
@@ -727,9 +785,7 @@ elif menu == "🔍 Phase 4: Expanded PERI Windshield Tool":
         # DOMAIN 1
         with tab_d1:
             st.markdown("<div class='peri-domain-header'>Domain 1: Sanitation & Waste Management Assessment</div>", unsafe_allow_html=True)
-            
             d1_scores = []
-            
             d1_items = [
                 ("1.1 Uncollected Household Solid Waste", "Trash piles, scattered plastic on road shoulders/lots", ["Clean (1)", "Moderate (2)", "Severe Risk (3)"]),
                 ("1.2 Open Drainage & Canal Integrity", "Clogged roadside canals, unpaved ditching, stagnant greywater", ["Adequate (1)", "Substandard (2)", "Hazardous (3)"]),
