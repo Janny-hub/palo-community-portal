@@ -4,7 +4,6 @@ import numpy as np
 import pandas as pd
 import pydeck as pdk
 import streamlit as st
-import streamlit.components.v1 as components
 
 # Page Configuration (Must be first Streamlit command)
 st.set_page_config(
@@ -65,45 +64,12 @@ def save_session_to_disk():
     save_shared_data(shared)
 
 
-# Sync latest data on rerun so enumerators see updates in real-time
+# Always sync latest data on rerun so enumerators see updates in real-time
 sync_session_from_disk()
 
-# Initialize Authentication & Navigation State
+# Initialize Authentication State
 if "authenticated" not in st.session_state:
     st.session_state["authenticated"] = False
-
-NAV_OPTIONS = [
-    "🗺️ Interactive Spot Map",
-    "📋 Phase 1: Full Governance Scorecard",
-    "🏠 Phase 2: Master Household Survey",
-    "🗣️ Phase 3: Qualitative Field Tools",
-    "🔍 Phase 4: Expanded PERI Windshield Tool",
-    "📈 Phase 5: Spatial & Statistical Analytics",
-    "📋 Phase 6: Community Diagnosis & Action Plan",
-    "🩺 Diagnostic Summary & Analytics",
-    "💾 Data Management & Export",
-]
-
-if "menu_selection" not in st.session_state:
-    st.session_state["menu_selection"] = NAV_OPTIONS[0]
-
-# Modal State Management
-if "show_success_modal" not in st.session_state:
-    st.session_state["show_success_modal"] = False
-if "modal_title" not in st.session_state:
-    st.session_state["modal_title"] = ""
-if "modal_details" not in st.session_state:
-    st.session_state["modal_details"] = ""
-if "modal_next_page" not in st.session_state:
-    st.session_state["modal_next_page"] = None
-
-
-# Helper function to trigger success modal popup
-def trigger_success_modal(title, details, next_page=None):
-    st.session_state["modal_title"] = title
-    st.session_state["modal_details"] = details
-    st.session_state["modal_next_page"] = next_page
-    st.session_state["show_success_modal"] = True
 
 
 # Login Form Block
@@ -154,11 +120,13 @@ def show_login_screen():
         unsafe_allow_html=True,
     )
     st.markdown(
-        '<div class="login-sub">Comprehensive Community Health Field Portal</div>',
+        '<div class="login-sub">Comprehensive Community Health Field'
+        ' Portal</div>',
         unsafe_allow_html=True,
     )
     st.markdown(
-        '<div class="dev-badge-login">⭐ Lead developer Jan Art A. Serna, RMT</div>',
+        '<div class="dev-badge-login">⭐ Lead developer Jan Art A. Serna,'
+        ' RMT</div>',
         unsafe_allow_html=True,
     )
 
@@ -182,89 +150,9 @@ if not st.session_state["authenticated"]:
     show_login_screen()
     st.stop()
 
-# ================= CLIENT-SIDE JS & AUTOSAVE INJECTION =================
-# Injecting the requested 30-Second Autosave Interval, Submit Handler & Modal JS
-JS_AUTOSAVE_AND_MODAL = """
-<script>
-// --------------------------------------------------
-// 1. Save Function (Shared by Manual Save & Autosave)
-// --------------------------------------------------
-function autoSaveFormData() {
-  console.log("Autosaving field form data to local storage & syncing...");
-  const formData = {};
-  const inputs = document.querySelectorAll('input, select, textarea');
-  inputs.forEach((input, idx) => {
-    if (input.name || input.id) {
-      formData[input.id || input.name || idx] = input.value;
-    }
-  });
-  localStorage.setItem('upm_clerks_autosave', JSON.stringify(formData));
-}
+# ================= MAIN APPLICATION LOGIC =================
 
-// --------------------------------------------------
-// 2. 30-Second Autosave Interval (Does NOT submit)
-// --------------------------------------------------
-const AUTOSAVE_INTERVAL_MS = 30000; // 30 seconds
-
-if (!window.autosaveIntervalActive) {
-  setInterval(() => {
-    autoSaveFormData();
-  }, AUTOSAVE_INTERVAL_MS);
-  window.autosaveIntervalActive = true;
-}
-
-// --------------------------------------------------
-// 3. Form Submit & Success Pop-up Handler
-// --------------------------------------------------
-document.addEventListener('DOMContentLoaded', (event) => {
-  const form = document.querySelector('form');
-  const successModal = document.getElementById('successModal');
-  const closeModalBtn = document.getElementById('closeModalBtn');
-  const modalOkBtn = document.getElementById('modalOkBtn');
-
-  if (form) {
-    form.addEventListener('submit', function (e) {
-      autoSaveFormData();
-      showSuccessModal();
-    });
-  }
-
-  function showSuccessModal() {
-    if (successModal) successModal.style.display = 'flex';
-  }
-
-  function hideSuccessModal() {
-    if (successModal) successModal.style.display = 'none';
-  }
-
-  closeModalBtn?.addEventListener('click', hideSuccessModal);
-  modalOkBtn?.addEventListener('click', hideSuccessModal);
-
-  window.addEventListener('click', function (e) {
-    if (e.target === successModal) {
-      hideSuccessModal();
-    }
-  });
-
-  // --------------------------------------------------
-  // 4. Next Page Navigation Logic
-  // --------------------------------------------------
-  document.getElementById('nextPageBtn')?.addEventListener('click', function () {
-    autoSaveFormData();
-  });
-});
-</script>
-"""
-components.html(JS_AUTOSAVE_AND_MODAL, height=0)
-
-# Native Streamlit 30-Second Periodic Autosave Fragment
-if hasattr(st, "fragment"):
-    @st.fragment(run_every="30s")
-    def periodic_autosave_sync():
-        save_session_to_disk()
-    periodic_autosave_sync()
-
-# ================= CUSTOM CSS STYLING =================
+# Custom UP Maroon, Green & Gold Styling with Sticky Progress Bar CSS
 CSS_STYLE = """<style>
 .sticky-progress-container {
     position: sticky;
@@ -351,17 +239,6 @@ section[data-testid="stSidebar"] {
     border-radius: 6px;
     font-weight: 700;
     margin-bottom: 12px;
-}
-.autosave-indicator {
-    font-size: 11px;
-    color: #059669;
-    font-weight: 600;
-    background: #ECFDF5;
-    padding: 4px 8px;
-    border-radius: 4px;
-    border: 1px solid #A7F3D0;
-    display: inline-block;
-    margin-bottom: 10px;
 }
 </style>"""
 
@@ -459,11 +336,6 @@ st.sidebar.markdown(
 
 st.sidebar.progress(overall_progress_pct / 100)
 
-st.sidebar.markdown(
-    '<div class="autosave-indicator">⏱️ 30s Background Autosave Active</div>',
-    unsafe_allow_html=True,
-)
-
 if st.sidebar.button(
     "🔄 Sync / Refresh Shared Data",
     use_container_width=True,
@@ -501,18 +373,20 @@ with st.sidebar.expander("🔍 View Detailed Phase Status", expanded=False):
 
 st.sidebar.markdown("---")
 st.sidebar.markdown("### 🌐 Portal Navigation")
-
-# Sidebar Radio linked to session_state menu_selection
-selected_idx = (
-    NAV_OPTIONS.index(st.session_state["menu_selection"])
-    if st.session_state["menu_selection"] in NAV_OPTIONS
-    else 0
-)
-
 menu = st.sidebar.radio(
-    "Select Field Module", NAV_OPTIONS, index=selected_idx, key="menu_radio"
+    "Select Field Module",
+    [
+        "🗺️ Interactive Spot Map",
+        "📋 Phase 1: Full Governance Scorecard",
+        "🏠 Phase 2: Master Household Survey",
+        "🗣️ Phase 3: Qualitative Field Tools",
+        "🔍 Phase 4: Expanded PERI Windshield Tool",
+        "📈 Phase 5: Spatial & Statistical Analytics",
+        "📋 Phase 6: Community Diagnosis & Action Plan",
+        "🩺 Diagnostic Summary & Analytics",
+        "💾 Data Management & Export",
+    ],
 )
-st.session_state["menu_selection"] = menu
 
 st.sidebar.markdown("---")
 if st.sidebar.button("🔒 Logout Account", use_container_width=True):
@@ -520,56 +394,6 @@ if st.sidebar.button("🔒 Logout Account", use_container_width=True):
     st.rerun()
 
 st.sidebar.caption("👨‍💻 **Lead Developer:** Jan Art Serna, RMT")
-
-# ================= SUCCESS MODAL POPUP DIALOG =================
-if st.session_state["show_success_modal"]:
-    if hasattr(st, "dialog"):
-
-        @st.dialog("🎉 Submission Successful")
-        def render_success_dialog():
-            st.balloons()
-            st.success(f"**{st.session_state['modal_title']}**")
-            st.info(st.session_state["modal_details"])
-
-            col_close, col_next = st.columns(2)
-            with col_close:
-                if st.button(
-                    "👍 OK / Close", id="modalOkBtn", use_container_width=True
-                ):
-                    st.session_state["show_success_modal"] = False
-                    st.rerun()
-
-            with col_next:
-                next_pg = st.session_state.get("modal_next_page")
-                if next_pg:
-                    if st.button(
-                        f"➡️ Next: {next_pg.split(':')[0]}",
-                        id="nextPageBtn",
-                        type="primary",
-                        use_container_width=True,
-                    ):
-                        st.session_state["menu_selection"] = next_pg
-                        st.session_state["show_success_modal"] = False
-                        st.rerun()
-
-        render_success_dialog()
-    else:
-        # Fallback UI card for Streamlit versions without native @st.dialog
-        st.success(f"🎉 **{st.session_state['modal_title']}**")
-        st.info(st.session_state["modal_details"])
-        c1, c2 = st.columns(2)
-        if c1.button("👍 OK / Close", use_container_width=True):
-            st.session_state["show_success_modal"] = False
-            st.rerun()
-        if st.session_state.get("modal_next_page") and c2.button(
-            f"➡️ Next Module", type="primary", use_container_width=True
-        ):
-            st.session_state["menu_selection"] = st.session_state[
-                "modal_next_page"
-            ]
-            st.session_state["show_success_modal"] = False
-            st.rerun()
-
 
 # MODULE 1: INTERACTIVE SPOT MAP
 if menu == "🗺️ Interactive Spot Map":
@@ -694,18 +518,6 @@ if menu == "🗺️ Interactive Spot Map":
                 },
             )
         )
-
-    # Next Phase Quick Navigation Button
-    st.markdown("---")
-    if st.button(
-        "➡️ Proceed to Phase 1: Full Governance Scorecard",
-        type="primary",
-        use_container_width=True,
-    ):
-        st.session_state["menu_selection"] = (
-            "📋 Phase 1: Full Governance Scorecard"
-        )
-        st.rerun()
 
 # MODULE 2: PHASE 1 BHB GOVERNANCE SCORECARD
 elif menu == "📋 Phase 1: Full Governance Scorecard":
@@ -924,17 +736,10 @@ elif menu == "📋 Phase 1: Full Governance Scorecard":
                     "ActionPlan": action_plan,
                 })
                 save_session_to_disk()
-
-                # Trigger Submission Success Modal
-                trigger_success_modal(
-                    title=f"Governance Scorecard Saved for Barangay {b_name}!",
-                    details=(
-                        f"Total Score: {total_score}/100 | Governance Status:"
-                        f" {rating}"
-                    ),
-                    next_page="🏠 Phase 2: Master Household Survey",
+                st.success(
+                    f"Scorecard Saved! Total Score: {total_score}/100 — Status:"
+                    f" {rating}"
                 )
-                st.rerun()
 
     else:
         st.markdown("### 📂 Submitted Governance Scorecards")
@@ -942,43 +747,27 @@ elif menu == "📋 Phase 1: Full Governance Scorecard":
             st.info("No governance scorecard records found.")
         else:
             gov_options = [
-                f"[{i+1}] {r.get('Barangay', 'Unnamed')} (Score:"
-                f" {r.get('Score', 0)})"
+                f"[{i+1}] {r.get('Barangay', 'Unnamed')} (Score: {r.get('Score', 0)})"
                 for i, r in enumerate(st.session_state.gov_records)
             ]
-            selected_idx = st.selectbox(
-                "Select Record to Review / Edit",
-                range(len(gov_options)),
-                format_func=lambda x: gov_options[x],
-            )
+            selected_idx = st.selectbox("Select Record to Review / Edit", range(len(gov_options)), format_func=lambda x: gov_options[x])
             rec = st.session_state.gov_records[selected_idx]
 
             with st.form("edit_gov_form"):
                 st.markdown(f"**Editing Record #{selected_idx+1}**")
-                e_brgy = st.text_input(
-                    "Barangay Name", value=rec.get("Barangay", "")
-                )
-                e_score = st.number_input(
-                    "Total Score (0–100)", 0, 100, int(rec.get("Score", 0))
-                )
-
+                e_brgy = st.text_input("Barangay Name", value=rec.get("Barangay", ""))
+                e_score = st.number_input("Total Score (0–100)", 0, 100, int(rec.get("Score", 0)))
+                
                 if e_score >= 80:
                     e_rating = "HIGH FUNCTIONING"
                 elif e_score >= 50:
                     e_rating = "MODERATE FUNCTIONING"
                 else:
-                    e_rating = (
-                        "LOW FUNCTIONING / CRITICAL INTERVENTION REQUIRED"
-                    )
-
+                    e_rating = "LOW FUNCTIONING / CRITICAL INTERVENTION REQUIRED"
+                
                 st.info(f"Calculated Rating: **{e_rating}**")
-                e_gaps = st.text_area(
-                    "Governance Bottlenecks & Legislative Gaps",
-                    value=rec.get("Gaps", ""),
-                )
-                e_action = st.text_area(
-                    "Action & Corrective Plan", value=rec.get("ActionPlan", "")
-                )
+                e_gaps = st.text_area("Governance Bottlenecks & Legislative Gaps", value=rec.get("Gaps", ""))
+                e_action = st.text_area("Action & Corrective Plan", value=rec.get("ActionPlan", ""))
 
                 col_btn1, col_btn2 = st.columns(2)
                 with col_btn1:
@@ -988,7 +777,7 @@ elif menu == "📋 Phase 1: Full Governance Scorecard":
                             "Score": e_score,
                             "Rating": e_rating,
                             "Gaps": e_gaps,
-                            "ActionPlan": e_action,
+                            "ActionPlan": e_action
                         }
                         save_session_to_disk()
                         st.success("Record updated successfully!")
@@ -1189,6 +978,8 @@ elif menu == "🏠 Phase 2: Master Household Survey":
                     )
 
                     c1, c2 = st.columns(2)
+
+                    # Expanded Complaints / Symptoms Dropdown
                     a_symptoms = c1.multiselect(
                         f"Adult {i} Current Complaints / Symptoms",
                         [
@@ -1229,7 +1020,8 @@ elif menu == "🏠 Phase 2: Master Household Survey":
                     )
 
                     a_action = st.multiselect(
-                        f"🩺 Adult {i} Action Taken",
+                        f"🩺 Adult {i} Action Taken (for Abnormal Vitals /"
+                        " Clinical Complaints)",
                         [
                             "Referral to RHU / MHO Physician",
                             "Referral to BHS / Barangay Midwife",
@@ -1677,7 +1469,8 @@ elif menu == "🏠 Phase 2: Master Household Survey":
                     )
 
                     c_action = st.multiselect(
-                        f"👶 Child {c_i} Action Taken",
+                        f"👶 Child {c_i} Action Taken (for Undernutrition /"
+                        " Incomplete Immunization / Illness)",
                         [
                             "Referral to RHU / Municipal Nutrition Officer",
                             "Referral to BHS / BNS for Supplementary Feeding",
@@ -1723,9 +1516,10 @@ elif menu == "🏠 Phase 2: Master Household Survey":
                     " Access**"
                 )
 
+                st.markdown("##### 1. Initial Actions Upon Feeling Unwell")
                 hsb_initial_actions = st.multiselect(
                     "What immediate steps do you take when you first notice"
-                    " symptoms?",
+                    " symptoms or feel sick? (Select all that apply)",
                     [
                         "Rest and wait to see if symptoms improve on their own",
                         (
@@ -1751,8 +1545,12 @@ elif menu == "🏠 Phase 2: Master Household Survey":
                     ],
                 )
 
+                st.markdown(
+                    "##### 2. Healthcare Providers and Facilities Used"
+                )
                 hsb_providers_used = st.multiselect(
-                    "Which types of healthcare sources do you visit?",
+                    "Which types of healthcare sources or facilities do you"
+                    " visit when seeking care? (Select all that apply)",
                     [
                         "Public or government hospital",
                         "Private clinic or hospital",
@@ -1764,8 +1562,12 @@ elif menu == "🏠 Phase 2: Master Household Survey":
                     default=["Community health center or rural health unit"],
                 )
 
+                st.markdown(
+                    "##### 3. Travel Time to Nearest Health Facility"
+                )
                 hsb_travel_time = st.selectbox(
-                    "Estimated travel time to nearest health facility?",
+                    "What is the estimated travel time from your house to the"
+                    " nearest health facility? (Select one)",
                     [
                         "Less than 15 minutes",
                         "15 to 30 minutes",
@@ -1774,8 +1576,13 @@ elif menu == "🏠 Phase 2: Master Household Survey":
                     ],
                 )
 
+                st.markdown(
+                    "##### 4. Barriers to Seeking Timely Medical Care"
+                )
                 hsb_barriers = st.multiselect(
-                    "Barriers causing delay in seeking medical care:",
+                    "Which of the following factors have caused you to delay or"
+                    " skip seeking medical care when sick? (Select all that"
+                    " apply)",
                     [
                         "High cost of consultation, tests, or medication",
                         "Long waiting times at health facilities",
@@ -1793,8 +1600,12 @@ elif menu == "🏠 Phase 2: Master Household Survey":
                     ],
                 )
 
+                st.markdown(
+                    "##### 5. Key Influencers in Healthcare Decisions"
+                )
                 hsb_influencers = st.multiselect(
-                    "Who influences healthcare decisions?",
+                    "Who influences or helps you make decisions about when and"
+                    " where to seek medical care? (Select all that apply)",
                     [
                         "Spouse, partner, or immediate family members",
                         "Parents or older relatives",
@@ -1807,8 +1618,12 @@ elif menu == "🏠 Phase 2: Master Household Survey":
                     default=["I make all decisions independently"],
                 )
 
+                st.markdown(
+                    "##### 6. Criteria for Selecting a Healthcare Facility"
+                )
                 hsb_criteria = st.multiselect(
-                    "Key factors determining choice of healthcare provider:",
+                    "What key factors determine which clinic, hospital, or"
+                    " provider you choose to visit? (Select all that apply)",
                     [
                         "Low cost or acceptance of health insurance",
                         "Proximity to home or work",
@@ -1877,17 +1692,10 @@ elif menu == "🏠 Phase 2: Master Household Survey":
                     "Yakap": yakap_registered,
                 })
                 save_session_to_disk()
-
-                # Trigger Submission Success Modal
-                trigger_success_modal(
-                    title=f"Household Record '{hh_id}' Successfully Saved!",
-                    details=(
-                        f"Barangay: {brgy} | {purok} | Geocoded Position:"
-                        f" [{lat:.4f}, {lon:.4f}]"
-                    ),
-                    next_page="🗣️ Phase 3: Qualitative Field Tools",
+                st.success(
+                    f"Household record '{hh_id}' saved successfully! Synced"
+                    " with shared data."
                 )
-                st.rerun()
 
     else:
         st.markdown("### 📂 Submitted Household Survey Records")
@@ -1895,64 +1703,28 @@ elif menu == "🏠 Phase 2: Master Household Survey":
             st.info("No household records found.")
         else:
             hh_options = [
-                f"[{i+1}] {r.get('HH_ID', 'N/A')} - {r.get('Barangay', 'N/A')}"
-                f" ({r.get('Purok', 'N/A')})"
+                f"[{i+1}] {r.get('HH_ID', 'N/A')} - {r.get('Barangay', 'N/A')} ({r.get('Purok', 'N/A')})"
                 for i, r in enumerate(st.session_state.hh_records)
             ]
-            selected_idx = st.selectbox(
-                "Select Household Record to Review / Edit",
-                range(len(hh_options)),
-                format_func=lambda x: hh_options[x],
-            )
+            selected_idx = st.selectbox("Select Household Record to Review / Edit", range(len(hh_options)), format_func=lambda x: hh_options[x])
             rec = st.session_state.hh_records[selected_idx]
 
             with st.form("edit_hh_form"):
-                st.markdown(
-                    f"**Editing Household Record #{selected_idx+1}"
-                    f" ({rec.get('HH_ID', '')})**"
-                )
+                st.markdown(f"**Editing Household Record #{selected_idx+1} ({rec.get('HH_ID', '')})**")
                 c1, c2, c3 = st.columns(3)
-                e_hh_id = c1.text_input(
-                    "Household ID", value=rec.get("HH_ID", "")
-                )
-                e_brgy = c2.text_input(
-                    "Barangay Name", value=rec.get("Barangay", "")
-                )
+                e_hh_id = c1.text_input("Household ID", value=rec.get("HH_ID", ""))
+                e_brgy = c2.text_input("Barangay Name", value=rec.get("Barangay", ""))
                 e_purok = c3.text_input("Purok", value=rec.get("Purok", ""))
 
                 c1, c2, c3 = st.columns(3)
-                e_lat = c1.number_input(
-                    "Latitude",
-                    value=float(rec.get("Lat", 11.1560)),
-                    format="%.4f",
-                )
-                e_lon = c2.number_input(
-                    "Longitude",
-                    value=float(rec.get("Lon", 124.9920)),
-                    format="%.4f",
-                )
-                e_flood = c3.selectbox(
-                    "Flood Prone?",
-                    ["No", "Yes"],
-                    index=0 if rec.get("Flood_Prone") == "No" else 1,
-                )
+                e_lat = c1.number_input("Latitude", value=float(rec.get("Lat", 11.1560)), format="%.4f")
+                e_lon = c2.number_input("Longitude", value=float(rec.get("Lon", 124.9920)), format="%.4f")
+                e_flood = c3.selectbox("Flood Prone?", ["No", "Yes"], index=0 if rec.get("Flood_Prone")=="No" else 1)
 
                 c1, c2, c3 = st.columns(3)
-                e_dialect = c1.text_input(
-                    "Dialect", value=rec.get("Dialect", "Waray")
-                )
-                e_religion = c2.text_input(
-                    "Religion", value=rec.get("Religion", "Roman Catholic")
-                )
-                e_yakap = c3.selectbox(
-                    "PhilHealth YAKAP Registered",
-                    ["Yes", "No", "Uncertain"],
-                    index=["Yes", "No", "Uncertain"].index(
-                        rec.get("Yakap", "Yes")
-                    )
-                    if rec.get("Yakap") in ["Yes", "No", "Uncertain"]
-                    else 0,
-                )
+                e_dialect = c1.text_input("Dialect", value=rec.get("Dialect", "Waray"))
+                e_religion = c2.text_input("Religion", value=rec.get("Religion", "Roman Catholic"))
+                e_yakap = c3.selectbox("PhilHealth YAKAP Registered", ["Yes", "No", "Uncertain"], index=["Yes", "No", "Uncertain"].index(rec.get("Yakap", "Yes")) if rec.get("Yakap") in ["Yes", "No", "Uncertain"] else 0)
 
                 col_btn1, col_btn2 = st.columns(2)
                 with col_btn1:
@@ -1966,7 +1738,7 @@ elif menu == "🏠 Phase 2: Master Household Survey":
                         rec["Dialect"] = e_dialect
                         rec["Religion"] = e_religion
                         rec["Yakap"] = e_yakap
-
+                        
                         st.session_state.hh_records[selected_idx] = rec
                         save_session_to_disk()
                         st.success("Household record updated successfully!")
@@ -2043,16 +1815,9 @@ elif menu == "🗣️ Phase 3: Qualitative Field Tools":
                     "Beliefs": indigenous_practices,
                 })
                 save_session_to_disk()
-
-                # Trigger Submission Success Modal
-                trigger_success_modal(
-                    title=f"{tool_type} Record Saved!",
-                    details=(
-                        f"Informant: {informant_type} | Location: {purok_loc}"
-                    ),
-                    next_page="🔍 Phase 4: Expanded PERI Windshield Tool",
+                st.success(
+                    "Qualitative field notes saved successfully and synced!"
                 )
-                st.rerun()
 
     else:
         st.markdown("### 📂 Submitted Qualitative Records")
@@ -2060,47 +1825,22 @@ elif menu == "🗣️ Phase 3: Qualitative Field Tools":
             st.info("No qualitative records found.")
         else:
             qual_options = [
-                f"[{i+1}] {r.get('Type', 'N/A')} - {r.get('Informant', 'N/A')}"
-                f" ({r.get('Purok', 'N/A')})"
+                f"[{i+1}] {r.get('Type', 'N/A')} - {r.get('Informant', 'N/A')} ({r.get('Purok', 'N/A')})"
                 for i, r in enumerate(st.session_state.qual_records)
             ]
-            selected_idx = st.selectbox(
-                "Select Qualitative Record to Review / Edit",
-                range(len(qual_options)),
-                format_func=lambda x: qual_options[x],
-            )
+            selected_idx = st.selectbox("Select Qualitative Record to Review / Edit", range(len(qual_options)), format_func=lambda x: qual_options[x])
             rec = st.session_state.qual_records[selected_idx]
 
             with st.form("edit_qual_form"):
                 st.markdown(f"**Editing Qualitative Record #{selected_idx+1}**")
                 c1, c2, c3 = st.columns(3)
-                e_type = c1.selectbox(
-                    "Tool Type",
-                    [
-                        "Key Informant Interview (KII)",
-                        "Focus Group Discussion (FGD)",
-                    ],
-                    index=0 if "KII" in rec.get("Type", "") else 1,
-                )
-                e_informant = c2.text_input(
-                    "Informant Category", value=rec.get("Informant", "")
-                )
-                e_purok = c3.text_input(
-                    "Purok / Zone", value=rec.get("Purok", "")
-                )
+                e_type = c1.selectbox("Tool Type", ["Key Informant Interview (KII)", "Focus Group Discussion (FGD)"], index=0 if "KII" in rec.get("Type", "") else 1)
+                e_informant = c2.text_input("Informant Category", value=rec.get("Informant", ""))
+                e_purok = c3.text_input("Purok / Zone", value=rec.get("Purok", ""))
 
-                e_perceptions = st.text_area(
-                    "1. Perceived Health Bottlenecks & Environmental Risks",
-                    value=rec.get("Perceptions", ""),
-                )
-                e_barriers = st.text_area(
-                    "2. Barriers to Accessing Local RHU/BHS Services",
-                    value=rec.get("Barriers", ""),
-                )
-                e_beliefs = st.text_area(
-                    "3. Local Health Seeking Practices & Beliefs",
-                    value=rec.get("Beliefs", ""),
-                )
+                e_perceptions = st.text_area("1. Perceived Health Bottlenecks & Environmental Risks", value=rec.get("Perceptions", ""))
+                e_barriers = st.text_area("2. Barriers to Accessing Local RHU/BHS Services", value=rec.get("Barriers", ""))
+                e_beliefs = st.text_area("3. Local Health Seeking Practices & Beliefs", value=rec.get("Beliefs", ""))
 
                 col_btn1, col_btn2 = st.columns(2)
                 with col_btn1:
@@ -2111,7 +1851,7 @@ elif menu == "🗣️ Phase 3: Qualitative Field Tools":
                             "Purok": e_purok,
                             "Perceptions": e_perceptions,
                             "Barriers": e_barriers,
-                            "Beliefs": e_beliefs,
+                            "Beliefs": e_beliefs
                         }
                         save_session_to_disk()
                         st.success("Qualitative record updated successfully!")
@@ -2800,8 +2540,12 @@ elif menu == "🔍 Phase 4: Expanded PERI Windshield Tool":
                 st.markdown("""
                 **3.1 Quantitative Scoring & Index Calculation Methodology**
                 - **Score 1.0 (Optimal / Low Risk):** Parameter meets sanitary and structural standards. Minimal or no hazard observed.
-                - **Score 2.0 (Moderate Risk / Substandard):** Parameter displays noticeble deficiencies, wear, or moderate sanitation gaps.
+                - **Score 2.0 (Moderate Risk / Substandard):** Parameter displays noticeable deficiencies, wear, or moderate sanitation gaps.
                 - **Score 3.0 (Severe Hazard / Critical):** Parameter presents acute, severe environmental hazards or immediate health risks.
+                
+                **Mathematical Formulas:**
+                1. **Domain Score (DS):** $DS = \\frac{\\sum \\text{Item Ratings in Domain}}{\\text{Total Evaluated Items in Domain}}$
+                2. **Purok Environmental Risk Index (PERI):** $PERI = \\frac{DS_1 + DS_2 + DS_3 + DS_4 + DS_5 + DS_6}{6}$
                 
                 | PERI Score Range | Risk Tier Category | Operational Response Required |
                 | :--- | :--- | :--- |
@@ -2854,19 +2598,10 @@ elif menu == "🔍 Phase 4: Expanded PERI Windshield Tool":
                     "Tier_Category": tier_cat,
                 })
                 save_session_to_disk()
-
-                # Trigger Submission Success Modal
-                trigger_success_modal(
-                    title=(
-                        f"PERI Windshield Assessment for {purok_eval} Saved!"
-                    ),
-                    details=(
-                        f"PERI Index: {peri_index:.2f}/3.00 | Assigned Tier:"
-                        f" {tier_cat}"
-                    ),
-                    next_page="📈 Phase 5: Spatial & Statistical Analytics",
+                st.success(
+                    f"PERI Windshield Assessment for {purok_eval} saved"
+                    " successfully and synced!"
                 )
-                st.rerun()
 
     else:
         st.markdown("### 📂 Submitted PERI Windshield Assessment Records")
@@ -2874,69 +2609,28 @@ elif menu == "🔍 Phase 4: Expanded PERI Windshield Tool":
             st.info("No PERI records found.")
         else:
             peri_options = [
-                f"[{i+1}] {r.get('Purok', 'N/A')} - PERI:"
-                f" {r.get('PERI_Index', 0.0):.2f} ({r.get('Date', 'N/A')})"
+                f"[{i+1}] {r.get('Purok', 'N/A')} - PERI: {r.get('PERI_Index', 0.0):.2f} ({r.get('Date', 'N/A')})"
                 for i, r in enumerate(st.session_state.windshield_records)
             ]
-            selected_idx = st.selectbox(
-                "Select PERI Record to Review / Edit",
-                range(len(peri_options)),
-                format_func=lambda x: peri_options[x],
-            )
+            selected_idx = st.selectbox("Select PERI Record to Review / Edit", range(len(peri_options)), format_func=lambda x: peri_options[x])
             rec = st.session_state.windshield_records[selected_idx]
 
             with st.form("edit_peri_form"):
                 st.markdown(f"**Editing PERI Record #{selected_idx+1}**")
                 c1, c2, c3 = st.columns(3)
-                e_purok = c1.text_input(
-                    "Target Purok", value=rec.get("Purok", "")
-                )
-                e_evaluator = c2.text_input(
-                    "Lead Evaluator", value=rec.get("Evaluator", "")
-                )
-                e_date = c3.text_input(
-                    "Evaluation Date", value=rec.get("Date", "")
-                )
+                e_purok = c1.text_input("Target Purok", value=rec.get("Purok", ""))
+                e_evaluator = c2.text_input("Lead Evaluator", value=rec.get("Evaluator", ""))
+                e_date = c3.text_input("Evaluation Date", value=rec.get("Date", ""))
 
                 c1, c2, c3 = st.columns(3)
-                e_ds1 = c1.number_input(
-                    "DS1 Sanitation (1.0 - 3.0)",
-                    1.0,
-                    3.0,
-                    float(rec.get("DS1_Sanitation", 1.0)),
-                )
-                e_ds2 = c2.number_input(
-                    "DS2 Food (1.0 - 3.0)",
-                    1.0,
-                    3.0,
-                    float(rec.get("DS2_Food", 1.0)),
-                )
-                e_ds3 = c3.number_input(
-                    "DS3 Built Env (1.0 - 3.0)",
-                    1.0,
-                    3.0,
-                    float(rec.get("DS3_BuiltEnv", 1.0)),
-                )
+                e_ds1 = c1.number_input("DS1 Sanitation (1.0 - 3.0)", 1.0, 3.0, float(rec.get("DS1_Sanitation", 1.0)))
+                e_ds2 = c2.number_input("DS2 Food (1.0 - 3.0)", 1.0, 3.0, float(rec.get("DS2_Food", 1.0)))
+                e_ds3 = c3.number_input("DS3 Built Env (1.0 - 3.0)", 1.0, 3.0, float(rec.get("DS3_BuiltEnv", 1.0)))
 
                 c1, c2, c3 = st.columns(3)
-                e_ds4 = c1.number_input(
-                    "DS4 Health Infra (1.0 - 3.0)",
-                    1.0,
-                    3.0,
-                    float(rec.get("DS4_HealthInfra", 1.0)),
-                )
-                e_ds5 = c2.number_input(
-                    "DS5 DRR Safety (1.0 - 3.0)",
-                    1.0,
-                    3.0,
-                    float(rec.get("DS5_DRR", 1.0)),
-                )
-                e_ds6 = c3.number_input(
-                    "DS6 Vector Hazard (1.0 - 3.0)",
-                    1.0,
-                    3.0,
-                    float(rec.get("DS6_Vector", 1.0)),
-                )
+                e_ds4 = c1.number_input("DS4 Health Infra (1.0 - 3.0)", 1.0, 3.0, float(rec.get("DS4_HealthInfra", 1.0)))
+                e_ds5 = c2.number_input("DS5 DRR Safety (1.0 - 3.0)", 1.0, 3.0, float(rec.get("DS5_DRR", 1.0)))
+                e_ds6 = c3.number_input("DS6 Vector Hazard (1.0 - 3.0)", 1.0, 3.0, float(rec.get("DS6_Vector", 1.0)))
 
                 e_peri = (e_ds1 + e_ds2 + e_ds3 + e_ds4 + e_ds5 + e_ds6) / 6.0
                 if e_peri >= 2.30:
@@ -2946,10 +2640,7 @@ elif menu == "🔍 Phase 4: Expanded PERI Windshield Tool":
                 else:
                     e_tier = "CATEGORY A: Low Risk (Green)"
 
-                st.info(
-                    f"Recalculated PERI Index: **{e_peri:.2f}** | Tier:"
-                    f" **{e_tier}**"
-                )
+                st.info(f"Recalculated PERI Index: **{e_peri:.2f}** | Tier: **{e_tier}**")
 
                 col_btn1, col_btn2 = st.columns(2)
                 with col_btn1:
@@ -2965,7 +2656,7 @@ elif menu == "🔍 Phase 4: Expanded PERI Windshield Tool":
                             "DS5_DRR": e_ds5,
                             "DS6_Vector": e_ds6,
                             "PERI_Index": e_peri,
-                            "Tier_Category": e_tier,
+                            "Tier_Category": e_tier
                         }
                         save_session_to_disk()
                         st.success("PERI record updated successfully!")
@@ -3008,18 +2699,6 @@ elif menu == "📈 Phase 5: Spatial & Statistical Analytics":
             df_analytics["Income"], df_analytics["Food_Skip"]
         )
         st.dataframe(crosstab_df, use_container_width=True)
-
-    # Next Phase Quick Navigation Button
-    st.markdown("---")
-    if st.button(
-        "➡️ Proceed to Phase 6: Community Diagnosis & Action Plan",
-        type="primary",
-        use_container_width=True,
-    ):
-        st.session_state["menu_selection"] = (
-            "📋 Phase 6: Community Diagnosis & Action Plan"
-        )
-        st.rerun()
 
 # MODULE 7: PHASE 6 COMMUNITY DIAGNOSIS & ACTION PLAN
 elif menu == "📋 Phase 6: Community Diagnosis & Action Plan":
@@ -3070,20 +2749,10 @@ elif menu == "📋 Phase 6: Community Diagnosis & Action Plan":
                     "Budget": budget_req,
                 })
                 save_session_to_disk()
-
-                # Trigger Submission Success Modal
-                trigger_success_modal(
-                    title=(
-                        f"Action Plan for '{problem_title}' Saved"
-                        " Successfully!"
-                    ),
-                    details=(
-                        f"Priority Score: {magnitude * severity}/100 | Lead:"
-                        f" {responsible_party}"
-                    ),
-                    next_page="🩺 Diagnostic Summary & Analytics",
+                st.success(
+                    "Community Diagnosis & Action Plan saved successfully and"
+                    " synced!"
                 )
-                st.rerun()
 
     else:
         st.markdown("### 📂 Submitted Action Plans & Diagnoses")
@@ -3091,48 +2760,27 @@ elif menu == "📋 Phase 6: Community Diagnosis & Action Plan":
             st.info("No action plans found.")
         else:
             diag_options = [
-                f"[{i+1}] {r.get('Problem', 'N/A')} (Score:"
-                f" {r.get('Score', 0)})"
+                f"[{i+1}] {r.get('Problem', 'N/A')} (Score: {r.get('Score', 0)})"
                 for i, r in enumerate(st.session_state.diag_records)
             ]
-            selected_idx = st.selectbox(
-                "Select Action Plan to Review / Edit",
-                range(len(diag_options)),
-                format_func=lambda x: diag_options[x],
-            )
+            selected_idx = st.selectbox("Select Action Plan to Review / Edit", range(len(diag_options)), format_func=lambda x: diag_options[x])
             rec = st.session_state.diag_records[selected_idx]
 
             with st.form("edit_diag_form"):
                 st.markdown(f"**Editing Action Plan #{selected_idx+1}**")
                 c1, c2, c3 = st.columns(3)
-                e_prob = c1.text_input(
-                    "Identified Health Problem", value=rec.get("Problem", "")
-                )
-                e_mag = c2.slider(
-                    "Magnitude (1–10)", 1, 10, int(rec.get("Magnitude", 5))
-                )
-                e_sev = c3.slider(
-                    "Severity (1–10)", 1, 10, int(rec.get("Severity", 5))
-                )
+                e_prob = c1.text_input("Identified Health Problem", value=rec.get("Problem", ""))
+                e_mag = c2.slider("Magnitude (1–10)", 1, 10, int(rec.get("Magnitude", 5)))
+                e_sev = c3.slider("Severity (1–10)", 1, 10, int(rec.get("Severity", 5)))
 
                 c1, c2 = st.columns(2)
-                e_obj = c1.text_area(
-                    "Objectives", value=rec.get("Objectives", "")
-                )
-                e_interv = c2.text_area(
-                    "Interventions", value=rec.get("Interventions", "")
-                )
+                e_obj = c1.text_area("Objectives", value=rec.get("Objectives", ""))
+                e_interv = c2.text_area("Interventions", value=rec.get("Interventions", ""))
 
                 c1, c2, c3 = st.columns(3)
-                e_lead = c1.text_input(
-                    "Responsible Lead", value=rec.get("Lead", "")
-                )
-                e_time = c2.text_input(
-                    "Timeline", value=rec.get("Timeline", "")
-                )
-                e_bud = c3.text_input(
-                    "Budget Allocation", value=rec.get("Budget", "")
-                )
+                e_lead = c1.text_input("Responsible Lead", value=rec.get("Lead", ""))
+                e_time = c2.text_input("Timeline", value=rec.get("Timeline", ""))
+                e_bud = c3.text_input("Budget Allocation", value=rec.get("Budget", ""))
 
                 col_btn1, col_btn2 = st.columns(2)
                 with col_btn1:
@@ -3146,7 +2794,7 @@ elif menu == "📋 Phase 6: Community Diagnosis & Action Plan":
                             "Interventions": e_interv,
                             "Lead": e_lead,
                             "Timeline": e_time,
-                            "Budget": e_bud,
+                            "Budget": e_bud
                         }
                         save_session_to_disk()
                         st.success("Action plan updated successfully!")
