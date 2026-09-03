@@ -1,6 +1,3 @@
-The logo image tags have been removed from the header, developer credit for **Jan Art A. Serna, RMT** has been added to the header banner, and flood hazard detection has been integrated into both the Phase 2 household survey inputs and the Interactive Spot Map analytics.
-
-```python
 import streamlit as st
 import pandas as pd
 import numpy as np
@@ -579,5 +576,3 @@ elif menu == "💾 Data Management & Export":
         st.download_button("Download Phase 2 Master Survey Data (CSV)", df_out.to_csv(index=False).encode('utf-8'), "UPM_SHS_Phase2_Master.csv", "text/csv")
     else:
         st.caption("No household records available to export yet.")
-
-```
