@@ -77,93 +77,72 @@ def show_login_screen():
     st.markdown(
         """
         <style>
-        /* Site-wide Dark Gray Background */
-        .stApp, [data-testid="stAppViewContainer"], [data-testid="stHeader"] {
-            background-color: #1e2022 !important;
-        }
-
-        /* Compact Login Header Block */
-        .login-header-box {
-            max-width: 350px;
-            margin: 50px auto 0 auto;
-            padding: 20px 20px 10px 20px;
-            background-color: #2a2d32;
-            border-top-left-radius: 12px;
-            border-top-right-radius: 12px;
-            border: 1px solid #3d4148;
-            border-bottom: none;
+        .login-box {
+            max-width: 420px;
+            margin: 60px auto;
+            padding: 30px;
+            background-color: #FFFFFF;
+            border-radius: 12px;
+            border: 1px solid #CBD5E1;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
             text-align: center;
         }
         .login-title {
-            color: #f87171;
+            color: #7B1113;
             font-weight: 800;
-            font-size: 19px;
+            font-size: 22px;
             margin-bottom: 4px;
         }
         .login-sub {
-            color: #94a3b8;
-            font-size: 12px;
-            margin-bottom: 10px;
+            color: #475569;
+            font-size: 13px;
+            margin-bottom: 15px;
         }
         .dev-badge-login {
-            background-color: #3b2d1d;
-            border: 1px solid #d97706;
-            color: #fcd34d;
-            font-size: 11px;
+            background-color: #FEF3C7;
+            border: 1px solid #F59E0B;
+            color: #92400E;
+            font-size: 12px;
             font-weight: 700;
-            padding: 4px 10px;
-            border-radius: 16px;
+            padding: 6px 12px;
+            border-radius: 20px;
             display: inline-block;
-        }
-
-        /* Compact Centered Form Box */
-        div[data-testid="stForm"] {
-            max-width: 350px !important;
-            margin: 0 auto !important;
-            background-color: #2a2d32 !important;
-            border: 1px solid #3d4148 !important;
-            border-bottom-left-radius: 12px !important;
-            border-bottom-right-radius: 12px !important;
-            border-top-left-radius: 0px !important;
-            border-top-right-radius: 0px !important;
-            padding: 20px !important;
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4);
-        }
-        div[data-testid="stForm"] label {
-            color: #e2e8f0 !important;
-            font-size: 13px !important;
+            margin-bottom: 20px;
         }
         </style>
     """,
         unsafe_allow_html=True,
     )
 
-    col1, col2, col3 = st.columns([1, 1, 1])
+    st.markdown('<div class="login-box">', unsafe_allow_html=True)
+    st.markdown(
+        '<div class="login-title">🩺 UP Manila Clerks Portal</div>',
+        unsafe_allow_html=True,
+    )
+    st.markdown(
+        '<div class="login-sub">Comprehensive Community Health Field'
+        ' Portal</div>',
+        unsafe_allow_html=True,
+    )
+    st.markdown(
+        '<div class="dev-badge-login">⭐ Lead developer Jan Art A. Serna,'
+        ' RMT</div>',
+        unsafe_allow_html=True,
+    )
 
-    with col2:
-        st.markdown(
-            """
-            <div class="login-header-box">
-                <div class="login-title">🩺 UP Manila Clerks Portal</div>
-                <div class="login-sub">Comprehensive Community Health Field Portal</div>
-                <div class="dev-badge-login">⭐ Lead developer Jan Art A. Serna, RMT</div>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
+    with st.form("login_form"):
+        username_input = st.text_input("Username")
+        password_input = st.text_input("Password", type="password")
+        submit_button = st.form_submit_button("Log In", use_container_width=True)
 
-        with st.form("login_form"):
-            username_input = st.text_input("Username")
-            password_input = st.text_input("Password", type="password")
-            submit_button = st.form_submit_button("Log In", use_container_width=True)
-
-            if submit_button:
-                if username_input == "palo" and password_input == "1719":
-                    st.session_state["authenticated"] = True
-                    st.success("Access Granted!")
-                    st.rerun()
-                else:
-                    st.error("Invalid Username or Password.")
+        if submit_button:
+            if username_input == "palo" and password_input == "1719":
+                st.session_state["authenticated"] = True
+                st.success("Access Granted!")
+                st.rerun()
+            else:
+                st.error("Invalid Username or Password.")
+    st.markdown("</div>", unsafe_allow_html=True)
 
 
 # Stop execution if user is not authenticated
@@ -173,22 +152,18 @@ if not st.session_state["authenticated"]:
 
 # ================= MAIN APPLICATION LOGIC =================
 
-# Custom Dark Gray Theme Styling with Maroon, Green & Gold Accents
+# Custom UP Maroon, Green & Gold Styling with Sticky Progress Bar CSS
 CSS_STYLE = """<style>
-.stApp, [data-testid="stAppViewContainer"], [data-testid="stHeader"] {
-    background-color: #1e2022 !important;
-    color: #e2e8f0;
-}
 .sticky-progress-container {
     position: sticky;
     top: 0;
     z-index: 99999;
-    background-color: #2a2d32;
+    background-color: #F1F5F9;
     padding: 14px 10px;
     margin-bottom: 15px;
-    border-bottom: 2px solid #3d4148;
+    border-bottom: 2px solid #CBD5E1;
     border-radius: 0 0 8px 8px;
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2);
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.08);
 }
 .up-navbar {
     background-color: #7B1113;
@@ -197,7 +172,7 @@ CSS_STYLE = """<style>
     border-radius: 10px;
     text-align: center;
     margin-bottom: 16px;
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.15);
 }
 .up-navbar-title {
     color: #FFFFFF !important;
@@ -231,27 +206,27 @@ CSS_STYLE = """<style>
     letter-spacing: 0.4px;
 }
 div[data-testid="stForm"] {
-    border: 1px solid #3d4148;
+    border: 1px solid #CBD5E1;
     border-radius: 10px;
-    background-color: #2a2d32;
+    background-color: #FFFFFF;
     padding: 24px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.03);
 }
 section[data-testid="stSidebar"] {
-    background-color: #25282c;
-    border-right: 1px solid #3d4148;
+    background-color: #F1F5F9;
+    border-right: 1px solid #E2E8F0;
 }
 .adult-card {
-    background-color: #2a2d32;
-    border: 1px solid #3d4148;
+    background-color: #F8FAFC;
+    border: 1px solid #E2E8F0;
     border-left: 4px solid #7B1113;
     padding: 12px 15px;
     border-radius: 6px;
     margin-bottom: 12px;
 }
 .child-card {
-    background-color: #1a2e23;
-    border: 1px solid #2d5a40;
+    background-color: #F0FDF4;
+    border: 1px solid #DCFCE7;
     border-left: 4px solid #16A34A;
     padding: 12px 15px;
     border-radius: 6px;
@@ -352,8 +327,8 @@ overall_progress_pct = int((completed_phases / 6) * 100)
 st.sidebar.markdown(
     f"""
 <div class="sticky-progress-container">
-    <div style="font-weight: 700; color: #e2e8f0; font-size: 14px; margin-bottom: 4px;">📊 Phase Completion Tracker</div>
-    <div style="font-weight: 800; color: #f87171; font-size: 18px; margin-bottom: 4px;">{overall_progress_pct}% Completed</div>
+    <div style="font-weight: 700; color: #1E293B; font-size: 14px; margin-bottom: 4px;">📊 Phase Completion Tracker</div>
+    <div style="font-weight: 800; color: #7B1113; font-size: 18px; margin-bottom: 4px;">{overall_progress_pct}% Completed</div>
 </div>
 """,
     unsafe_allow_html=True,
