@@ -2897,3 +2897,209 @@ elif menu == "💾 Data Management & Export":
             )
         else:
             st.caption("No action plans available.")
+            <div class="button-container">
+  <!-- Save Button -->
+  <button type="button" id="saveBtn" class="btn btn-save">Save</button>
+  
+  <!-- Red Submit Button -->
+  <button type="submit" id="submitBtn" class="btn btn-submit">Submit</button>
+
+  <!-- Next Page Arrow Button -->
+  <button type="button" id="nextPageBtn" class="btn btn-next" title="Next Page">
+    Next &rarr;
+  </button>
+</div>
+
+<!-- SUCCESS POP-UP MODAL -->
+<div id="successModal" class="modal-overlay" style="display: none;">
+  <div class="modal-content">
+    <span class="close-btn" id="closeModalBtn">&times;</span>
+    <div class="modal-icon">&#10004;</div>
+    <h3>Submission Successful</h3>
+    <p>The entry has been submitted and recorded successfully.</p>
+    <button type="button" class="btn btn-ok" id="modalOkBtn">OK</button>
+  </div>
+</div>
+/* Red Submit Button */
+.btn-submit {
+  background-color: #dc3545; /* Red */
+  color: #ffffff;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+.btn-submit:hover {
+  background-color: #bb2d3b;
+}
+
+/* Next Page Arrow Button */
+.btn-next {
+  background-color: #0d6efd;
+  color: #ffffff;
+  border: none;
+  padding: 10px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: bold;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.btn-next:hover {
+  background-color: #0b5ed7;
+}
+
+/* --- POP-UP MODAL STYLES --- */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5); /* Semi-transparent backdrop */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.modal-content {
+  background: #ffffff;
+  padding: 25px 30px;
+  border-radius: 8px;
+  text-align: center;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+  max-width: 380px;
+  width: 90%;
+  position: relative;
+}
+
+.close-btn {
+  position: absolute;
+  top: 10px;
+  right: 15px;
+  font-size: 22px;
+  cursor: pointer;
+  color: #aaa;
+}
+
+.close-btn:hover {
+  color: #000;
+}
+
+.modal-icon {
+  font-size: 48px;
+  color: #28a745; /* Green checkmark */
+  margin-bottom: 10px;
+}
+
+.btn-ok {
+  background-color: #28a745;
+  color: #ffffff;
+  border: none;
+  padding: 8px 24px;
+  border-radius: 4px;
+  margin-top: 15px;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+.btn-ok:hover {
+  background-color: #218838;
+}
+/* Red Submit Button */
+.btn-submit {
+  background-color: #dc3545; /* Red */
+  color: #ffffff;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+.btn-submit:hover {
+  background-color: #bb2d3b;
+}
+
+/* Next Page Arrow Button */
+.btn-next {
+  background-color: #0d6efd;
+  color: #ffffff;
+  border: none;
+  padding: 10px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: bold;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.btn-next:hover {
+  background-color: #0b5ed7;
+}
+
+/* --- POP-UP MODAL STYLES --- */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5); /* Semi-transparent backdrop */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.modal-content {
+  background: #ffffff;
+  padding: 25px 30px;
+  border-radius: 8px;
+  text-align: center;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+  max-width: 380px;
+  width: 90%;
+  position: relative;
+}
+
+.close-btn {
+  position: absolute;
+  top: 10px;
+  right: 15px;
+  font-size: 22px;
+  cursor: pointer;
+  color: #aaa;
+}
+
+.close-btn:hover {
+  color: #000;
+}
+
+.modal-icon {
+  font-size: 48px;
+  color: #28a745; /* Green checkmark */
+  margin-bottom: 10px;
+}
+
+.btn-ok {
+  background-color: #28a745;
+  color: #ffffff;
+  border: none;
+  padding: 8px 24px;
+  border-radius: 4px;
+  margin-top: 15px;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+.btn-ok:hover {
+  background-color: #218838;
+}
+
