@@ -1,22 +1,32 @@
-. Phase 5: Spatial Mapping, Geocoding, & Statistical Analytics
-To transform raw community assessment data into high-impact public health intelligence, assessment teams must integrate spatial visualization (GIS) with advanced statistical modeling.
-6.1 Spot Mapping & Mobile Address Geocoding Protocol
-•	Step 1: Participatory BHW Spot Mapping: Mobilize BHWs to draw baseline community spot maps capturing every residential structure, water source, and health facility.
-•	Step 2: GPS Mobile Geocoding: Utilizing handheld GPS devices or mobile survey software (KoboToolbox), capture exact latitude and longitude coordinates (x, y) for every surveyed household.
-•	Step 3: GIS Layering: Upload geocoded survey points into QGIS or ArcGIS to convert static addresses into spatial shapefiles.
-6.2 Multi-Layer GIS Visualization Framework
-•	Layer 1: Disease Hotspot Mapping: Apply Kernel Density Estimation (KDE) to plot heatmaps of chronic hypertension, diabetes, and active TB clusters across Puroks.
-•	Layer 2: Environmental SDOH Overlay: Superimpose disease hot spots over layers of unsafe water sources (Level I/unprotected), flood risk zones, and open waste dumping areas.
-•	Layer 3: Food Desert Identification: Perform buffer analysis (500-meter walking radius) around fresh food markets versus sari-sari store density to map food deserts against childhood malnutrition.
-•	Layer 4: Catchment Isochrone Modeling: Generate 15-minute and 30-minute travel time contours around the BHS/RHU to identify geographically isolated and disadvantaged areas (GIDAs).
-6.3 Statistical Analysis & Advanced Analytical Modeling Plan
-A. Descriptive Analysis (Measuring the Social Gradient)
-Cross-tabulate clinical health outcomes across income quintiles, educational attainment levels, and geographic zones. Calculate Odds Ratios (OR) and Relative Risks (RR) to quantify how disease burdens increase along lower socio-economic tiers.
-B. Advanced Multivariate Modeling (Factor Analysis & Latent Class Analysis)
-Social determinants rarely occur in isolation; compounding social risks produce exponential health detriments. Two advanced statistical techniques are deployed:
-•	1. Principal Component & Factor Analysis: Collapse correlated environmental and economic variables (e.g., wall material, toilet type, income, water level) into latent factor scores (e.g., Household Deprivation Index) to measure overall structural vulnerability.
-•	2. Latent Class Analysis (LCA): Group households into discrete vulnerability classes based on overlapping social risks (e.g., Class 1: High Income/High Access; Class 2: Severe Food Insecurity + Housing Instability + No Piped Water). Model the direct probability of chronic disease prevalence per class.
-Statistical Method	Input Variables (Survey/GIS)	Target Public Health Output
-Descriptive Cross-Tabulation & Odds Ratios	Income Quintiles × Hypertension / Diabetes Prevalence	Quantifies the slope of the social gradient in health across income tiers.
-Factor Analysis (PCA)	Housing materials, WASH level, Income, Cooking fuel	Generates a composite 'Barangay Socio-Economic Vulnerability Index'.
-Latent Class Analysis (LCA)	Co-occurring food insecurity, housing instability, distance barrier	Identifies multi-risk household clusters requiring integrated LGU social protection.
+# MODULE 6: PHASE 5 SPATIAL MAPPING, GEOCODING & STATISTICAL ANALYTICS
+elif menu == "📈 Phase 5: Spatial & Statistical Analytics":
+    st.subheader("Phase 5: Spatial Mapping, Geocoding, & Advanced Statistical Analytics")
+    
+    t_geo, t_gis, t_stat, t_ref = st.tabs([
+        "📍 6.1 Geocoding Protocol",
+        "🗺️ 6.2 Multi-Layer GIS Engine",
+        "📊 6.3 Advanced Statistical Modeling",
+        "📋 Analytics Framework Table"
+    ])
+
+    # 6.1 Geocoding Protocol
+    with t_geo:
+        st.markdown("**6.1 Spot Mapping & Mobile Address Geocoding Workflow**")
+        
+        st.markdown("""
+        * **Step 1: Participatory BHW Spot Mapping:** Mobilize BHWs to draw baseline community spot maps capturing every residential structure, water source, and health facility.
+        * **Step 2: GPS Mobile Geocoding:** Utilizing handheld GPS devices or mobile survey software (KoboToolbox), capture exact latitude and longitude coordinates $(x, y)$ for every surveyed household.
+        * **Step 3: GIS Layering:** Upload geocoded survey points into QGIS or ArcGIS to convert static addresses into spatial shapefiles.
+        """)
+
+        st.markdown("---")
+        st.markdown("**⚡ Mobile Geocoding Coordinate Validator (KoboToolbox Field Test)**")
+        c1, c2, c3 = st.columns(3)
+        input_lat = c1.number_input("Test Latitude (Y)", value=11.1562, format="%.6f")
+        input_lon = c2.number_input("Test Longitude (X)", value=124.9912, format="%.6f")
+        input_acc = c3.number_input("GPS Accuracy Radius (Meters)", value=3.2, step=0.1)
+
+        if input_acc <= 5.0:
+            st.success(f"✅ **GPS Lock Validated:** High accuracy ({input_acc}m) suitable for household shapefile export.")
+        else:
+            st.warning(f"⚠️ **Weak GPS Lock:** Accuracy is {input_acc}m. Re-calibrate device before saving geocode.")
