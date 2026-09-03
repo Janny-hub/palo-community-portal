@@ -771,6 +771,7 @@ elif menu == "🏠 Phase 2: Master Household Survey":
         "Select Operation",
         [
             "➕ New Household Survey Entry",
+            "📊 Phase 2 Interpreted Data & Individual Response Inspection",
             "📂 Review, Edit & Delete Submitted Household Surveys",
         ],
         horizontal=True,
@@ -969,24 +970,25 @@ elif menu == "🏠 Phase 2: Master Household Survey":
                         key=f"a_action_{i}",
                     )
 
-                    adults_data.append({
-                        "ID": f"Adult {i}",
-                        "Name": a_name,
-                        "Age": a_age,
-                        "Edu": a_edu,
-                        "Occupation": a_occ,
-                        "PhilHealth_Cat": a_ph_cat,
-                        "BP": f"{a_sys}/{a_dia}",
-                        "Sys": a_sys,
-                        "Dia": a_dia,
-                        "SpO2": a_spo2,
-                        "Pulse": a_pulse,
-                        "Temp": a_temp,
-                        "Complaints": a_symptoms,
-                        "Complaints_Other": a_symptoms_other,
-                        "Risk": a_risk,
-                        "Action_Taken": a_action,
-                    })
+                    if a_name.strip() != "":
+                        adults_data.append({
+                            "ID": f"Adult {i}",
+                            "Name": a_name,
+                            "Age": a_age,
+                            "Edu": a_edu,
+                            "Occupation": a_occ,
+                            "PhilHealth_Cat": a_ph_cat,
+                            "BP": f"{a_sys}/{a_dia}",
+                            "Sys": a_sys,
+                            "Dia": a_dia,
+                            "SpO2": a_spo2,
+                            "Pulse": a_pulse,
+                            "Temp": a_temp,
+                            "Complaints": a_symptoms,
+                            "Complaints_Other": a_symptoms_other,
+                            "Risk": a_risk,
+                            "Action_Taken": a_action,
+                        })
 
             # --- TAB 3: SOCIO-ECON, FOOD INSECURITY, HOUSING & WASH ---
             with t_socio:
@@ -1333,17 +1335,24 @@ elif menu == "🏠 Phase 2: Master Household Survey":
                         key=f"c_action_{c_i}",
                     )
 
-                    children_records.append({
-                        "Child_Num": f"Child {c_i}",
-                        "Name": c_name,
-                        "Sex": c_sex,
-                        "Age_Months": c_age_m,
-                        "Weight": c_wt_kg,
-                        "Height": c_ht_cm,
-                        "Nutr": c_nutr,
-                        "FIC_Status": fic_status,
-                        "Action_Taken": c_action,
-                    })
+                    if c_name.strip() != "":
+                        children_records.append({
+                            "Child_Num": f"Child {c_i}",
+                            "Name": c_name,
+                            "Sex": c_sex,
+                            "Age_Months": c_age_m,
+                            "Weight": c_wt_kg,
+                            "Height": c_ht_cm,
+                            "Nutr": c_nutr,
+                            "FIC_Status": fic_status,
+                            "BCG": imm_bcg,
+                            "HepB": imm_hepb,
+                            "Penta": imm_penta,
+                            "OPV": imm_opv,
+                            "PCV": imm_pcv,
+                            "MMR": imm_mmr,
+                            "Action_Taken": c_action,
+                        })
 
             # --- TAB 8: HEALTH-SEEKING BEHAVIOR & YAKAP ---
             with t_yakap:
@@ -1444,8 +1453,8 @@ elif menu == "🏠 Phase 2: Master Household Survey":
 
             # --- UNIFIED ONE-TIME COMPILATION SUBMISSION FOR PHASE 2 ---
             if st.form_submit_button("Submit & Save Complete Household Record"):
-                primary_sys = adults_data[0]["Sys"] if adults_data else 120
-                primary_risk = adults_data[0]["Risk"] if adults_data else "Normal"
+                primary_sys = adults_data[0]["Sys"] if len(adults_data) > 0 else 120
+                primary_risk = adults_data[0]["Risk"] if len(adults_data) > 0 else "Normal"
 
                 if is_flood_prone == "Yes" and primary_sys >= 140:
                     marker_color = [192, 38, 211, 230]
@@ -1539,6 +1548,190 @@ elif menu == "🏠 Phase 2: Master Household Survey":
                 st.success(
                     f"Household record '{hh_id}' saved successfully with all modules compiled into one entry!"
                 )
+
+    elif mode_p2 == "📊 Phase 2 Interpreted Data & Individual Response Inspection":
+        st.markdown("### 📊 Comprehensive Data Interpretation & Individual Response Inspector")
+        
+        if len(st.session_state.hh_records) == 0:
+            st.info("No household survey records found in Phase 2. Please add entries to view interpreted data.")
+        else:
+            tab_interp, tab_indiv = st.tabs([
+                "📈 Aggregated Cross-Module Interpretation", 
+                "🔍 Individual Response Inspector (All Modules)"
+            ])
+
+            # --- TAB 1: AGGREGATED INTERPRETATION ---
+            with tab_interp:
+                st.markdown("#### 1. Children Immunization & Anthropometric Interpretation")
+                all_children = []
+                for hh in st.session_state.hh_records:
+                    all_children.extend(hh.get("Children", []))
+                
+                tot_c_count = len(all_children)
+                if tot_c_count > 0:
+                    fic_count = sum(1 for c in all_children if c.get("FIC_Status") == "Fully Immunized Child (FIC)")
+                    fic_pct = (fic_count / tot_c_count) * 100
+                    
+                    stunted_cnt = sum(1 for c in all_children if "Stunted" in c.get("Nutr", {}).get("Stunting", ""))
+                    wasted_cnt = sum(1 for c in all_children if "Wasted" in c.get("Nutr", {}).get("Wasting", ""))
+                    underweight_cnt = sum(1 for c in all_children if "Underweight" in c.get("Nutr", {}).get("Underweight", ""))
+
+                    m1, m2, m3, m4, m5 = st.columns(5)
+                    m1.metric("Children Profiled", tot_c_count)
+                    m2.metric("Fully Immunized (FIC)", f"{fic_count} ({fic_pct:.1f}%)")
+                    m3.metric("Stunted Children", f"{stunted_cnt} ({(stunted_cnt/tot_c_count)*100:.1f}%)")
+                    m4.metric("Wasted Children", f"{wasted_cnt} ({(wasted_cnt/tot_c_count)*100:.1f}%)")
+                    m5.metric("Underweight Children", f"{underweight_cnt} ({(underweight_cnt/tot_c_count)*100:.1f}%)")
+                else:
+                    st.warning("No children individual profiles stored across submitted household forms yet.")
+
+                st.markdown("---")
+                st.markdown("#### 2. Adult Profiling & Vitals Screening Interpretation")
+                all_adults = []
+                for hh in st.session_state.hh_records:
+                    all_adults.extend(hh.get("Adults", []))
+                
+                tot_a_count = len(all_adults)
+                if tot_a_count > 0:
+                    htn_risk_cnt = sum(1 for a in all_adults if a.get("Risk") == "Hypertensive Risk" or a.get("Sys", 0) >= 140 or a.get("Dia", 0) >= 90)
+                    hypox_cnt = sum(1 for a in all_adults if a.get("Risk") == "Hypoxemic (<95%)" or (a.get("SpO2", 100) < 95 and a.get("SpO2", 0) > 0))
+                    
+                    ma1, ma2, ma3, ma4 = st.columns(4)
+                    ma1.metric("Adults Profiled", tot_a_count)
+                    ma2.metric("Hypertensive Risk", f"{htn_risk_cnt} ({(htn_risk_cnt/tot_a_count)*100:.1f}%)")
+                    ma3.metric("Hypoxemic (<95% SpO2)", f"{hypox_cnt} ({(hypox_cnt/tot_a_count)*100:.1f}%)")
+                    ma4.metric("Normal Vitals", f"{tot_a_count - htn_risk_cnt - hypox_cnt}")
+                else:
+                    st.warning("No adult individual profiles stored across submitted forms yet.")
+
+                st.markdown("---")
+                st.markdown("#### 3. Maternal Care, PhilHealth YAKAP & Environmental WASH Interpretation")
+                total_hhs = len(st.session_state.hh_records)
+                
+                yakap_reg_cnt = sum(1 for hh in st.session_state.hh_records if hh.get("Yakap") == "Yes")
+                yakap_avail_cnt = sum(1 for hh in st.session_state.hh_records if hh.get("Yakap_Availed") == "Yes")
+                flood_cnt = sum(1 for hh in st.session_state.hh_records if hh.get("Flood_Prone") == "Yes")
+                unsafe_water_cnt = sum(1 for hh in st.session_state.hh_records if "Unsafe" in hh.get("Water", ""))
+                open_def_cnt = sum(1 for hh in st.session_state.hh_records if "Open Defecation" in hh.get("Sanitation", ""))
+                
+                mw1, mw2, mw3, mw4, mw5 = st.columns(5)
+                mw1.metric("Total HHs", total_hhs)
+                mw2.metric("YAKAP Registered", f"{yakap_reg_cnt} ({(yakap_reg_cnt/total_hhs)*100:.1f}%)")
+                mw3.metric("Flood-Prone HHs", f"{flood_cnt} ({(flood_cnt/total_hhs)*100:.1f}%)")
+                mw4.metric("Unsafe Water Source", f"{unsafe_water_cnt}")
+                mw5.metric("Open Defecation Risk", f"{open_def_cnt}")
+
+            # --- TAB 2: INDIVIDUAL RESPONSE INSPECTOR ---
+            with tab_indiv:
+                hh_ids = [f"{r.get('HH_ID', 'N/A')} - {r.get('Barangay', 'N/A')} ({r.get('Head_Name', 'No Head')})" for r in st.session_state.hh_records]
+                sel_hh_idx = st.selectbox("Select Household Record to Inspect", range(len(hh_ids)), format_func=lambda x: hh_ids[x])
+                
+                selected_record = st.session_state.hh_records[sel_hh_idx]
+                
+                st.markdown(f"### 🏠 Inspection for Record: `{selected_record.get('HH_ID', 'N/A')}`")
+                
+                i_t1, i_t2, i_t3, i_t4, i_t5, i_t6 = st.tabs([
+                    "📌 Household Profile & Metadata",
+                    "🩺 Adult Vitals & Profiling Data",
+                    "👶 Child Profiling & Immunization Data",
+                    "🌾 WASH, Housing & Food Security",
+                    "🤒 Morbidity & Maternal Health",
+                    "🏥 Health-Seeking Behavior & YAKAP"
+                ])
+                
+                with i_t1:
+                    c1, c2, c3 = st.columns(3)
+                    c1.write(f"**Barangay:** {selected_record.get('Barangay', 'N/A')}")
+                    c2.write(f"**Purok:** {selected_record.get('Purok', 'N/A')}")
+                    c3.write(f"**Survey Date:** {selected_record.get('Date', 'N/A')}")
+                    
+                    c1, c2, c3 = st.columns(3)
+                    c1.write(f"**Head Name:** {selected_record.get('Head_Name', 'N/A')}")
+                    c2.write(f"**Civil Status:** {selected_record.get('Head_Civil_Status', 'N/A')}")
+                    c3.write(f"**Enumerator:** {selected_record.get('Enumerator', 'N/A')}")
+                    
+                    c1, c2, c3 = st.columns(3)
+                    c1.write(f"**Dialect:** {selected_record.get('Dialect', 'N/A')}")
+                    c2.write(f"**Religion:** {selected_record.get('Religion', 'N/A')}")
+                    c3.write(f"**Status:** {selected_record.get('Survey_Status', 'N/A')}")
+
+                with i_t2:
+                    st.markdown("#### 🩺 Un-nested Adult Profiling Data")
+                    adults_list = selected_record.get("Adults", [])
+                    if len(adults_list) == 0:
+                        st.info("No detailed adult profile rows recorded for this household.")
+                    else:
+                        adults_formatted = []
+                        for a in adults_list:
+                            adults_formatted.append({
+                                "Member ID": a.get("ID"),
+                                "Name / Initials": a.get("Name"),
+                                "Age": a.get("Age"),
+                                "Education": a.get("Edu"),
+                                "Occupation": a.get("Occupation"),
+                                "PhilHealth Category": a.get("PhilHealth_Cat"),
+                                "Blood Pressure": a.get("BP"),
+                                "SpO2 (%)": a.get("SpO2"),
+                                "Pulse Rate": a.get("Pulse"),
+                                "Complaints": ", ".join(a.get("Complaints", [])),
+                                "Risk Status": a.get("Risk"),
+                                "Action Taken": ", ".join(a.get("Action_Taken", []))
+                            })
+                        st.dataframe(pd.DataFrame(adults_formatted), use_container_width=True)
+
+                with i_t3:
+                    st.markdown("#### 👶 Un-nested Child Profiling & Immunization Data")
+                    children_list = selected_record.get("Children", [])
+                    if len(children_list) == 0:
+                        st.info("No detailed child profile rows recorded for this household.")
+                    else:
+                        children_formatted = []
+                        for c in children_list:
+                            nutr = c.get("Nutr", {})
+                            children_formatted.append({
+                                "Child #": c.get("Child_Num"),
+                                "Name / Initials": c.get("Name"),
+                                "Sex": c.get("Sex"),
+                                "Age (Months)": c.get("Age_Months"),
+                                "Weight (kg)": c.get("Weight"),
+                                "Height (cm)": c.get("Height"),
+                                "BMI": nutr.get("BMI"),
+                                "Wasting Status": nutr.get("Wasting"),
+                                "Stunting Status": nutr.get("Stunting"),
+                                "Underweight Status": nutr.get("Underweight"),
+                                "FIC Status": c.get("FIC_Status"),
+                                "Action Taken": ", ".join(c.get("Action_Taken", []))
+                            })
+                        st.dataframe(pd.DataFrame(children_formatted), use_container_width=True)
+
+                with i_t4:
+                    c1, c2, c3 = st.columns(3)
+                    c1.write(f"**Monthly Income:** {selected_record.get('Income', 'N/A')}")
+                    c2.write(f"**Livelihood:** {selected_record.get('Livelihood', 'N/A')}")
+                    c3.write(f"**4Ps Beneficiary:** {selected_record.get('Four_Ps', 'N/A')}")
+                    
+                    c1, c2, c3 = st.columns(3)
+                    c1.write(f"**Water Source:** {selected_record.get('Water', 'N/A')}")
+                    c2.write(f"**Sanitation/Toilet:** {selected_record.get('Sanitation', 'N/A')}")
+                    c3.write(f"**Flood-Prone:** {selected_record.get('Flood_Prone', 'N/A')}")
+
+                with i_t5:
+                    c1, c2 = st.columns(2)
+                    c1.write(f"**Hypertension Status:** {selected_record.get('Hypertension_Status', 'N/A')}")
+                    c2.write(f"**Diabetes Status:** {selected_record.get('Diabetes_Status', 'N/A')}")
+                    
+                    c1, c2 = st.columns(2)
+                    c1.write(f"**TB DOTS Status:** {selected_record.get('TB_Status', 'N/A')}")
+                    c2.write(f"**Pregnant Member:** {selected_record.get('Is_Pregnant', 'N/A')} (ANC Visits: {selected_record.get('ANC_Visits', 0)})")
+
+                with i_t6:
+                    c1, c2 = st.columns(2)
+                    c1.write(f"**PhilHealth YAKAP Registered:** {selected_record.get('Yakap', 'N/A')}")
+                    c2.write(f"**Availed FPE / Meds:** {selected_record.get('Yakap_Availed', 'N/A')}")
+                    
+                    st.write(f"**Initial Health Actions:** {', '.join(selected_record.get('HSB_Initial_Actions', []))}")
+                    st.write(f"**Providers Used:** {', '.join(selected_record.get('HSB_Providers_Used', []))}")
+                    st.write(f"**Barriers to Care:** {', '.join(selected_record.get('HSB_Barriers', []))}")
 
     else:
         st.markdown("### 📂 Submitted Household Survey Records")
@@ -2617,50 +2810,47 @@ elif menu == "📋 Phase 6: Community Diagnosis & Action Plan":
             c1, c2, c3, c4 = st.columns(4)
             problem_title = c1.text_input("Identified Health Problem / Hazard")
             magnitude = c2.slider("Magnitude of Problem (1–10)", 1, 10, 5)
-            severity = c3.slider("Severity / Urgency (1–10)", 1, 10, 5)
-            feasibility = c4.slider("Feasibility / PEARL Factors (1–10)", 1, 10, 8)
+            severity = c3.slider("Seriousness / Severity (1–10)", 1, 10, 5)
+            feasibility = c4.slider("Feasibility & Effectiveness (1–10)", 1, 10, 5)
 
-            priority_score = (magnitude + severity) * feasibility
+            p_score = (magnitude * 0.3) + (severity * 0.4) + (feasibility * 0.3)
+            st.info(f"Calculated Priority Score: **{p_score:.2f} / 10.0**")
 
-            st.markdown("---")
-            st.markdown("**Comprehensive Action Plan Formulation**")
+            st.markdown("**Intervention Details & Resource Mobilization**")
+            target_pop = st.text_input("Target Population / Beneficiaries")
+            lead_party = st.selectbox(
+                "Lead Responsible Unit",
+                ["Barangay Health Board", "RHU Physician", "BHW Lead", "LGU Engineering/Sanitation", "DRRMO"],
+            )
             c1, c2 = st.columns(2)
-            obj_target = c1.text_area("Specific, Measurable Objectives & Targets")
-            interventions = c2.text_area("Proposed Interventions & Strategic Activities")
+            timeline = c1.text_input("Implementation Timeline", "30 Days")
+            budget = c2.text_input("Estimated Budget Allocation (PHP)", "₱15,000")
 
-            c1, c2, c3 = st.columns(3)
-            resp_agency = c1.text_input("Responsible Lead / Partner Agency")
-            timeline = c2.text_input("Target Implementation Timeline")
-            budget_req = c3.text_input("Resource / Budget Requirements")
+            kpis = st.text_area("Key Performance Indicators (KPIs) & Monitoring Plan")
 
-            mon_indicator = st.text_area("Monitoring & Evaluation Indicators")
-
-            if st.form_submit_button("Submit & Save Complete Action Plan"):
+            if st.form_submit_button("Submit & Save Community Action Plan"):
                 st.session_state.diag_records.append({
                     "Problem": problem_title,
                     "Magnitude": magnitude,
                     "Severity": severity,
                     "Feasibility": feasibility,
-                    "Priority_Score": priority_score,
-                    "Objectives": obj_target,
-                    "Interventions": interventions,
-                    "Responsible": resp_agency,
+                    "PriorityScore": p_score,
+                    "TargetPop": target_pop,
+                    "LeadParty": lead_party,
                     "Timeline": timeline,
-                    "Budget": budget_req,
-                    "Indicator": mon_indicator,
+                    "Budget": budget,
+                    "KPIs": kpis,
                 })
                 save_session_to_disk()
-                st.success(
-                    f"Action Plan for '{problem_title}' saved successfully! Priority Score: {priority_score}"
-                )
+                st.success(f"Action plan for '{problem_title}' saved successfully!")
 
     else:
         st.markdown("### 📂 Submitted Action Plans")
         if len(st.session_state.diag_records) == 0:
-            st.info("No action plan records found.")
+            st.info("No action plans found.")
         else:
             diag_options = [
-                f"[{i+1}] {r.get('Problem', 'N/A')} (Priority Score: {r.get('Priority_Score', 0)})"
+                f"[{i+1}] {r.get('Problem', 'N/A')} (Score: {r.get('PriorityScore', 0.0):.2f})"
                 for i, r in enumerate(st.session_state.diag_records)
             ]
             selected_idx = st.selectbox(
@@ -2671,98 +2861,111 @@ elif menu == "📋 Phase 6: Community Diagnosis & Action Plan":
             rec = st.session_state.diag_records[selected_idx]
 
             with st.form("edit_diag_form"):
-                st.markdown(f"**Editing Action Plan Record #{selected_idx+1}**")
-                e_problem = st.text_input("Identified Health Problem", value=rec.get("Problem", ""))
+                st.markdown(f"**Editing Action Plan #{selected_idx+1}**")
+                e_prob = st.text_input("Identified Problem", value=rec.get("Problem", ""))
+                
                 c1, c2, c3 = st.columns(3)
                 e_mag = c1.slider("Magnitude", 1, 10, int(rec.get("Magnitude", 5)))
                 e_sev = c2.slider("Severity", 1, 10, int(rec.get("Severity", 5)))
-                e_feas = c3.slider("Feasibility", 1, 10, int(rec.get("Feasibility", 8)))
+                e_feas = c3.slider("Feasibility", 1, 10, int(rec.get("Feasibility", 5)))
 
-                e_priority = (e_mag + e_sev) * e_feas
-                st.info(f"Calculated Priority Score: **{e_priority}**")
+                e_pscore = (e_mag * 0.3) + (e_sev * 0.4) + (e_feas * 0.3)
+                st.info(f"Recalculated Priority Score: **{e_pscore:.2f}**")
 
-                e_obj = st.text_area("Objectives & Targets", value=rec.get("Objectives", ""))
-                e_interv = st.text_area("Interventions & Activities", value=rec.get("Interventions", ""))
-
-                c1, c2, c3 = st.columns(3)
-                e_resp = c1.text_input("Responsible Lead", value=rec.get("Responsible", ""))
-                e_time = c2.text_input("Timeline", value=rec.get("Timeline", ""))
-                e_budget = c3.text_input("Budget", value=rec.get("Budget", ""))
-
-                e_ind = st.text_area("Monitoring Indicator", value=rec.get("Indicator", ""))
+                e_target = st.text_input("Target Population", value=rec.get("TargetPop", ""))
+                e_lead = st.text_input("Lead Party", value=rec.get("LeadParty", ""))
+                
+                c1, c2 = st.columns(2)
+                e_time = c1.text_input("Timeline", value=rec.get("Timeline", ""))
+                e_budget = c2.text_input("Budget", value=rec.get("Budget", ""))
+                e_kpis = st.text_area("KPIs", value=rec.get("KPIs", ""))
 
                 col_btn1, col_btn2 = st.columns(2)
                 with col_btn1:
                     if st.form_submit_button("💾 Save Changes"):
-                        st.session_state.diag_records[selected_idx] = {
-                            "Problem": e_problem,
-                            "Magnitude": e_mag,
-                            "Severity": e_sev,
-                            "Feasibility": e_feas,
-                            "Priority_Score": e_priority,
-                            "Objectives": e_obj,
-                            "Interventions": e_interv,
-                            "Responsible": e_resp,
-                            "Timeline": e_time,
-                            "Budget": e_budget,
-                            "Indicator": e_ind,
-                        }
+                        rec["Problem"] = e_prob
+                        rec["Magnitude"] = e_mag
+                        rec["Severity"] = e_sev
+                        rec["Feasibility"] = e_feas
+                        rec["PriorityScore"] = e_pscore
+                        rec["TargetPop"] = e_target
+                        rec["LeadParty"] = e_lead
+                        rec["Timeline"] = e_time
+                        rec["Budget"] = e_budget
+                        rec["KPIs"] = e_kpis
+
+                        st.session_state.diag_records[selected_idx] = rec
                         save_session_to_disk()
-                        st.success("Action plan record updated successfully!")
+                        st.success("Action plan updated successfully!")
                         st.rerun()
                 with col_btn2:
-                    if st.form_submit_button("🗑️ Delete Record"):
+                    if st.form_submit_button("🗑️ Delete Action Plan"):
                         st.session_state.diag_records.pop(selected_idx)
                         save_session_to_disk()
-                        st.success("Action plan record deleted successfully!")
+                        st.success("Action plan deleted successfully!")
                         st.rerun()
 
 # MODULE 8: DIAGNOSTIC SUMMARY & ANALYTICS
 elif menu == "🩺 Diagnostic Summary & Analytics":
-    st.subheader("🩺 Consolidated Diagnostic Summary & Field Analytics")
+    st.subheader("🩺 Integrated Diagnostic Summary & Cross-Phase Analytics Dashboard")
+
     c1, c2, c3, c4 = st.columns(4)
-    c1.metric("Governance Scorecards", len(st.session_state.gov_records))
-    c2.metric("Household Surveys", len(st.session_state.hh_records))
-    c3.metric("Qualitative Studies", len(st.session_state.qual_records))
-    c4.metric("PERI Evaluations", len(st.session_state.windshield_records))
+    c1.metric("Phase 1 Scorecards", len(st.session_state.gov_records))
+    c2.metric("Phase 2 Surveys", len(st.session_state.hh_records))
+    c3.metric("Phase 4 PERI Forms", len(st.session_state.windshield_records))
+    c4.metric("Phase 6 Action Plans", len(st.session_state.diag_records))
 
     st.markdown("---")
-    st.markdown("### 📊 Household Survey Overview")
+    st.markdown("### 📊 Cross-Phase Executive Summary")
+    
     if len(st.session_state.hh_records) > 0:
-        df_hh_sum = pd.DataFrame(st.session_state.hh_records)
-        st.dataframe(df_hh_sum, use_container_width=True)
+        tot_hh = len(st.session_state.hh_records)
+        flood_hh = sum(1 for r in st.session_state.hh_records if r.get("Flood_Prone") == "Yes")
+        htn_hh = sum(1 for r in st.session_state.hh_records if "Hypertensive" in r.get("Risk", ""))
+        yakap_hh = sum(1 for r in st.session_state.hh_records if r.get("Yakap") == "Yes")
+
+        st.write(f"- **Total Population Sampled:** {tot_hh} Households")
+        st.write(f"- **Environmental Vulnerability:** {flood_hh} ({ (flood_hh/tot_hh)*100:.1f}%) in flood-prone zones")
+        st.write(f"- **Clinical Risk Identification:** {htn_hh} ({ (htn_hh/tot_hh)*100:.1f}%) displaying hypertensive vitals")
+        st.write(f"- **UHC Universal Coverage:** {yakap_hh} ({ (yakap_hh/tot_hh)*100:.1f}%) registered under PhilHealth YAKAP")
     else:
-        st.info("No household survey records submitted yet.")
+        st.info("No household survey data registered to compile executive analytics.")
 
 # MODULE 9: DATA MANAGEMENT & EXPORT
 elif menu == "💾 Data Management & Export":
-    st.subheader("💾 Multi-Enumerator Data Management & System Export")
-    st.markdown("Download full community survey datasets or manage local persistence.")
+    st.subheader("💾 Centralized Field Data Management & Export Utility")
 
-    col_exp1, col_exp2 = st.columns(2)
-    with col_exp1:
-        st.markdown("#### 📥 Export Data to JSON")
-        shared_data = load_shared_data()
-        json_str = json.dumps(shared_data, indent=4)
+    st.markdown("##### 📥 Export Live Database")
+    shared_data = load_shared_data()
+    json_str = json.dumps(shared_data, indent=4)
+    
+    st.download_button(
+        label="⬇️ Download Full Database (JSON)",
+        data=json_str,
+        file_name="upm_community_survey_data.json",
+        mime="application/json",
+        use_container_width=True
+    )
+
+    st.markdown("---")
+    st.markdown("##### 📄 Export Module CSVs")
+    if len(st.session_state.hh_records) > 0:
+        # Create a clean version of household records without complex nested lists for smooth CSV rendering
+        clean_hh = []
+        for r in st.session_state.hh_records:
+            copy_r = dict(r)
+            copy_r["Adults_Count"] = len(r.get("Adults", []))
+            copy_r["Children_Count"] = len(r.get("Children", []))
+            copy_r.pop("Adults", None)
+            copy_r.pop("Children", None)
+            clean_hh.append(copy_r)
+            
+        csv_hh = pd.DataFrame(clean_hh).to_csv(index=False)
         st.download_button(
-            label="⬇️ Download Complete Shared Data (JSON)",
-            data=json_str,
-            file_name="community_survey_complete_export.json",
-            mime="application/json",
-            use_container_width=True,
+            label="⬇️ Export Phase 2 Household Master CSV (Cleaned)",
+            data=csv_hh,
+            file_name="phase2_household_records.csv",
+            mime="text/csv"
         )
-
-    with col_exp2:
-        st.markdown("#### 🧹 Danger Zone")
-        if st.button("⚠️ Reset / Clear All Local & Shared Data", use_container_width=True):
-            empty_data = {
-                "hh_records": [],
-                "gov_records": [],
-                "qual_records": [],
-                "windshield_records": [],
-                "diag_records": [],
-            }
-            save_shared_data(empty_data)
-            sync_session_from_disk()
-            st.success("All shared data has been cleared!")
-            st.rerun()
+    else:
+        st.info("No household records available for CSV export.")
