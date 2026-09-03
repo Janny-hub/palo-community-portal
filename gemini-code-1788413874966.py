@@ -69,7 +69,7 @@ st.markdown("""
         <div>
             <div class="up-navbar-title">UNIVERSITY OF THE PHILIPPINES MANILA</div>
             <div class="up-navbar-sub">School of Health Sciences — Comprehensive Community Health Field Portal</div>
-            <div style="font-size: 12px; color: #CBD5E1; margin-top: 3px;">Full System Framework: Phases 1, 2, 3, & 4 Complete Field Protocols</div>
+            <div style="font-size: 12px; color: #CBD5E1; margin-top: 3px;">Full System Framework: Complete Protocols for Phases 1, 2, 3, & 4</div>
         </div>
     </div>
 """, unsafe_allow_html=True)
@@ -77,7 +77,7 @@ st.markdown("""
 # Child Nutritional Status Calculation Engine
 def compute_child_nutrition(age_months, weight_kg, height_cm):
     if height_cm <= 0 or weight_kg <= 0:
-        return {"Wasting": "Invalid Input", "Stunting": "Invalid Input", "Underweight": "Invalid Input"}
+        return {"BMI": "N/A", "Wasting": "Invalid Input", "Stunting": "Invalid Input", "Underweight": "Invalid Input"}
     
     height_m = height_cm / 100.0
     bmi = weight_kg / (height_m ** 2)
@@ -199,39 +199,39 @@ elif menu == "📋 Phase 1: Full Governance Scorecard":
         with t2:
             st.markdown("**Domain 1: Legal Structure & Reconstitution (Max 10 Points)**")
             c1, c2 = st.columns(2)
-            g1_1 = c1.number_input("1.1 Is there an updated Executive Order reconstituting the BHB with clear mandate terms? (0–5 pts)", 0, 5, 0)
-            g1_2 = c2.number_input("1.2 Are mandatory multi-sectoral reps active (NGO, BHW, Senior, Youth)? (0–5 pts)", 0, 5, 0)
+            g1_1 = c1.number_input("1.1 Updated Executive Order reconstituting BHB with mandate terms (0–5 pts)", 0, 5, 0)
+            g1_2 = c2.number_input("1.2 Mandatory multi-sectoral reps active (NGO, BHW, Senior, Youth) (0–5 pts)", 0, 5, 0)
 
             st.markdown("**Domain 2: Meeting Regularity & Quorum Compliance (Max 20 Points)**")
             c1, c2, c3 = st.columns(3)
-            g2_1 = c1.number_input("2.1 How many quarterly meetings were conducted in the past 12 mos? (3 pts/meeting, Max 12 pts)", 0, 12, 0)
-            g2_2 = c2.number_input("2.2 Was official quorum met during every scheduled meeting? (0–4 pts)", 0, 4, 0)
-            g2_3 = c3.number_input("2.3 Are signed meeting minutes and attendance records filed? (0–4 pts)", 0, 4, 0)
+            g2_1 = c1.number_input("2.1 Quarterly meetings in past 12 mos (3 pts/meeting, Max 12 pts)", 0, 12, 0)
+            g2_2 = c2.number_input("2.2 Official quorum met during every meeting (0–4 pts)", 0, 4, 0)
+            g2_3 = c3.number_input("2.3 Signed minutes and attendance records filed (0–4 pts)", 0, 4, 0)
 
             st.markdown("**Domain 3: Health Policies & Ordinance Enactment (Max 20 Points)**")
             c1, c2, c3 = st.columns(3)
-            g3_1 = c1.number_input("3.1 Were local health/sanitation ordinances enacted in the past 24 mos? (0–10 pts)", 0, 10, 0)
-            g3_2 = c2.number_input("3.2 Is there an active barangay task force enforcing local health laws? (0–5 pts)", 0, 5, 0)
-            g3_3 = c3.number_input("3.3 Are local policies aligned with DOH Universal Health Care (UHC) mandates? (0–5 pts)", 0, 5, 0)
+            g3_1 = c1.number_input("3.1 Local health/sanitation ordinances enacted in past 24 mos (0–10 pts)", 0, 10, 0)
+            g3_2 = c2.number_input("3.2 Active task force enforcing local health laws (0–5 pts)", 0, 5, 0)
+            g3_3 = c3.number_input("3.3 Local policies aligned with DOH UHC mandates (0–5 pts)", 0, 5, 0)
 
         with t3:
             st.markdown("**Domain 4: AIP Budget Allocation & Financial Execution (Max 20 Points)**")
             c1, c2, c3 = st.columns(3)
-            g4_1 = c1.number_input("4.1 Are dedicated health line-items present in the Annual Investment Plan (AIP)? (0–8 pts)", 0, 8, 0)
-            g4_2 = c2.number_input("4.2 Is there budget for BHW honoraria, emergency response, and medicines? (0–6 pts)", 0, 6, 0)
-            g4_3 = c3.number_input("4.3 Was the barangay health budget execution rate >75% last fiscal year? (0–6 pts)", 0, 6, 0)
+            g4_1 = c1.number_input("4.1 Dedicated health line-items in AIP (0–8 pts)", 0, 8, 0)
+            g4_2 = c2.number_input("4.2 Budget for BHW honoraria, emergency response, medicines (0–6 pts)", 0, 6, 0)
+            g4_3 = c3.number_input("4.3 Health budget execution rate >75% last fiscal year (0–6 pts)", 0, 6, 0)
 
             st.markdown("**Domain 5: Health Reporting & Transparency (Max 15 Points)**")
             c1, c2, c3 = st.columns(3)
-            g5_1 = c1.number_input("5.1 Are quarterly health monitoring reports submitted to the MHO/RHU? (0–8 pts)", 0, 8, 0)
-            g5_2 = c2.number_input("5.2 Was the barangay health status presented during Barangay Assemblies? (0–4 pts)", 0, 4, 0)
-            g5_3 = c3.number_input("5.3 Is an updated Barangay Health Spot Map publicly maintained at the BHS? (0–3 pts)", 0, 3, 0)
+            g5_1 = c1.number_input("5.1 Quarterly health reports submitted to MHO/RHU (0–8 pts)", 0, 8, 0)
+            g5_2 = c2.number_input("5.2 Health status presented during Barangay Assemblies (0–4 pts)", 0, 4, 0)
+            g5_3 = c3.number_input("5.3 Barangay Health Spot Map maintained at BHS (0–3 pts)", 0, 3, 0)
 
             st.markdown("**Domain 6: Working Committees & Mobilization (Max 15 Points)**")
             c1, c2, c3 = st.columns(3)
-            g6_1 = c1.number_input("6.1 Are technical working committees (e.g., Dengue, WASH, Nutrition) functional? (0–6 pts)", 0, 6, 0)
-            g6_2 = c2.number_input("6.2 Do committees submit monthly status reports to the BHB? (0–6 pts)", 0, 6, 0)
-            g6_3 = c3.number_input("6.3 Were community health mobilization events completed in the past year? (0–3 pts)", 0, 3, 0)
+            g6_1 = c1.number_input("6.1 Active technical working committees (Dengue, WASH, Nutrition) (0–6 pts)", 0, 6, 0)
+            g6_2 = c2.number_input("6.2 Monthly committee reports to BHB (0–6 pts)", 0, 6, 0)
+            g6_3 = c3.number_input("6.3 Community health mobilization events completed in past year (0–3 pts)", 0, 3, 0)
 
         with t4:
             gap_summary = st.text_area("Identify primary governance bottlenecks & legislative gaps:")
@@ -253,7 +253,7 @@ elif menu == "📋 Phase 1: Full Governance Scorecard":
             st.success(f"Scorecard Saved! Total Score: {total_score}/100 — Status: {rating}")
 
 # ------------------------------------------------------------------------------
-# MODULE 3: PHASE 2 MASTER HOUSEHOLD SURVEY
+# MODULE 3: PHASE 2 MASTER HOUSEHOLD SURVEY (FULLY COMPREHENSIVE)
 # ------------------------------------------------------------------------------
 elif menu == "🏠 Phase 2: Master Household Survey":
     st.subheader("Phase 2: Master Household Survey Instrument (Tool 2.1 Complete)")
@@ -263,9 +263,9 @@ elif menu == "🏠 Phase 2: Master Household Survey":
             "📋 Metadata & Roster",
             "🩺 Adult Vitals (Adults 1–5)",
             "🌾 Socio-Econ, Assets & WASH",
-            "🤝 Decisions & Community",
-            "🤒 Morbidity & Chronic Care",
-            "👶 Maternal, EPI & Nutrition",
+            "🤝 Decision-Making Patterns",
+            "🤒 Complete Morbidity & Chronic Care",
+            "👶 Complete Maternal, EPI & Nutrition",
             "🏥 PhilHealth YAKAP & Access"
         ])
 
@@ -290,14 +290,14 @@ elif menu == "🏠 Phase 2: Master Household Survey":
             religion = c3.text_input("Religion")
 
             st.markdown("---")
-            st.markdown("**Module A: Household Demographic & Livelihood Roster (Summary)**")
+            st.markdown("**Module A: Household Demographic Roster**")
             c1, c2, c3, c4 = st.columns(4)
             tot_children = c1.number_input("No. of Children (<18 yrs)", 0, 20, 0)
             tot_dependents = c2.number_input("No. of Other Dependents", 0, 10, 0)
             hh_head_name = c3.text_input("Household Head Full Name")
             head_civil = c4.selectbox("Head Civil Status", ["Single", "Married", "Widowed", "Separated", "Cohabiting"])
 
-        # TAB 2: ADULT PHYSICAL VITALS (5 ADULTS)
+        # TAB 2: ADULT VITALS (5 ADULTS)
         with t_vitals:
             st.markdown("**Module B: Adult & Ill Member Physical Screening (Objective Vitals for Adults 1 to 5)**")
             adults_data = []
@@ -322,7 +322,7 @@ elif menu == "🏠 Phase 2: Master Household Survey":
                     "Sys": a_sys, "SpO2": a_spo2, "Pulse": a_pulse, "Temp": a_temp, "Risk": a_risk
                 })
 
-        # TAB 3: SOCIO-ECONOMIC, ASSETS & WASH
+        # TAB 3: SOCIO-ECONOMIC & WASH
         with t_socio:
             st.markdown("**C1. Livelihood & Economic Stability**")
             c1, c2, c3 = st.columns(3)
@@ -352,22 +352,84 @@ elif menu == "🏠 Phase 2: Master Household Survey":
             toilet_type = c2.selectbox("Sanitation / Toilet Facility Type", ["Pour/Flush to Septic Tank", "Ventilated Improved Pit (VIP) Latrine", "Open Defecation / None"])
             solid_disposal = c3.selectbox("Solid Waste Disposal Method", ["Municipal/Barangay Collection", "Composting", "Burying", "Burning (Siga)", "Open Dumping", "River Disposal"])
 
-        # TAB 4: DECISIONS, MORBIDITY
+        # TAB 4: DECISIONS
         with t_dec:
             st.markdown("**Module D: Decision-Making Pattern & Community Participation**")
             c1, c2 = st.columns(2)
             dec_expenses = c1.multiselect("Who decides on Family Expenses?", ["Father", "Mother", "Children", "Single Member", "Others"], default=["Father", "Mother"])
             dec_health = c2.multiselect("Who decides on Health & Medical Care?", ["Father", "Mother", "Children", "Single Member", "Others"], default=["Mother"])
 
-            st.markdown("**Module E: Morbidity & Chronic Illness Tracking**")
+        # TAB 5: COMPLETE MORBIDITY & CHRONIC CARE (EXPANDED FULL MODULE E)
+        with t_morb:
+            st.markdown("**Module E1: Acute Infectious Diseases & Illnesses (Past 12 Months)**")
             c1, c2, c3 = st.columns(3)
-            htn_med = c1.selectbox("Hypertension Med Compliance", ["N/A - Not Diagnosed", "Daily", "Irregular", "Stopped", "None"])
-            dm_med = c2.selectbox("Type 2 Diabetes Med Compliance", ["N/A - Not Diagnosed", "Daily", "Irregular", "Stopped", "None"])
-            tb_status = c3.selectbox("Active TB DOTS Status", ["N/A - Not Diagnosed", "Enrolled in TB-DOTS", "Stopped Treatment"])
+            e_diarrhea = c1.selectbox("Diarrheal Episodes (>1 in past 12 mos in family)", ["No", "Yes"])
+            e_urti = c2.selectbox("Severe Upper Respiratory Infections / Pneumonia", ["No", "Yes"])
+            e_dengue = c3.selectbox("Suspected or Confirmed Dengue Cases", ["No", "Yes"])
 
-        # TAB 5: MATERNAL & CHILD NUTRITION
+            st.markdown("**Module E2: Physician-Diagnosed Chronic Conditions & Treatment Compliance**")
+            c1, c2 = st.columns(2)
+            htn_status = c1.selectbox("Hypertension Status in Household", ["No Member Diagnosed", "Diagnosed - Compliant with Meds Daily", "Diagnosed - Irregular Med Compliance", "Diagnosed - Unmedicated / Stopped"])
+            dm_status = c2.selectbox("Type 2 Diabetes Status in Household", ["No Member Diagnosed", "Diagnosed - Compliant with Meds Daily", "Diagnosed - Irregular Med Compliance", "Diagnosed - Unmedicated / Stopped"])
+
+            c1, c2 = st.columns(2)
+            asthma_status = c1.selectbox("Bronchial Asthma / COPD Status", ["No Member Diagnosed", "Diagnosed - Active Maintenance Inhaler", "Diagnosed - Emergency Meds Only", "Diagnosed - Untreated"])
+            tb_status = c2.selectbox("Tuberculosis (TB) History & DOTS Status", ["No Member Diagnosed", "Currently Enrolled in TB-DOTS", "Completed TB Treatment", "Defaulted / Interrupted DOTS"])
+
+            c1, c2, c3 = st.columns(3)
+            ckd_status = c1.selectbox("Chronic Kidney Disease (CKD)", ["No", "Yes - Stage 1-3", "Yes - Dialysis Dependent"])
+            cvd_status = c2.selectbox("Cardiovascular Disease / History of Stroke", ["No", "Yes"])
+            cancer_status = c3.selectbox("Active Malignancy / Cancer", ["No", "Yes"])
+
+            st.markdown("**Module E3: Healthcare Utilization, Hospitalization & Disability**")
+            c1, c2, c3 = st.columns(3)
+            med_source = c1.selectbox("Primary Maintenance Medicine Source", ["Free from BHS / RHU", "Out-of-pocket Private Pharmacy", "Mixed (BHS + Pharmacy)", "Unable to Buy / Non-compliant"])
+            hosp_count = c2.number_input("Hospital Admissions in Family (Past 12 Mos)", 0, 10, 0)
+            pwd_count = c3.number_input("Persons with Disability (PWD) in Household", 0, 10, 0)
+
+            st.markdown("**Module E4: Household Mortality (Past 12 Months)**")
+            has_death = st.selectbox("Were there any deaths in the household in the past 12 months?", ["No", "Yes"])
+            if has_death == "Yes":
+                c1, c2, c3 = st.columns(3)
+                d_age = c1.number_input("Deceased Age", 0, 120, 50)
+                d_cause = c2.text_input("Cause of Death (Medical/Suspected)")
+                d_attended = c3.selectbox("Attended by Health Worker / Physician?", ["Yes", "No"])
+
+        # TAB 6: COMPLETE MATERNAL, EPI & NUTRITION (EXPANDED FULL MODULE F)
         with t_mch:
-            st.markdown("**Module F: Child Feeding & Nutritional Calculator (0–59 Months)**")
+            st.markdown("**Module F1: Maternal & Reproductive Health Protocols**")
+            c1, c2, c3 = st.columns(3)
+            is_preg = c1.selectbox("Currently Pregnant Member in Household?", ["No", "Yes"])
+            anc_visits = c2.number_input("Antenatal Care (ANC) Visits (Target ≥4)", 0, 15, 0)
+            anc_1st_tri = c3.selectbox("First ANC Visit in 1st Trimester?", ["N/A", "Yes", "No"])
+
+            c1, c2, c3 = st.columns(3)
+            ifa_tablets = c1.selectbox("Iron-Folic Acid (IFA) Tablets Received", ["N/A", "<180 Tablets", "≥180 Tablets (Completed)"])
+            td_status = c2.selectbox("Tetanus Diphtheria (Td) Immunization", ["N/A", "Td1", "Td2", "Td3+", "Fully Immunized Mother"])
+            postpartum_check = c3.selectbox("Postpartum Checkup within 72 hours", ["N/A", "Yes", "No"])
+
+            c1, c2 = st.columns(2)
+            deliv_place = c1.selectbox("Place of Delivery", ["N/A", "Barangay Health Station / Lying-In", "Rural Health Unit / District Hospital", "Tertiary Public Hospital", "Private Hospital / Clinic", "Home Delivery"])
+            deliv_attendant = c2.selectbox("Delivery Attendant", ["N/A", "Physician", "Nurse", "Midwife", "Traditional Birth Attendant (Hilot)", "Unattended"])
+
+            fp_method = st.selectbox("Current Family Planning / Contraceptive Method (Women 15-49)", ["None / Desires Pregnancy", "Pills (POP/COC)", "DMPA Injectable", "Subdermal Implant", "IUD", "BTL / Vasectomy", "Condom", "Natural (LAM/BBT/SDM)", "Unmet Need for FP"])
+
+            st.markdown("---")
+            st.markdown("**Module F2: Expanded Program on Immunization (EPI) & Child Preventive Health**")
+            c1, c2, c3 = st.columns(3)
+            epi_status = c1.selectbox("Child Immunization Status (0-12 mos)", ["N/A - No Infant", "Fully Immunized Child (FIC)", "Partially Immunized / Ongoing", "Unimmunized"])
+            vit_a = c2.selectbox("Vitamin A Supplementation in Past 6 Mos (6-59 mos)", ["N/A", "Yes", "No"])
+            deworming = c3.selectbox("Deworming Pill Received in Past 6 Mos (12-59 mos)", ["N/A", "Yes", "No"])
+
+            st.markdown("---")
+            st.markdown("**Module F3: Infant & Young Child Feeding (IYCF)**")
+            c1, c2, c3 = st.columns(3)
+            bf_1hr = c1.selectbox("Initiated Breastfeeding within 1 Hour of Birth?", ["N/A", "Yes", "No"])
+            excl_bf = c2.selectbox("Exclusively Breastfed for First 6 Months?", ["N/A", "Yes", "No"])
+            comp_feeding = c3.selectbox("Complementary Feeding Introduced at 6 Months?", ["N/A", "Yes", "No", "Early (<6 mos)", "Late (>6 mos)"])
+
+            st.markdown("---")
+            st.markdown("**Module F4: Objective Child Anthropometry & Nutritional Status Calculator (0–59 Months)**")
             c1, c2, c3, c4 = st.columns(4)
             c_id = c1.text_input("Child Member ID / Name", "Child 1")
             c_age = c2.number_input("Child Age (Months: 0–59)", 0, 59, 24)
@@ -375,9 +437,9 @@ elif menu == "🏠 Phase 2: Master Household Survey":
             c_height = c4.number_input("Height (cm)", 0.0, 150.0, 85.0, step=0.5)
 
             child_diag = compute_child_nutrition(c_age, c_weight, c_height)
-            st.info(f"💡 **Automated Child Diagnosis:** BMI: {child_diag['BMI']} | **Wasting:** {child_diag['Wasting']} | **Stunting:** {child_diag['Stunting']} | **Underweight:** {child_diag['Underweight']}")
+            st.info(f"💡 **Automated Child Nutritional Diagnosis:** BMI: {child_diag['BMI']} | **Wasting:** {child_diag['Wasting']} | **Stunting:** {child_diag['Stunting']} | **Underweight:** {child_diag['Underweight']}")
 
-        # TAB 6: PHILHEALTH YAKAP & ACCESS
+        # TAB 7: PHILHEALTH YAKAP & ACCESS
         with t_yakap:
             st.markdown("**Module H & I: PhilHealth YAKAP & 3-Delay Framework**")
             c1, c2 = st.columns(2)
