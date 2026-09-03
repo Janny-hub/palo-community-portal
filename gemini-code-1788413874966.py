@@ -151,12 +151,21 @@ section[data-testid="stSidebar"] {
     border-radius: 6px;
     margin-bottom: 12px;
 }
-.stat-card {
-    background-color: #FFFFFF;
-    border: 1px solid #CBD5E1;
-    border-radius: 8px;
-    padding: 16px;
-    margin-bottom: 16px;
+.child-card {
+    background-color: #F0FDF4;
+    border: 1px solid #DCFCE7;
+    border-left: 4px solid #16A34A;
+    padding: 12px 15px;
+    border-radius: 6px;
+    margin-bottom: 12px;
+}
+.peri-domain-header {
+    background-color: #7B1113;
+    color: #FFFFFF;
+    padding: 8px 14px;
+    border-radius: 6px;
+    font-weight: 700;
+    margin-bottom: 12px;
 }
 </style>"""
 
@@ -258,7 +267,7 @@ with st.sidebar.expander("🔍 View Detailed Phase Status", expanded=False):
     st.write(f"{'✅' if p1_status else '🔴'} **Phase 1 (Governance):** {'100%' if p1_status else '0%'}")
     st.write(f"{'✅' if p2_status else '🔴'} **Phase 2 (Master Survey):** {'100%' if p2_status else '0%'}")
     st.write(f"{'✅' if p3_status else '🔴'} **Phase 3 (Qualitative):** {'100%' if p3_status else '0%'}")
-    st.write(f"{'✅' if p4_status else '🔴'} **Phase 4 (Windshield):** {'100%' if p4_status else '0%'}")
+    st.write(f"{'✅' if p4_status else '🔴'} **Phase 4 (Expanded PERI):** {'100%' if p4_status else '0%'}")
     st.write(f"{'✅' if p5_status else '🔴'} **Phase 5 (Analytics):** {'100%' if p5_status else '0%'}")
     st.write(f"{'✅' if p6_status else '🔴'} **Phase 6 (Action Plan):** {'100%' if p6_status else '0%'}")
 
@@ -271,7 +280,7 @@ menu = st.sidebar.radio(
         "📋 Phase 1: Full Governance Scorecard", 
         "🏠 Phase 2: Master Household Survey", 
         "🗣️ Phase 3: Qualitative Field Tools", 
-        "🔍 Phase 4: Full PERI Windshield Tool", 
+        "🔍 Phase 4: Expanded PERI Windshield Tool", 
         "📈 Phase 5: Spatial & Statistical Analytics",
         "📋 Phase 6: Community Diagnosis & Action Plan",
         "🩺 Diagnostic Summary & Analytics",
@@ -431,13 +440,14 @@ elif menu == "🏠 Phase 2: Master Household Survey":
     st.subheader("Phase 2: Master Household Survey Instrument (Tool 2.1 Complete)")
     
     with st.form("phase2_complete_form"):
-        t_meta, t_vitals, t_socio, t_dec, t_morb, t_mch, t_yakap = st.tabs([
+        t_meta, t_vitals, t_socio, t_dec, t_morb, t_mch, t_child, t_yakap = st.tabs([
             "📋 Metadata & Roster",
             "🩺 Adult Profiling & Vitals (Adults 1–5)",
             "🌾 Socio-Econ, Food Insecurity, Housing & WASH",
             "🤝 Decision-Making Patterns",
-            "🤒 Complete Morbidity & Chronic Care",
-            "👶 Complete Maternal, Delivery, FP, Mortality & Child Profiling",
+            "🤒 Morbidity & Chronic Care",
+            "👩 Maternal, FP & Mortality",
+            "👶 Expanded Child Profiling & Immunizations (Children 1–4)",
             "🏥 Healthcare Access & PhilHealth YAKAP"
         ])
 
@@ -586,70 +596,55 @@ elif menu == "🏠 Phase 2: Master Household Survey":
             postpartum_check = c3.selectbox("Postpartum Checkup within 72 hours", ["N/A", "Yes", "No"])
 
             st.markdown("---")
-            st.markdown("**Module F2: Delivery by Health Personnel & Accredited Health Facility**")
-            
+            st.markdown("**Module F2: Delivery & Family Planning**")
             c1, c2 = st.columns(2)
-            deliv_personnel_yesno = c1.selectbox("6.1 Delivery handled by trained health personnel?", ["N/A", "Yes", "No"])
-            
-            if deliv_personnel_yesno == "Yes":
-                deliv_personnel_type = c2.selectbox("If yes, specify personnel:", ["RHM (Rural Health Midwife)", "Nurse", "Physician"])
-            elif deliv_personnel_yesno == "No":
-                deliv_personnel_type = c2.text_input("If no, who handled the delivery (Specify):", "Traditional Birth Attendant / Hilot")
-            else:
-                deliv_personnel_type = "N/A"
+            deliv_personnel_yesno = c1.selectbox("Delivery handled by trained health personnel?", ["N/A", "Yes", "No"])
+            deliv_facility_yesno = c2.selectbox("Delivery handled in an accredited Health Facility?", ["N/A", "Yes", "No"])
 
             c1, c2 = st.columns(2)
-            deliv_facility_yesno = c1.selectbox("6.2 Delivery handled in an accredited Health Facility?", ["N/A", "Yes", "No"])
-            
-            if deliv_facility_yesno == "Yes":
-                deliv_facility_type = c2.selectbox("If yes, specify accredited facility:", ["Government Hospital", "Private Hospital", "RHU Birthing Center", "Private Lying-in"])
-            else:
-                deliv_facility_type = "N/A / Home Delivery"
+            fp_access = c1.selectbox("Couples with access to family planning services?", ["Yes", "No"])
+            fp_practice = c2.selectbox("Couples practicing family planning?", ["Yes", "No"])
 
             st.markdown("---")
-            st.markdown("**Module F3: Family Planning Assessment (To be answered by Women of Reproductive Age - WRAs)**")
-            
-            c1, c2 = st.columns(2)
-            fp_access = c1.selectbox("1. Couples with access to family planning services?", ["Yes", "No"])
-            fp_practice = c2.selectbox("2. Couples practicing family planning?", ["Yes", "No"])
+            st.markdown("**Module F3: Mortality Assessment (Jan–Dec)**")
+            mortality_yesno = st.selectbox("With deaths in the family due to preventable diseases (Jan-Dec)?", ["No", "Yes"])
 
-            c1, c2 = st.columns(2)
-            if fp_practice == "Yes":
-                fp_method = c1.selectbox("If yes, specify method:", ["Pills", "Injectables (DMPA)", "IUD", "Condom", "Subdermal Implant", "BTL (Tubal Ligation)", "NSV (Vasectomy)", "Natural Family Planning (NFP)"])
-                fp_reason_no = "N/A"
-            else:
-                fp_method = "None"
-                fp_reason_no = c2.text_input("If no, state reason:", "Desire for pregnancy / Religious belief / Fear of side effects")
+        # NEW EXPANDED CHILD PROFILING TAB (UP TO 4 CHILDREN + IMMUNIZATION CHECKLIST)
+        with t_child:
+            st.markdown("**Module F4: Expanded Child Anthropometric & Immunization Record Profiling (Up to 4 Children)**")
+            children_records = []
 
-            st.markdown("---")
-            st.markdown("**Module F4: Mortality Assessment (Jan – Dec)**")
-            
-            mortality_yesno = st.selectbox("1. With deaths in the family due to preventable diseases (Jan-Dec)?", ["No", "Yes"])
-            mortality_records = []
+            for c_i in range(1, 5):
+                st.markdown(f"<div class='child-card'><strong>👶 Child Member {c_i} Profile & Immunization Screening</strong></div>", unsafe_allow_html=True)
+                
+                c1, c2, c3, c4, c5 = st.columns(5)
+                c_name = c1.text_input(f"Child {c_i} Name / Initials", key=f"c_name_{c_i}")
+                c_sex = c2.selectbox(f"Child {c_i} Sex", ["Male", "Female"], key=f"c_sex_{c_i}")
+                c_age_m = c3.number_input(f"Child {c_i} Age (Months)", 0, 59, 12, key=f"c_age_{c_i}")
+                c_wt_kg = c4.number_input(f"Child {c_i} Weight (kg)", 0.0, 35.0, 8.5, key=f"c_wt_{c_i}")
+                c_ht_cm = c5.number_input(f"Child {c_i} Height (cm)", 0.0, 120.0, 72.0, key=f"c_ht_{c_i}")
 
-            if mortality_yesno == "Yes":
-                st.markdown("*Record details of preventable deaths in the household below (Includes Reason of Death):*")
-                for m_i in range(1, 4):
-                    st.caption(f"**Mortality Entry #{m_i}**")
-                    mc1, mc2, mc3, mc4, mc5 = st.columns(5)
-                    m_cause = mc1.text_input(f"Cause of Disease #{m_i}", key=f"m_cause_{m_i}")
-                    m_reason = mc2.text_input(f"Reason of Death #{m_i}", key=f"m_reason_{m_i}")
-                    m_age = mc3.number_input(f"Age at Death #{m_i}", 0, 120, 0, key=f"m_age_{m_i}")
-                    m_sex = mc4.selectbox(f"Sex #{m_i}", ["N/A", "Male", "Female"], key=f"m_sex_{m_i}")
-                    m_year = mc5.number_input(f"Year #{m_i}", 2020, 2026, 2025, key=f"m_year_{m_i}")
-                    if m_cause:
-                        mortality_records.append({"Cause": m_cause, "Reason": m_reason, "Age": m_age, "Sex": m_sex, "Year": m_year})
+                # Calculate nutritional status for child
+                c_nutr = compute_child_nutrition(c_age_m, c_wt_kg, c_ht_cm)
+                st.caption(f"📊 **Nutritional Outcome:** BMI: {c_nutr['BMI']} | Wasting: **{c_nutr['Wasting']}** | Stunting: **{c_nutr['Stunting']}** | Underweight: **{c_nutr['Underweight']}**")
 
-            st.markdown("---")
-            st.markdown("**Module F5: Child Anthropometric & Immunization Profiling (<5 Years)**")
-            
-            c1, c2, c3 = st.columns(3)
-            child_age_m = c1.number_input("Child Age in Months", 0, 60, 12)
-            child_wt_kg = c2.number_input("Child Weight (kg)", 0.0, 40.0, 8.5)
-            child_ht_cm = c3.number_input("Child Height / Length (cm)", 0.0, 120.0, 72.0)
-            
-            child_nutr = compute_child_nutrition(child_age_m, child_wt_kg, child_ht_cm)
-            st.info(f"📊 **Calculated Nutritional Metrics:** BMI: {child_nutr['BMI']} | Wasting: **{child_nutr['Wasting']}** | Stunting: **{child_nutr['Stunting']}** | Underweight: **{child_nutr['Underweight']}**")
+                st.markdown(f"**💉 Child {c_i} Immunization Card Check:**")
+                ic1, ic2, ic3, ic4, ic5, ic6 = st.columns(6)
+                imm_bcg = ic1.checkbox("BCG (Birth)", key=f"bcg_{c_i}")
+                imm_hepb = ic2.checkbox("Hep B (Birth)", key=f"hepb_{c_i}")
+                imm_penta = ic3.checkbox("Pentavalent 3x", key=f"penta_{c_i}")
+                imm_opv = ic4.checkbox("OPV/IPV 3x", key=f"opv_{c_i}")
+                imm_pcv = ic5.checkbox("PCV 3x", key=f"pcv_{c_i}")
+                imm_mmr = ic6.checkbox("MMR 2x (9m & 12m)", key=f"mmr_{c_i}")
+
+                is_fic = all([imm_bcg, imm_hepb, imm_penta, imm_opv, imm_pcv, imm_mmr])
+                fic_status = "Fully Immunized Child (FIC)" if is_fic else "Partially Immunized / Incomplete"
+                st.markdown(f"**Imm. Summary:** Status = `{fic_status}`")
+
+                children_records.append({
+                    "Child_Num": f"Child {c_i}", "Name": c_name, "Sex": c_sex, "Age_Months": c_age_m,
+                    "Weight": c_wt_kg, "Height": c_ht_cm, "Nutr": c_nutr, "FIC_Status": fic_status
+                })
 
         with t_yakap:
             st.markdown("**Module G: Healthcare Seeking Behavior & PhilHealth YAKAP Access**")
@@ -662,29 +657,27 @@ elif menu == "🏠 Phase 2: Master Household Survey":
             yakap_availed = c2.selectbox("Has availed FREE First Patient Encounter (FPE) & Meds?", ["Yes", "No", "N/A"])
 
         if st.form_submit_button("Submit & Save Complete Household Record"):
-            # Check primary adult vitals for mapping risk colors
             primary_sys = adults_data[0]["Sys"] if adults_data else 120
             primary_risk = adults_data[0]["Risk"] if adults_data else "Normal"
             
-            # Marker color logic: Blue (Flood), Red (HTN), Purple (Dual), Green (Normal)
             if is_flood_prone == "Yes" and primary_sys >= 140:
-                marker_color = [192, 38, 211, 230] # Purple Dual
+                marker_color = [192, 38, 211, 230]
             elif primary_sys >= 140:
-                marker_color = [123, 17, 19, 220] # Maroon HTN
+                marker_color = [123, 17, 19, 220]
             elif is_flood_prone == "Yes":
-                marker_color = [37, 99, 235, 220] # Blue Flood
+                marker_color = [37, 99, 235, 220]
             else:
-                marker_color = [34, 197, 94, 200] # Green Normal
+                marker_color = [34, 197, 94, 200]
 
             st.session_state.hh_records.append({
                 "HH_ID": hh_id, "Barangay": brgy, "Purok": purok, "Date": str(date_survey),
                 "Lat": lat, "Lon": lon, "BP": f"{primary_sys}/80", "Risk": primary_risk,
                 "Flood_Prone": is_flood_prone, "Color": marker_color,
                 "Income": income_cat, "Water": water_source, "Sanitation": toilet_type,
-                "Food_Skip": food_skip, "Child_Nutr": child_nutr["Wasting"],
+                "Food_Skip": food_skip, "Children": children_records,
                 "Yakap": yakap_registered
             })
-            st.success(f"Household record '{hh_id}' saved successfully with complete geotagging and health vitals!")
+            st.success(f"Household record '{hh_id}' saved successfully with complete geotagging, adult vitals, and 4 child profiling entries!")
 
 # MODULE 4: PHASE 3 QUALITATIVE FIELD TOOLS
 elif menu == "🗣️ Phase 3: Qualitative Field Tools":
@@ -709,30 +702,232 @@ elif menu == "🗣️ Phase 3: Qualitative Field Tools":
             })
             st.success("Qualitative field notes saved successfully!")
 
-# MODULE 5: PHASE 4 FULL PERI WINDSHIELD TOOL
-elif menu == "🔍 Phase 4: Full PERI Windshield Tool":
-    st.subheader("Phase 4: Community PERI Windshield Survey Instrument")
-    
-    with st.form("phase4_windshield_form"):
-        st.markdown("**Windshield Assessment Domains**")
-        c1, c2 = st.columns(2)
-        purok_obs = c1.selectbox("Purok / Zone Observed", [f"Purok {i}" for i in range(1, 8)])
-        obs_date = c2.date_input("Observation Date")
+# MODULE 5: PHASE 4 EXPANDED PERI WINDSHIELD TOOL
+elif menu == "🔍 Phase 4: Expanded PERI Windshield Tool":
+    st.subheader("Phase 4: Expanded PERI Environmental Observation Matrices & Scoring System")
+    st.markdown("Evaluates micro-environmental risk parameters across 6 core domains. Scores range from **1 (Clean/Optimal)** to **3 (Severe Hazard)**.")
 
-        st.markdown("**Environmental & Infrastructure Observations**")
-        c1, c2, c3 = st.columns(3)
-        housing_cond = c1.selectbox("Prevailing Housing Condition", ["Dilapidated / Informal", "Mixed Materials", "Sturdy / Concrete"])
-        sanitation_obs = c2.selectbox("Visible Environmental Sanitation", ["Uncollected Garbage / Open Dumps", "Clogged Drainage", "Clean / Well Maintained"])
-        hazard_obs = c3.selectbox("Dominant Environmental Hazards", ["Flood-Prone / Riverbank", "Stagnant Water / Vector Breeding", "High Traffic / Industrial Dust", "None Observed"])
+    with st.form("phase4_expanded_form"):
+        st.markdown("**Field Metadata Control**")
+        mc1, mc2, mc3 = st.columns(3)
+        purok_eval = mc1.selectbox("Target Purok / Zone Evaluated", [f"Purok {i}" for i in range(1, 8)])
+        eval_date = mc2.date_input("Evaluation Date")
+        evaluator_name = mc3.selectbox("Lead Evaluator", ["Jan Art Serna, RMT", "Aubrey Maye Arrieta", "Leila Projimo, PTRP"])
 
-        notes = st.text_area("Detailed Observational Notes on Community Dynamics & Built Environment:")
+        tab_d1, tab_d2, tab_d3, tab_d4, tab_d5, tab_d6, tab_manual = st.tabs([
+            "1. Sanitation & Waste",
+            "2. Food Env & Nutrition",
+            "3. Built Env & Housing",
+            "4. Health Infra Access",
+            "5. DRR & Climate Safety",
+            "6. Vector Control & Hazards",
+            "📖 Scoring Manual & Index"
+        ])
 
-        if st.form_submit_button("Save PERI Windshield Record"):
+        # DOMAIN 1
+        with tab_d1:
+            st.markdown("<div class='peri-domain-header'>Domain 1: Sanitation & Waste Management Assessment</div>", unsafe_allow_html=True)
+            
+            d1_scores = []
+            
+            d1_items = [
+                ("1.1 Uncollected Household Solid Waste", "Trash piles, scattered plastic on road shoulders/lots", ["Clean (1)", "Moderate (2)", "Severe Risk (3)"]),
+                ("1.2 Open Drainage & Canal Integrity", "Clogged roadside canals, unpaved ditching, stagnant greywater", ["Adequate (1)", "Substandard (2)", "Hazardous (3)"]),
+                ("1.3 Stagnant Water & Pooling", "Standing water in road depressions, tires >48 hrs", ["Low Risk (1)", "Moderate (2)", "Severe Risk (3)"]),
+                ("1.4 Stray & Unattended Animals", "Free-roaming dogs, cats, or livestock scavenging waste", ["Controlled (1)", "Moderate (2)", "Uncontrolled (3)"]),
+                ("1.5 Material Recovery & Garbage Hubs", "Purok MRF condition: overflowing bins, no segregation", ["Clean/Segregated (1)", "Overflowing (2)", "Dilapidated/None (3)"]),
+                ("1.6 Open Waste Burning (Siga)", "Visual/smell evidence of plastic or leaf burning", ["Absent (1)", "Occasional (2)", "Frequent/Severe (3)"]),
+                ("1.7 Odor & Airborne Emissions", "Pungent odor from waste, sewage, or livestock pens", ["Odor-Free (1)", "Moderate Odor (2)", "Severe/Noxious (3)"]),
+                ("1.8 Fecal Contamination Exposure", "Visible animal/human feces along walkways/canals", ["None Visible (1)", "Isolated (2)", "Widespread Risk (3)"]),
+                ("1.9 Commercial / Market Waste", "Rotting produce, fish water around sari-sari/talipapa", ["Sanitary (1)", "Substandard (2)", "Severe Risk (3)"])
+            ]
+
+            d1_data = {}
+            for code_title, desc, opts in d1_items:
+                c1, c2, c3, c4 = st.columns([3, 3, 2, 3])
+                c1.markdown(f"**{code_title}**\n\n*{desc}*")
+                val = c2.radio("Rating", opts, key=f"d1_{code_title}", horizontal=True)
+                score = 1 if "(1)" in val else (2 if "(2)" in val else 3)
+                d1_scores.append(score)
+                purok_hs = c3.text_input("Hotspot Purok", key=f"hs_d1_{code_title}")
+                lm = c4.text_input("Landmark / Notes", key=f"lm_d1_{code_title}")
+                d1_data[code_title] = {"Score": score, "Rating": val, "Hotspot": purok_hs, "Landmark": lm}
+                st.markdown("---")
+
+        # DOMAIN 2
+        with tab_d2:
+            st.markdown("<div class='peri-domain-header'>Domain 2: Food Environment & Nutritional Accessibility Assessment</div>", unsafe_allow_html=True)
+            d2_scores = []
+            d2_items = [
+                ("2.1 Fresh Produce Access (Talipapa)", "Fresh fruit/veg/meat markets within 300m walking distance", ["High Access (1)", "Limited Access (2)", "Food Desert (3)"]),
+                ("2.2 Sari-Sari Store Food Profile", "Dominance of salty snacks, sugary drinks, instant noodles", ["Balanced/Healthy (1)", "Junk-Dominant (2)", "Unhealthy Swamp (3)"]),
+                ("2.3 Produce Quality & Freshness", "Physical condition of produce: fresh vs. wilted/spoiled", ["High Quality (1)", "Mixed Quality (2)", "Poor/Spoiled (3)"]),
+                ("2.4 Street Food Vending Hygiene", "Food covers, glass displays, clean water for utensils", ["Sanitary (1)", "Substandard (2)", "Unsanitary/High Risk (3)"]),
+                ("2.5 Child-Targeted Marketing", "Aggressive advertising banners targeting school children", ["Low Exposure (1)", "Moderate (2)", "High/Aggressive (3)"]),
+                ("2.6 Tobacco & Alcohol Visibility", "Prominent display/sale near youth gathering points/schools", ["Restricted/Far (1)", "Moderate (2)", "Highly Visible (3)"]),
+                ("2.7 Safe Drinking Water Refill Outlets", "Availability and sanitary state of commercial refill stations", ["Accessible & Clean (1)", "Scarcely Available (2)", "Unsightly/Risky (3)"])
+            ]
+            d2_data = {}
+            for code_title, desc, opts in d2_items:
+                c1, c2, c3, c4 = st.columns([3, 3, 2, 3])
+                c1.markdown(f"**{code_title}**\n\n*{desc}*")
+                val = c2.radio("Rating", opts, key=f"d2_{code_title}", horizontal=True)
+                score = 1 if "(1)" in val else (2 if "(2)" in val else 3)
+                d2_scores.append(score)
+                purok_hs = c3.text_input("Hotspot Purok", key=f"hs_d2_{code_title}")
+                lm = c4.text_input("Landmark / Notes", key=f"lm_d2_{code_title}")
+                d2_data[code_title] = {"Score": score, "Rating": val, "Hotspot": purok_hs, "Landmark": lm}
+                st.markdown("---")
+
+        # DOMAIN 3
+        with tab_d3:
+            st.markdown("<div class='peri-domain-header'>Domain 3: Built Environment, Housing Quality & Infrastructure</div>", unsafe_allow_html=True)
+            d3_scores = []
+            d3_items = [
+                ("3.1 Housing Structural Integrity", "Concrete/permanent vs. makeshift, tarpaulin, light bamboo", ["Mostly Concrete (1)", "Mixed Structural (2)", "Predominantly Makeshift (3)"]),
+                ("3.2 Pedestrian Walkways & Sidewalks", "Paved, unblocked sidewalks separated from vehicle traffic", ["Safe/Paved (1)", "Partial/Blocked (2)", "Absent/Dangerous (3)"]),
+                ("3.3 Street Lighting & Night Illumination", "Functioning streetlights along main roads and dark alleys", ["Fully Lit (1)", "Dim/Partial (2)", "Dark/Unlit Alleys (3)"]),
+                ("3.4 Public Open Spaces & Youth Parks", "Clean public plazas/courts free from glass/hazards", ["Safe & Accessible (1)", "Dilapidated/Unkept (2)", "None/Unsafe (3)"]),
+                ("3.5 Universal Physical Accessibility", "Ramps and unblocked curb cuts for PWDs/Seniors/Strollers", ["Barrier-Free (1)", "Partially Barrier-Free (2)", "Severe Barriers (3)"]),
+                ("3.6 Electrical Wiring & Power Safety", "Overhead wires: neatly bundled vs. entangled octopus lines", ["Orderly/Safe (1)", "Cluttered/Low (2)", "Hazardous 'Octopus' (3)"]),
+                ("3.7 Road Surface & Speed Management", "Quality of road paving and presence of speed humps", ["Well-Paved/Safe (1)", "Unpaved/Potholes (2)", "Severely Broken/Muddy (3)"])
+            ]
+            d3_data = {}
+            for code_title, desc, opts in d3_items:
+                c1, c2, c3, c4 = st.columns([3, 3, 2, 3])
+                c1.markdown(f"**{code_title}**\n\n*{desc}*")
+                val = c2.radio("Rating", opts, key=f"d3_{code_title}", horizontal=True)
+                score = 1 if "(1)" in val else (2 if "(2)" in val else 3)
+                d3_scores.append(score)
+                purok_hs = c3.text_input("Hotspot Zone", key=f"hs_d3_{code_title}")
+                lm = c4.text_input("Landmark / Notes", key=f"lm_d3_{code_title}")
+                d3_data[code_title] = {"Score": score, "Rating": val, "Hotspot": purok_hs, "Landmark": lm}
+                st.markdown("---")
+
+        # DOMAIN 4
+        with tab_d4:
+            st.markdown("<div class='peri-domain-header'>Domain 4: Health Infrastructure & Primary Care Accessibility</div>", unsafe_allow_html=True)
+            d4_scores = []
+            d4_items = [
+                ("4.1 Barangay Health Station (BHS) State", "Physical appearance: clean/painted vs. cracked/leaking", ["Well-Maintained (1)", "Substandard/Wear (2)", "Dilapidated/Blighted (3)"]),
+                ("4.2 Facility Visibility & Signage", "Prominent exterior signage detailing services and hours", ["Clear & Complete (1)", "Faded/Incomplete (2)", "Missing/No Signage (3)"]),
+                ("4.3 Public Transport Proximity (<100m)", "Distance from BHS entrance to nearest public transport stop", ["High Access (<50m) (1)", "Moderate (50-150m) (2)", "Isolated (>150m) (3)"]),
+                ("4.4 Pharmacy / Essential Med Access", "Proximity of BHS dispensing room or private Botika", ["Co-located/Nearby (1)", "Limited/Distant (2)", "Absent in Zone (3)"]),
+                ("4.5 Emergency Vehicle Access Corridors", "Width of access roads for ambulance/fire truck entry", ["Unobstructed Wide (1)", "Narrow/Tight Turn (2)", "Blocked/Inaccessible (3)"]),
+                ("4.6 Health Promotion Advisory Display", "Outdoor bulletin boards displaying updated health warnings", ["Updated & Visible (1)", "Outdated Posters (2)", "Blank/Damaged (3)"]),
+                ("4.7 BHS Sanitation & Basic Utilities", "Functioning sink, clean patient toilet, running water & power", ["Fully Functional (1)", "Partial/Defective (2)", "Non-Functional/None (3)"])
+            ]
+            d4_data = {}
+            for code_title, desc, opts in d4_items:
+                c1, c2, c3, c4 = st.columns([3, 3, 2, 3])
+                c1.markdown(f"**{code_title}**\n\n*{desc}*")
+                val = c2.radio("Rating", opts, key=f"d4_{code_title}", horizontal=True)
+                score = 1 if "(1)" in val else (2 if "(2)" in val else 3)
+                d4_scores.append(score)
+                purok_hs = c3.text_input("Hotspot Location", key=f"hs_d4_{code_title}")
+                lm = c4.text_input("Landmark / Notes", key=f"lm_d4_{code_title}")
+                d4_data[code_title] = {"Score": score, "Rating": val, "Hotspot": purok_hs, "Landmark": lm}
+                st.markdown("---")
+
+        # DOMAIN 5
+        with tab_d5:
+            st.markdown("<div class='peri-domain-header'>Domain 5: Disaster Risk Reduction & Climate Environmental Safety</div>", unsafe_allow_html=True)
+            d5_scores = []
+            d5_items = [
+                ("5.1 High-Hazard Proximity (Geohazards)", "Homes along steep slopes, active riverbanks, sea walls", ["Low Exposure (1)", "Moderate Buffer (2)", "High Hazard Zone (3)"]),
+                ("5.2 Flood Vulnerability & High-Water Marks", "Visible watermark lines, silt, or low-lying basin topography", ["Flood-Free/High (1)", "Ankle-Deep/Slow (2)", "Rapid Deep Inundation (3)"]),
+                ("5.3 Evacuation Route Signage & Clarity", "Reflectorized directional signs along major footpaths", ["Clearly Marked (1)", "Faded/Sparse (2)", "No Signage Found (3)"]),
+                ("5.4 Evacuation Center Readiness", "Structural condition/roof integrity of covered court/school", ["Ready & Accessible (1)", "Minor Maintenance (2)", "Unsafe/Restricted (3)"]),
+                ("5.5 Major Drainage Outfalls & Waterways", "River outlets/creeks: free-flowing vs. choked with trash/silt", ["Clear Outflow (1)", "Moderately Clogged (2)", "Severely Choked (3)"]),
+                ("5.6 Urban Fire Hazard & Density", "Extremely dense wooden housing clusters separated by <1.5m alleys", ["Low Fire Risk (1)", "Moderate Density (2)", "High Fire Trap (3)"]),
+                ("5.7 Slope Protection & Retaining Walls", "Concrete retaining walls/gabions along steep roadside cuts", ["Intact Protection (1)", "Cracking/Eroded (2)", "Unprotected Slope (3)"])
+            ]
+            d5_data = {}
+            for code_title, desc, opts in d5_items:
+                c1, c2, c3, c4 = st.columns([3, 3, 2, 3])
+                c1.markdown(f"**{code_title}**\n\n*{desc}*")
+                val = c2.radio("Rating", opts, key=f"d5_{code_title}", horizontal=True)
+                score = 1 if "(1)" in val else (2 if "(2)" in val else 3)
+                d5_scores.append(score)
+                purok_hs = c3.text_input("Hazard Zone Purok", key=f"hs_d5_{code_title}")
+                lm = c4.text_input("Landmark / Notes", key=f"lm_d5_{code_title}")
+                d5_data[code_title] = {"Score": score, "Rating": val, "Hotspot": purok_hs, "Landmark": lm}
+                st.markdown("---")
+
+        # DOMAIN 6
+        with tab_d6:
+            st.markdown("<div class='peri-domain-header'>Domain 6: Vector Control & Environmental Exposure Hazards</div>", unsafe_allow_html=True)
+            d6_scores = []
+            d6_items = [
+                ("6.1 Dengue Vector Breeding Sites", "Density of tires, uncovered rain barrels, open tin cans", ["Rare/Clean (1)", "Moderate Sites (2)", "Prolific Breeding (3)"]),
+                ("6.2 Rodent & Fly Infestation Signs", "Rat burrows along canal banks, swarms of flies near waste", ["Low/Unnoticed (1)", "Moderate Signs (2)", "Severe Infestation (3)"]),
+                ("6.3 Commercial / Workshop Pollution", "Proximity of residential homes to auto-repair/waste oil dumping", ["Buffer Compliant (1)", "Moderate Nuisance (2)", "Severe Toxic Exposure (3)"]),
+                ("6.4 Dust, Exhaust & Air Quality", "Heavy airborne dust from dirt roads or intense diesel exhaust", ["Clean Air (1)", "Moderate Dust/Fumes (2)", "High Particulate Dust (3)"])
+            ]
+            d6_data = {}
+            for code_title, desc, opts in d6_items:
+                c1, c2, c3, c4 = st.columns([3, 3, 2, 3])
+                c1.markdown(f"**{code_title}**\n\n*{desc}*")
+                val = c2.radio("Rating", opts, key=f"d6_{code_title}", horizontal=True)
+                score = 1 if "(1)" in val else (2 if "(2)" in val else 3)
+                d6_scores.append(score)
+                purok_hs = c3.text_input("Hotspot Purok", key=f"hs_d6_{code_title}")
+                lm = c4.text_input("Landmark / Notes", key=f"lm_d6_{code_title}")
+                d6_data[code_title] = {"Score": score, "Rating": val, "Hotspot": purok_hs, "Landmark": lm}
+                st.markdown("---")
+
+        # MANUAL & INDEX TAB
+        with tab_manual:
+            st.markdown("### 📖 Comprehensive Result Interpretation & Field Scoring Manual")
+            st.markdown("""
+            **3.1 Quantitative Scoring & Index Calculation Methodology**
+            - **Score 1.0 (Optimal / Low Risk):** Parameter meets sanitary and structural standards. Minimal or no hazard observed.
+            - **Score 2.0 (Moderate Risk / Substandard):** Parameter displays noticeable deficiencies, wear, or moderate sanitation gaps.
+            - **Score 3.0 (Severe Hazard / Critical):** Parameter presents acute, severe environmental hazards or immediate health risks.
+            
+            **Mathematical Formulas:**
+            1. **Domain Score (DS):** $DS = \\frac{\\sum \\text{Item Ratings in Domain}}{\\text{Total Evaluated Items in Domain}}$
+            2. **Purok Environmental Risk Index (PERI):** $PERI = \\frac{DS_1 + DS_2 + DS_3 + DS_4 + DS_5 + DS_6}{6}$
+            
+            | PERI Score Range | Risk Tier Category | Operational Response Required |
+            | :--- | :--- | :--- |
+            | **1.00 – 1.49** | **CATEGORY A: Low Risk (Green)** | Routine quarterly monitoring; maintain existing services. |
+            | **1.50 – 2.29** | **CATEGORY B: Moderate Concern (Amber)** | Targeted 30-day intervention; schedule clean-up drives & health education. |
+            | **2.30 – 3.00** | **CATEGORY C: Critical Hazard (Red)** | Immediate Emergency Action (<7 days); escalate to Mayor, LGU Health Officer & DRRMO. |
+            """)
+
+        # Calculate Real-Time PERI
+        ds1 = sum(d1_scores) / len(d1_scores)
+        ds2 = sum(d2_scores) / len(d2_scores)
+        ds3 = sum(d3_scores) / len(d3_scores)
+        ds4 = sum(d4_scores) / len(d4_scores)
+        ds5 = sum(d5_scores) / len(d5_scores)
+        ds6 = sum(d6_scores) / len(d6_scores)
+        
+        peri_index = (ds1 + ds2 + ds3 + ds4 + ds5 + ds6) / 6.0
+
+        if peri_index >= 2.30:
+            tier_cat = "CATEGORY C: Critical Hazard (Red)"
+            tier_color = "red"
+        elif peri_index >= 1.50:
+            tier_cat = "CATEGORY B: Moderate Concern (Amber)"
+            tier_color = "orange"
+        else:
+            tier_cat = "CATEGORY A: Low Risk (Green)"
+            tier_color = "green"
+
+        st.markdown("---")
+        st.markdown(f"### 📊 Calculated PERI Composite Score for {purok_eval}: **{peri_index:.2f} / 3.00**")
+        st.markdown(f"**Assigned Tier:** :{tier_color}[**{tier_cat}**]")
+
+        if st.form_submit_button("Save Complete Phase 4 Expanded PERI Record"):
             st.session_state.windshield_records.append({
-                "Purok": purok_obs, "Date": str(obs_date), "Housing": housing_cond,
-                "Sanitation": sanitation_obs, "Hazards": hazard_obs, "Notes": notes
+                "Purok": purok_eval, "Date": str(eval_date), "Evaluator": evaluator_name,
+                "DS1_Sanitation": ds1, "DS2_Food": ds2, "DS3_BuiltEnv": ds3,
+                "DS4_HealthInfra": ds4, "DS5_DRR": ds5, "DS6_Vector": ds6,
+                "PERI_Index": peri_index, "Tier_Category": tier_cat
             })
-            st.success("PERI Windshield observation log saved!")
+            st.success(f"PERI Windshield Assessment for {purok_eval} saved successfully!")
 
 # MODULE 6: PHASE 5 SPATIAL & STATISTICAL ANALYTICS
 elif menu == "📈 Phase 5: Spatial & Statistical Analytics":
@@ -798,7 +993,7 @@ elif menu == "🩺 Diagnostic Summary & Analytics":
     c1.metric("Total Surveyed HHs", len(st.session_state.hh_records))
     c2.metric("BHB Scorecard", "Recorded" if p1_status else "Pending")
     c3.metric("Qualitative Logs", len(st.session_state.qual_records))
-    c4.metric("Action Plans", len(st.session_state.diag_records))
+    c4.metric("PERI Windshield Logs", len(st.session_state.windshield_records))
 
     st.markdown("---")
     st.markdown("### 📌 Active Action Plans Overview")
@@ -813,31 +1008,40 @@ elif menu == "💾 Data Management & Export":
     
     st.markdown("Export accumulated field survey records into standardized CSV format for statistical analysis.")
     
-    c1, c2, c3 = st.columns(3)
+    c1, c2, c3, c4 = st.columns(4)
     
     with c1:
-        st.markdown("**Master Household Surveys**")
+        st.markdown("**Master Household Data**")
         if len(st.session_state.hh_records) > 0:
             df_hh = pd.DataFrame(st.session_state.hh_records)
             csv_hh = df_hh.to_csv(index=False).encode('utf-8')
-            st.download_button("📥 Download Household Data (CSV)", csv_hh, "household_records.csv", "text/csv")
+            st.download_button("📥 Download Household CSV", csv_hh, "household_records.csv", "text/csv")
         else:
-            st.caption("No household records available to export.")
+            st.caption("No household records available.")
 
     with c2:
         st.markdown("**BHB Governance Scorecards**")
         if len(st.session_state.gov_records) > 0:
             df_gov = pd.DataFrame(st.session_state.gov_records)
             csv_gov = df_gov.to_csv(index=False).encode('utf-8')
-            st.download_button("📥 Download Governance Data (CSV)", csv_gov, "governance_records.csv", "text/csv")
+            st.download_button("📥 Download Governance CSV", csv_gov, "governance_records.csv", "text/csv")
         else:
-            st.caption("No governance records available to export.")
+            st.caption("No governance records available.")
 
     with c3:
-        st.markdown("**Community Action Plans**")
+        st.markdown("**Expanded PERI Windshield**")
+        if len(st.session_state.windshield_records) > 0:
+            df_peri = pd.DataFrame(st.session_state.windshield_records)
+            csv_peri = df_peri.to_csv(index=False).encode('utf-8')
+            st.download_button("📥 Download PERI CSV", csv_peri, "peri_windshield_records.csv", "text/csv")
+        else:
+            st.caption("No PERI records available.")
+
+    with c4:
+        st.markdown("**Action Plans**")
         if len(st.session_state.diag_records) > 0:
             df_diag = pd.DataFrame(st.session_state.diag_records)
             csv_diag = df_diag.to_csv(index=False).encode('utf-8')
-            st.download_button("📥 Download Action Plans (CSV)", csv_diag, "action_plans.csv", "text/csv")
+            st.download_button("📥 Download Action Plans CSV", csv_diag, "action_plans.csv", "text/csv")
         else:
-            st.caption("No action plans available to export.")
+            st.caption("No action plans available.")
