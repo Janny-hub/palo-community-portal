@@ -554,18 +554,34 @@ elif menu == "🏠 Phase 2: Master Household Survey":
     )
 
     if mode_p2 == "➕ New Household Survey Entry":
-        st.markdown("#### ⚙️ Profile Roster Count Configuration")
-        st.info("💡 Adjust the number of adult and child members below **before** filling out the form tabs. Pressing Enter here will dynamically render the requested profiling cards without submitting the household record.")
+        st.markdown("#### ⚙️ Profile Roster Count Configuration & Non-Submitting Add Controls")
+        st.info("💡 Adjust the counters or click the buttons below to dynamically add profiling forms without submitting the overall survey record.")
         
-        c_cnt1, c_cnt2 = st.columns(2)
-        num_adults = c_cnt1.number_input(
-            "Specify Number of Adult Members to Profile in this Household",
-            min_value=0, max_value=15, value=1, step=1, key="num_adults_counter"
-        )
-        num_children = c_cnt2.number_input(
-            "Specify Number of Children (<5 yrs / eligible) to Profile",
-            min_value=0, max_value=10, value=0, step=1, key="num_children_counter"
-        )
+        if "adult_count" not in st.session_state:
+            st.session_state.adult_count = 1
+        if "child_count" not in st.session_state:
+            st.session_state.child_count = 0
+
+        c_cnt1, c_cnt2, c_cnt3, c_cnt4 = st.columns(4)
+        with c_cnt1:
+            st.session_state.adult_count = st.number_input(
+                "Adult Members Count", min_value=0, max_value=20, value=st.session_state.adult_count, step=1
+            )
+        with c_cnt2:
+            if st.button("➕ Add Adult Form", use_container_width=True):
+                st.session_state.adult_count += 1
+                st.rerun()
+        with c_cnt3:
+            st.session_state.child_count = st.number_input(
+                "Child Members Count (<5 yrs)", min_value=0, max_value=15, value=st.session_state.child_count, step=1
+            )
+        with c_cnt4:
+            if st.button("➕ Add Child Form", use_container_width=True):
+                st.session_state.child_count += 1
+                st.rerun()
+
+        num_adults = st.session_state.adult_count
+        num_children = st.session_state.child_count
 
         with st.form("phase2_complete_form"):
             t_meta, t_vitals, t_socio, t_dec, t_morb, t_mch, t_child, t_yakap = st.tabs([
@@ -609,11 +625,11 @@ elif menu == "🏠 Phase 2: Master Household Survey":
 
             # --- TAB 2: DYNAMIC ADULT PROFILING ---
             with t_vitals:
-                st.markdown(f"**Module B: Adult Profiling & Physical Screening ({num_adults} Adult(s) Specified)**")
+                st.markdown(f"**Module B: Adult Profiling & Physical Screening ({num_adults} Adult(s) Active)**")
                 
                 adults_data = []
                 for i in range(1, int(num_adults) + 1):
-                    st.markdown(f"<div class='adult-card'><strong>Adult Member {i} Profile & Physical Vitals</strong></div>", unsafe_allow_html=True)
+                    st.markdown(f"<div class='adult-card'><strong>Adult Member {i} Full Profile & Physical Screening</strong></div>", unsafe_allow_html=True)
                     c1, c2, c3, c4, c5 = st.columns(5)
                     a_name = c1.text_input(f"Adult {i} Name / Initials", key=f"a_name_{i}")
                     a_gender = c2.selectbox(f"Adult {i} Gender", ["Male", "Female", "Other"], key=f"a_gen_{i}")
@@ -750,7 +766,7 @@ elif menu == "🏠 Phase 2: Master Household Survey":
 
             # --- TAB 7: DYNAMIC CHILD PROFILING ---
             with t_child:
-                st.markdown(f"**Module F4: Expanded Child Anthropometric & Immunization Record Profiling ({num_children} Child(ren) Specified)**")
+                st.markdown(f"**Module F4: Expanded Child Anthropometric & Immunization Record Profiling ({num_children} Child(ren) Active)**")
                 
                 children_records = []
                 for c_i in range(1, int(num_children) + 1):
@@ -1296,13 +1312,13 @@ elif menu == "🔍 Phase 4: Expanded PERI Windshield Tool":
         st.markdown("""
         **1. Step 1 - Calculate Domain Score (DS):** For each domain, sum the numerical scores of all evaluated items and divide by the total number of items evaluated in that domain.
         
-        $$\text{Domain Score (DS)} = \\frac{\\sum \\text{Item Ratings in Domain}}{\\text{Total Number of Evaluated Items in Domain}}$$
+        $$\\text{Domain Score (DS)} = \\frac{\\sum \\text{Item Ratings in Domain}}{\\text{Total Number of Evaluated Items in Domain}}$$
         
         *Example: If Domain 1 (Sanitation) has 9 items and the sum of scores is 18, then $DS = \\frac{18}{9} = 2.00$ (Moderate Risk).*
         
         **2. Step 2 - Calculate Purok Environmental Risk Index (PERI):** Sum the Domain Scores across all 6 domains and divide by 6 to determine the overall composite risk index for the specific Purok.
         
-        $$\text{PERI} = \\frac{DS_1 + DS_2 + DS_3 + DS_4 + DS_5 + DS_6}{6}$$
+        $$\\text{PERI} = \\frac{DS_1 + DS_2 + DS_3 + DS_4 + DS_5 + DS_6}{6}$$
         
         The PERI provides a single, comparative composite score ranging from **1.00 (Lowest Risk)** to **3.00 (Highest Risk)**.
         """)
