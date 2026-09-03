@@ -10,8 +10,13 @@ st.set_page_config(
     layout="wide"
 )
 
-# Custom UP Maroon, Green & Gold Styling (Clean HTML block, no images)
+# Custom UP Maroon, Green & Gold Styling with Light Gray Global Background
 CSS_STYLE = """<style>
+/* Main App Light Gray Background */
+.stApp, [data-testid="stAppViewContainer"], [data-testid="stHeader"] {
+    background-color: #F3F4F6 !important;
+}
+
 .up-navbar {
     background-color: #7B1113;
     border-bottom: 4px solid #1E4D2B;
@@ -55,11 +60,11 @@ div[data-testid="stForm"] {
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.03);
 }
 section[data-testid="stSidebar"] {
-    background-color: #F1F5F9;
-    border-right: 1px solid #E2E8F0;
+    background-color: #E2E8F0 !important;
+    border-right: 1px solid #CBD5E1;
 }
 .adult-card {
-    background-color: #F8FAFC;
+    background-color: #FFFFFF;
     border: 1px solid #E2E8F0;
     border-left: 4px solid #7B1113;
     padding: 12px 15px;
@@ -152,10 +157,10 @@ if menu == "🗺️ Interactive Spot Map":
     if len(st.session_state.hh_records) == 0:
         st.info("No household survey records stored yet. Showing baseline map with simulated flood hazard markers.")
         map_df = pd.DataFrame([
-            {"HH_ID": "HH-001", "Purok": "Purok 1", "Lat": 11.1562, "Lon": 124.9912, "BP": "145/92", "Risk": "Hypertensive Risk", "Flood_Prone": "Yes", "Color": [192, 38, 211, 230]}, # Purple: Dual Risk
-            {"HH_ID": "HH-002", "Purok": "Purok 1", "Lat": 11.1568, "Lon": 124.9918, "BP": "118/78", "Risk": "Normal", "Flood_Prone": "No", "Color": [34, 197, 94, 200]},   # Green: Safe
-            {"HH_ID": "HH-003", "Purok": "Purok 2", "Lat": 11.1555, "Lon": 124.9905, "BP": "120/80", "Risk": "Normal", "Flood_Prone": "Yes", "Color": [37, 99, 235, 220]},   # Blue: Flood Risk Only
-            {"HH_ID": "HH-004", "Purok": "Purok 3", "Lat": 11.1570, "Lon": 124.9930, "BP": "150/98", "Risk": "Hypertensive Risk", "Flood_Prone": "No", "Color": [123, 17, 19, 220]} # Maroon: Health Risk Only
+            {"HH_ID": "HH-001", "Purok": "Purok 1", "Lat": 11.1562, "Lon": 124.9912, "BP": "145/92", "Risk": "Hypertensive Risk", "Flood_Prone": "Yes", "Color": [192, 38, 211, 230]},
+            {"HH_ID": "HH-002", "Purok": "Purok 1", "Lat": 11.1568, "Lon": 124.9918, "BP": "118/78", "Risk": "Normal", "Flood_Prone": "No", "Color": [34, 197, 94, 200]},
+            {"HH_ID": "HH-003", "Purok": "Purok 2", "Lat": 11.1555, "Lon": 124.9905, "BP": "120/80", "Risk": "Normal", "Flood_Prone": "Yes", "Color": [37, 99, 235, 220]},
+            {"HH_ID": "HH-004", "Purok": "Purok 3", "Lat": 11.1570, "Lon": 124.9930, "BP": "150/98", "Risk": "Hypertensive Risk", "Flood_Prone": "No", "Color": [123, 17, 19, 220]}
         ])
     else:
         map_df = pd.DataFrame(st.session_state.hh_records)
@@ -176,14 +181,12 @@ if menu == "🗺️ Interactive Spot Map":
         st.markdown("🟣 **Purple:** Dual Hazard (Flood + Health Risk)")
         st.markdown("🟢 **Green:** Normal / Low Risk")
 
-    # Apply Filters
     filt_df = map_df[map_df["Purok"].isin(sel_puroks)]
     if flood_filter == "Flood-Prone Zones Only":
         filt_df = filt_df[filt_df["Flood_Prone"] == "Yes"]
     elif flood_filter == "Non-Flood Zones Only":
         filt_df = filt_df[filt_df["Flood_Prone"] == "No"]
 
-    # Metrics Summary
     total_map_hh = len(filt_df)
     flood_detected = sum(1 for _, r in filt_df.iterrows() if r.get("Flood_Prone") == "Yes")
     
@@ -439,15 +442,14 @@ elif menu == "🏠 Phase 2: Master Household Survey":
             primary_bp = adults_data[0]["BP"]
             has_htn = any(a["Sys"] >= 140 or a["Risk"] == "Hypertensive Risk" for a in adults_data)
             
-            # Map Marker Color Logic (Flood Zone vs Health Risk vs Dual Hazard)
             if has_htn and is_flood_prone == "Yes":
-                color_code = [192, 38, 211, 230] # Purple: Dual Hazard
+                color_code = [192, 38, 211, 230]
             elif has_htn:
-                color_code = [123, 17, 19, 220]  # Maroon: Health Risk Only
+                color_code = [123, 17, 19, 220]
             elif is_flood_prone == "Yes":
-                color_code = [37, 99, 235, 220]   # Blue: Flood Hazard Only
+                color_code = [37, 99, 235, 220]
             else:
-                color_code = [34, 197, 94, 200]   # Green: Normal/Safe
+                color_code = [34, 197, 94, 200]
 
             st.session_state.hh_records.append({
                 "HH_ID": hh_id, "Barangay": brgy, "Purok": purok, "Lat": lat, "Lon": lon,
