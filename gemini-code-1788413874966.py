@@ -179,7 +179,7 @@ with col_header:
     <div class="up-navbar-title">UNIVERSITY OF THE PHILIPPINES MANILA</div>
     <div class="up-navbar-sub">School of Health Sciences — Comprehensive Community Health Field Portal</div>
     <div class="up-navbar-detail">Integrated System: Spatial Mapping, Geocoding, Analytics & Action Planning (Phases 1–6)</div>
-    <div class="dev-honor-banner">⭐ Lead System Developer & Architect: Jan Art Serna, RMT | Field Enumerators: Aubrey Maye Arrieta | Leila Projimo, PTRP</div>
+    <div class="dev-honor-banner">Lead developer Jan Art A. Serna, RMT</div>
     </div>"""
     st.markdown(HEADER_HTML, unsafe_allow_html=True)
 
