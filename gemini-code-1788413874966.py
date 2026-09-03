@@ -73,6 +73,13 @@ section[data-testid="stSidebar"] {
     padding: 16px;
     margin-bottom: 16px;
 }
+.progress-card {
+    background-color: #FFFFFF;
+    border: 1px solid #E2E8F0;
+    border-radius: 8px;
+    padding: 12px;
+    margin-bottom: 10px;
+}
 </style>"""
 
 st.markdown(CSS_STYLE, unsafe_allow_html=True)
@@ -82,7 +89,7 @@ HEADER_HTML = """<div class="up-navbar">
 <div class="up-navbar-title">UNIVERSITY OF THE PHILIPPINES MANILA</div>
 <div class="up-navbar-sub">School of Health Sciences — Comprehensive Community Health Field Portal</div>
 <div class="up-navbar-detail">Integrated System: Spatial Mapping, Geocoding, Analytics & Action Planning (Phases 1–6)</div>
-<div class="up-navbar-dev">👨‍💻 Lead Developer: Jan Art A. Serna, RMT</div>
+<div class="up-navbar-dev">👨‍💻 Field Enumerators: Aubrey Maye Arrieta | Leila Projimo, PTRP | Jan Art Serna, RMT</div>
 </div>"""
 
 st.markdown(HEADER_HTML, unsafe_allow_html=True)
@@ -139,7 +146,31 @@ if "windshield_records" not in st.session_state:
 if "diag_records" not in st.session_state:
     st.session_state.diag_records = []
 
-# Navigation Bar
+# Dynamic Progress Tracker Calculations
+p1_status = len(st.session_state.gov_records) > 0
+p2_status = len(st.session_state.hh_records) > 0
+p3_status = len(st.session_state.qual_records) > 0
+p4_status = len(st.session_state.windshield_records) > 0
+p5_status = p2_status  # Analytics generated upon HH data
+p6_status = len(st.session_state.diag_records) > 0
+
+completed_phases = sum([p1_status, p2_status, p3_status, p4_status, p5_status, p6_status])
+overall_progress_pct = int((completed_phases / 6) * 100)
+
+# Sidebar - Progress & Navigation
+st.sidebar.markdown("### 📊 Phase Completion Tracker")
+st.sidebar.progress(overall_progress_pct / 100)
+st.sidebar.markdown(f"**Overall Progress: `{overall_progress_pct}%` Completed**")
+
+with st.sidebar.expander("🔍 View Phase Completion Details", expanded=False):
+    st.write(f"{'✅' if p1_status else '🔴'} **Phase 1 (Governance):** {'100%' if p1_status else '0%'}")
+    st.write(f"{'✅' if p2_status else '🔴'} **Phase 2 (Master Survey):** {'100%' if p2_status else '0%'}")
+    st.write(f"{'✅' if p3_status else '🔴'} **Phase 3 (Qualitative):** {'100%' if p3_status else '0%'}")
+    st.write(f"{'✅' if p4_status else '🔴'} **Phase 4 (Windshield):** {'100%' if p4_status else '0%'}")
+    st.write(f"{'✅' if p5_status else '🔴'} **Phase 5 (Analytics):** {'100%' if p5_status else '0%'}")
+    st.write(f"{'✅' if p6_status else '🔴'} **Phase 6 (Action Plan):** {'100%' if p6_status else '0%'}")
+
+st.sidebar.markdown("---")
 st.sidebar.markdown("### 🌐 Portal Navigation")
 menu = st.sidebar.radio(
     "Select Field Module",
@@ -308,7 +339,7 @@ elif menu == "🏠 Phase 2: Master Household Survey":
             "🌾 Socio-Econ, Food Insecurity, Housing & WASH",
             "🤝 Decision-Making Patterns",
             "🤒 Complete Morbidity & Chronic Care",
-            "👶 Complete Maternal, EPI & Nutrition",
+            "👶 Complete Maternal, Delivery, FP, Mortality & Child Nutrition",
             "🏥 Healthcare Access & PhilHealth YAKAP"
         ])
 
@@ -323,7 +354,7 @@ elif menu == "🏠 Phase 2: Master Household Survey":
             c1, c2, c3, c4 = st.columns(4)
             lat = c1.number_input("Latitude", value=11.1560, format="%.4f")
             lon = c2.number_input("Longitude", value=124.9920, format="%.4f")
-            enum_name = c3.text_input("Enumerator Name")
+            enum_name = c3.selectbox("Enumerator Name", ["Aubrey Maye Arrieta", "Leila Projimo, PTRP", "Jan Art Serna, RMT"])
             resp_role = c4.selectbox("Respondent Role", ["Head", "Spouse", "Adult Member", "Other"])
 
             c1, c2, c3 = st.columns(3)
@@ -460,7 +491,64 @@ elif menu == "🏠 Phase 2: Master Household Survey":
             postpartum_check = c3.selectbox("Postpartum Checkup within 72 hours", ["N/A", "Yes", "No"])
 
             st.markdown("---")
-            st.markdown("**Module F2: Infant & Young Child Nutrition Calculator (0–59 Months)**")
+            st.markdown("**Module F2: Delivery by Health Personnel & Accredited Health Facility**")
+            
+            c1, c2 = st.columns(2)
+            deliv_personnel_yesno = c1.selectbox("6.1 Delivery handled by trained health personnel?", ["N/A", "Yes", "No"])
+            
+            if deliv_personnel_yesno == "Yes":
+                deliv_personnel_type = c2.selectbox("If yes, specify personnel:", ["RHM (Rural Health Midwife)", "Nurse", "Physician"])
+            elif deliv_personnel_yesno == "No":
+                deliv_personnel_type = c2.text_input("If no, who handled the delivery (Specify):", "Traditional Birth Attendant / Hilot")
+            else:
+                deliv_personnel_type = "N/A"
+
+            c1, c2 = st.columns(2)
+            deliv_facility_yesno = c1.selectbox("6.2 Delivery handled in an accredited Health Facility?", ["N/A", "Yes", "No"])
+            
+            if deliv_facility_yesno == "Yes":
+                deliv_facility_type = c2.selectbox("If yes, specify accredited facility:", ["Government Hospital", "Private Hospital", "RHU Birthing Center", "Private Lying-in"])
+            else:
+                deliv_facility_type = "N/A / Home Delivery"
+
+            st.markdown("---")
+            st.markdown("**Module F3: Family Planning Assessment (To be answered by Women of Reproductive Age - WRAs)**")
+            
+            c1, c2 = st.columns(2)
+            fp_access = c1.selectbox("1. Couples with access to family planning services?", ["Yes", "No"])
+            fp_practice = c2.selectbox("2. Couples practicing family planning?", ["Yes", "No"])
+
+            c1, c2 = st.columns(2)
+            if fp_practice == "Yes":
+                fp_method = c1.selectbox("If yes, specify method:", ["Pills", "Injectables (DMPA)", "IUD", "Condom", "Subdermal Implant", "BTL (Tubal Ligation)", "NSV (Vasectomy)", "Natural Family Planning (NFP)"])
+                fp_reason_no = "N/A"
+            else:
+                fp_method = "None"
+                fp_reason_no = c2.text_input("If no, state reason:", "Desire for pregnancy / Religious belief / Fear of side effects")
+
+            st.markdown("---")
+            st.markdown("**Module F4: Mortality Assessment (Jan – Dec)**")
+            
+            mortality_yesno = st.selectbox("1. With deaths in the family due to preventable diseases (Jan-Dec)?", ["No", "Yes"])
+            mortality_records = []
+
+            if mortality_yesno == "Yes":
+                st.markdown("*Record details of preventable deaths in the household below:*")
+                for m_i in range(1, 3):
+                    st.caption(f"**Mortality Entry {m_i}**")
+                    mc1, mc2, mc3, mc4, mc5 = st.columns(5)
+                    m_cause = mc1.text_input(f"Cause of Disease #{m_i}", key=f"m_cause_{m_i}")
+                    m_age = mc2.number_input(f"Age #{m_i}", 0, 120, 0, key=f"m_age_{m_i}")
+                    m_sex = mc3.selectbox(f"Sex #{m_i}", ["Male", "Female"], key=f"m_sex_{m_i}")
+                    m_attended = mc4.selectbox(f"Health Worker Attended? #{m_i}", ["Physician", "Nurse", "Midwife", "None / Unattended"], key=f"m_att_{m_i}")
+                    m_treatment = mc5.text_input(f"Treatment Used #{m_i}", key=f"m_tx_{m_i}")
+                    
+                    mortality_records.append({
+                        "Cause": m_cause, "Age": m_age, "Sex": m_sex, "Attended": m_attended, "Treatment": m_treatment
+                    })
+
+            st.markdown("---")
+            st.markdown("**Module F5: Infant & Young Child Nutrition Calculator (0–59 Months)**")
             c1, c2, c3, c4 = st.columns(4)
             c_id = c1.text_input("Child Member ID / Name", "Child 1")
             c_age = c2.number_input("Child Age (Months: 0–59)", 0, 59, 24)
@@ -514,6 +602,7 @@ elif menu == "🏠 Phase 2: Master Household Survey":
 
             st.session_state.hh_records.append({
                 "HH_ID": hh_id, "Barangay": brgy, "Purok": purok, "Lat": lat, "Lon": lon,
+                "Enumerator": enum_name,
                 "BP": primary_bp, "Risk": "Hypertensive Risk" if has_htn else "Normal",
                 "Flood_Prone": is_flood_prone,
                 "Income_Tier": income_cat,
@@ -523,11 +612,16 @@ elif menu == "🏠 Phase 2: Master Household Survey":
                 "Travel_Time_RHU": travel_time,
                 "Transpo_Cost_RHU": transpo_cost,
                 "Health_Barriers": ", ".join(health_barriers),
+                "Delivery_Personnel": deliv_personnel_type,
+                "Delivery_Facility": deliv_facility_type,
+                "FP_Practicing": fp_practice,
+                "FP_Method": fp_method,
+                "Preventable_Mortality": mortality_yesno,
                 "WASH_Level": water_source,
                 "House_Type": house_type,
                 "Child_Nutritional_Status": child_diag["Wasting"], "Color": color_code
             })
-            st.success(f"Master Household Survey Record {hh_id} stored successfully!")
+            st.success(f"Master Household Survey Record {hh_id} stored successfully by {enum_name}!")
 
 # MODULE 4: PHASE 3 QUALITATIVE FIELD TOOLS
 elif menu == "🗣️ Phase 3: Qualitative Field Tools":
@@ -576,7 +670,7 @@ elif menu == "🔍 Phase 4: Full PERI Windshield Tool":
         c1, c2, c3 = st.columns(3)
         w_brgy = c1.text_input("Barangay Name Evaluated")
         w_purok = c2.selectbox("Zone / Purok Evaluated", [f"Purok {i}" for i in range(1, 8)])
-        w_evaluator = c3.text_input("Lead Assessor / Community Clerk")
+        w_evaluator = c3.selectbox("Lead Assessor / Enumerator", ["Aubrey Maye Arrieta", "Leila Projimo, PTRP", "Jan Art Serna, RMT"])
 
         st.caption("Rating Scale: `1 = Low Risk / Safe Standard`, `2 = Moderate Hazard`, `3 = Critical Concern / Severe Threat`")
         
@@ -611,7 +705,7 @@ elif menu == "🔍 Phase 4: Full PERI Windshield Tool":
                 tier = "Category C: Critical Hazard / Severe Flood & Environmental Risk"
 
             st.session_state.windshield_records.append({
-                "Barangay": w_brgy, "Purok": w_purok, "PERI": round(peri_index, 2), "Tier": tier
+                "Barangay": w_brgy, "Purok": w_purok, "PERI": round(peri_index, 2), "Tier": tier, "Assessor": w_evaluator
             })
             st.warning(f"PERI Composite Index: **{peri_index:.2f} / 3.00** — Action Status: **{tier}**")
 
