@@ -1,0 +1,6 @@
+[theme]
+primaryColor = "#7B1113"          # UP Maroon (Buttons, active tabs, controls)
+backgroundColor = "#F9FAFB"       # Light neutral canvas background
+secondaryBackgroundColor = "#FFFFFF"  # Clean white card and sidebar background
+textColor = "#111827"             # High-contrast charcoal text
+font = "sans serif"
