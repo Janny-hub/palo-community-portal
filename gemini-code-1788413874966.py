@@ -448,7 +448,7 @@ elif menu == "🏠 Phase 2: Master Household Survey":
             "🤒 Morbidity & Chronic Care",
             "👩 Maternal, FP & Mortality",
             "👶 Expanded Child Profiling & Immunizations (Children 1–4)",
-            "🏥 Healthcare Access & PhilHealth YAKAP"
+            "🏥 Health-Seeking Behavior & PhilHealth YAKAP"
         ])
 
         with t_meta:
@@ -467,14 +467,10 @@ elif menu == "🏠 Phase 2: Master Household Survey":
 
             c1, c2, c3 = st.columns(3)
             surv_status = c1.selectbox("Survey Status", ["Completed", "Partially Completed", "Refused"])
-            
-            # UPDATED: Primary Dialect options with Waray, Tagalog, English, Mixed, Other
             dialect = c2.selectbox(
                 "Primary Dialect Spoken at Home", 
                 ["Waray", "Tagalog", "English", "Mixed", "Cebuano / Bisaya", "Ilocano", "Bicolano", "Hiligaynon / Ilonggo", "Pangasinan", "Other Language"]
             )
-            
-            # UPDATED: Religion choices for the Philippines
             religion = c3.selectbox(
                 "Religion", 
                 [
@@ -531,7 +527,6 @@ elif menu == "🏠 Phase 2: Master Household Survey":
                 a_symptoms = c1.multiselect(f"Adult {i} Current Complaints", ["None", "Headache", "Cough", "Chest Pain", "Shortness of Breath"], default=["None"], key=f"a_sym_{i}")
                 a_risk = c2.selectbox(f"Adult {i} Risk Assessment", ["Normal", "Hypertensive Risk", "Hypoxemic (<95%)", "Fever / Febrile", "Tachycardic / Bradycardic"], key=f"a_risk_{i}")
 
-                # UPDATED: Added Action Taken protocol for abnormal vitals
                 a_action = st.multiselect(
                     f"🩺 Adult {i} Action Taken (for Abnormal Vitals / Clinical Complaints)",
                     [
@@ -647,7 +642,6 @@ elif menu == "🏠 Phase 2: Master Household Survey":
             st.markdown("**Module F3: Mortality Assessment (Jan–Dec)**")
             mortality_yesno = st.selectbox("With deaths in the family due to preventable diseases (Jan-Dec)?", ["No", "Yes"])
 
-        # EXPANDED CHILD PROFILING TAB (UP TO 4 CHILDREN + IMMUNIZATION CHECKLIST + ACTION TAKEN)
         with t_child:
             st.markdown("**Module F4: Expanded Child Anthropometric & Immunization Record Profiling (Up to 4 Children)**")
             children_records = []
@@ -662,7 +656,6 @@ elif menu == "🏠 Phase 2: Master Household Survey":
                 c_wt_kg = c4.number_input(f"Child {c_i} Weight (kg)", 0.0, 35.0, 8.5, key=f"c_wt_{c_i}")
                 c_ht_cm = c5.number_input(f"Child {c_i} Height (cm)", 0.0, 120.0, 72.0, key=f"c_ht_{c_i}")
 
-                # Calculate nutritional status for child
                 c_nutr = compute_child_nutrition(c_age_m, c_wt_kg, c_ht_cm)
                 st.caption(f"📊 **Nutritional Outcome:** BMI: {c_nutr['BMI']} | Wasting: **{c_nutr['Wasting']}** | Stunting: **{c_nutr['Stunting']}** | Underweight: **{c_nutr['Underweight']}**")
 
@@ -679,7 +672,6 @@ elif menu == "🏠 Phase 2: Master Household Survey":
                 fic_status = "Fully Immunized Child (FIC)" if is_fic else "Partially Immunized / Incomplete"
                 st.markdown(f"**Imm. Summary:** Status = `{fic_status}`")
 
-                # UPDATED: Added Action Taken protocol for abnormal child nutritional status / incomplete immunization
                 is_abnormal_nutr = "Wasted" in c_nutr['Wasting'] or "Stunted" in c_nutr['Stunting'] or "Underweight" in c_nutr['Underweight']
                 
                 c_action = st.multiselect(
@@ -704,11 +696,91 @@ elif menu == "🏠 Phase 2: Master Household Survey":
                 })
 
         with t_yakap:
-            st.markdown("**Module G: Healthcare Seeking Behavior & PhilHealth YAKAP Access**")
-            c1, c2 = st.columns(2)
-            primary_facility = c1.selectbox("Primary Facility Consulted First When Ill", ["Barangay Health Station (BHS)", "Rural Health Unit (RHU)", "District / Provincial Hospital", "Private Clinic / Hospital", "Traditional Healer / Faith Healer"])
-            delay_reason = c2.selectbox("Main Reason for Delaying Care", ["None / Immediate Care", "Financial Constraints", "Distance / Transport Cost", "Long Waiting Times", "Fear of Diagnosis"])
+            st.markdown("**Module G: Health-Seeking Behavior & PhilHealth YAKAP Access**")
+            
+            st.markdown("##### 1. Initial Actions Upon Feeling Unwell")
+            hsb_initial_actions = st.multiselect(
+                "What immediate steps do you take when you first notice symptoms or feel sick? (Select all that apply)",
+                [
+                    "Rest and wait to see if symptoms improve on their own",
+                    "Use home remedies, herbal teas, or traditional methods",
+                    "Buy over-the-counter (OTC) medication from a store/pharmacy",
+                    "Search symptoms online or on social media",
+                    "Ask family members, friends, or neighbors for advice",
+                    "Contact or schedule an appointment with a healthcare professional"
+                ],
+                default=["Rest and wait to see if symptoms improve on their own"]
+            )
 
+            st.markdown("##### 2. Healthcare Providers and Facilities Used")
+            hsb_providers_used = st.multiselect(
+                "Which types of healthcare sources or facilities do you visit when seeking care? (Select all that apply)",
+                [
+                    "Public or government hospital",
+                    "Private clinic or hospital",
+                    "Community health center or rural health unit",
+                    "Local pharmacy or chemist",
+                    "Traditional, herbal, or faith-based practitioner",
+                    "Telehealth app or online consultation service"
+                ],
+                default=["Community health center or rural health unit"]
+            )
+
+            st.markdown("##### 3. Travel Time to Nearest Health Facility")
+            hsb_travel_time = st.selectbox(
+                "What is the estimated travel time from your house to the nearest health facility? (Select one)",
+                [
+                    "Less than 15 minutes",
+                    "15 to 30 minutes",
+                    "30 minutes to 1 hour",
+                    "More than 1 hour"
+                ]
+            )
+
+            st.markdown("##### 4. Barriers to Seeking Timely Medical Care")
+            hsb_barriers = st.multiselect(
+                "Which of the following factors have caused you to delay or skip seeking medical care when sick? (Select all that apply)",
+                [
+                    "High cost of consultation, tests, or medication",
+                    "Long waiting times at health facilities",
+                    "Distance or lack of affordable transportation",
+                    "Inability to take time off work or caregiving responsibilities",
+                    "Fear of diagnosis, medical tests, or procedures",
+                    "Past negative experiences or poor communication with health staff",
+                    "Lack of health insurance coverage"
+                ]
+            )
+
+            st.markdown("##### 5. Key Influencers in Healthcare Decisions")
+            hsb_influencers = st.multiselect(
+                "Who influences or helps you make decisions about when and where to seek medical care? (Select all that apply)",
+                [
+                    "Spouse, partner, or immediate family members",
+                    "Parents or older relatives",
+                    "Friends, co-workers, or peers",
+                    "Community or religious leaders",
+                    "Local pharmacist or drug vendor",
+                    "Online forums or patient support groups",
+                    "I make all decisions independently"
+                ],
+                default=["I make all decisions independently"]
+            )
+
+            st.markdown("##### 6. Criteria for Selecting a Healthcare Facility")
+            hsb_criteria = st.multiselect(
+                "What key factors determine which clinic, hospital, or provider you choose to visit? (Select all that apply)",
+                [
+                    "Low cost or acceptance of health insurance",
+                    "Proximity to home or work",
+                    "Short waiting times for appointments",
+                    "Strong reputation or recommendations from loved ones",
+                    "Respectful, welcoming, and confidential staff",
+                    "Clean facilities and availability of medicines/equipment"
+                ]
+            )
+
+            st.markdown("---")
+            st.markdown("**PhilHealth YAKAP (Konsulta) Coverage**")
             c1, c2 = st.columns(2)
             yakap_registered = c1.selectbox("Registered under PhilHealth YAKAP (Konsulta)?", ["Yes", "No", "Uncertain"])
             yakap_availed = c2.selectbox("Has availed FREE First Patient Encounter (FPE) & Meds?", ["Yes", "No", "N/A"])
@@ -733,9 +805,15 @@ elif menu == "🏠 Phase 2: Master Household Survey":
                 "Income": income_cat, "Water": water_source, "Sanitation": toilet_type,
                 "Food_Skip": food_skip, "Children": children_records,
                 "Adults": adults_data, "Dialect": dialect, "Religion": religion,
+                "HSB_Initial_Actions": hsb_initial_actions,
+                "HSB_Providers_Used": hsb_providers_used,
+                "HSB_Travel_Time": hsb_travel_time,
+                "HSB_Barriers": hsb_barriers,
+                "HSB_Influencers": hsb_influencers,
+                "HSB_Criteria": hsb_criteria,
                 "Yakap": yakap_registered
             })
-            st.success(f"Household record '{hh_id}' saved successfully with dialect ({dialect}), religion ({religion}), geotagging, adult vitals with action protocols, and 4 child profiling entries!")
+            st.success(f"Household record '{hh_id}' saved successfully with Health-Seeking Behavior metrics, dialect ({dialect}), religion ({religion}), geotagging, adult vitals, and child profiling entries!")
 
 # MODULE 4: PHASE 3 QUALITATIVE FIELD TOOLS
 elif menu == "🗣️ Phase 3: Qualitative Field Tools":
