@@ -77,80 +77,93 @@ def show_login_screen():
     st.markdown(
         """
         <style>
-        .stApp {
-            background: linear-gradient(135deg, #7B1113 0%, #50080A 70%, #FACC15 100%) !important;
-            background-attachment: fixed !important;
+        /* Site-wide Dark Gray Background */
+        .stApp, [data-testid="stAppViewContainer"], [data-testid="stHeader"] {
+            background-color: #1e2022 !important;
         }
-        .login-box {
-            max-width: 360px;
-            margin: 40px auto;
-            padding: 20px;
-            background-color: #FFFFFF;
-            border-radius: 12px;
-            border: 3px solid #FACC15;
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+
+        /* Compact Login Header Block */
+        .login-header-box {
+            max-width: 350px;
+            margin: 50px auto 0 auto;
+            padding: 20px 20px 10px 20px;
+            background-color: #2a2d32;
+            border-top-left-radius: 12px;
+            border-top-right-radius: 12px;
+            border: 1px solid #3d4148;
+            border-bottom: none;
             text-align: center;
         }
         .login-title {
-            color: #7B1113;
+            color: #f87171;
             font-weight: 800;
-            font-size: 18px;
-            margin-bottom: 2px;
+            font-size: 19px;
+            margin-bottom: 4px;
         }
         .login-sub {
-            color: #475569;
+            color: #94a3b8;
             font-size: 12px;
             margin-bottom: 10px;
         }
         .dev-badge-login {
-            background-color: #FEF3C7;
-            border: 1px solid #FACC15;
-            color: #7B1113;
+            background-color: #3b2d1d;
+            border: 1px solid #d97706;
+            color: #fcd34d;
             font-size: 11px;
             font-weight: 700;
             padding: 4px 10px;
             border-radius: 16px;
             display: inline-block;
-            margin-bottom: 12px;
         }
+
+        /* Compact Centered Form Box */
         div[data-testid="stForm"] {
-            padding: 10px !important;
-            border: none !important;
-            box-shadow: none !important;
-            background-color: transparent !important;
+            max-width: 350px !important;
+            margin: 0 auto !important;
+            background-color: #2a2d32 !important;
+            border: 1px solid #3d4148 !important;
+            border-bottom-left-radius: 12px !important;
+            border-bottom-right-radius: 12px !important;
+            border-top-left-radius: 0px !important;
+            border-top-right-radius: 0px !important;
+            padding: 20px !important;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4);
+        }
+        div[data-testid="stForm"] label {
+            color: #e2e8f0 !important;
+            font-size: 13px !important;
         }
         </style>
     """,
         unsafe_allow_html=True,
     )
 
-    st.markdown('<div class="login-box">', unsafe_allow_html=True)
-    st.markdown(
-        '<div class="login-title">🩺 UP Manila Clerks Portal</div>',
-        unsafe_allow_html=True,
-    )
-    st.markdown(
-        '<div class="login-sub">Comprehensive Community Health Field Portal</div>',
-        unsafe_allow_html=True,
-    )
-    st.markdown(
-        '<div class="dev-badge-login">⭐ Lead developer Jan Art A. Serna, RMT</div>',
-        unsafe_allow_html=True,
-    )
+    col1, col2, col3 = st.columns([1, 1, 1])
 
-    with st.form("login_form"):
-        username_input = st.text_input("Username")
-        password_input = st.text_input("Password", type="password")
-        submit_button = st.form_submit_button("Log In", use_container_width=True)
+    with col2:
+        st.markdown(
+            """
+            <div class="login-header-box">
+                <div class="login-title">🩺 UP Manila Clerks Portal</div>
+                <div class="login-sub">Comprehensive Community Health Field Portal</div>
+                <div class="dev-badge-login">⭐ Lead developer Jan Art A. Serna, RMT</div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
 
-        if submit_button:
-            if username_input == "palo" and password_input == "1719":
-                st.session_state["authenticated"] = True
-                st.success("Access Granted!")
-                st.rerun()
-            else:
-                st.error("Invalid Username or Password.")
-    st.markdown("</div>", unsafe_allow_html=True)
+        with st.form("login_form"):
+            username_input = st.text_input("Username")
+            password_input = st.text_input("Password", type="password")
+            submit_button = st.form_submit_button("Log In", use_container_width=True)
+
+            if submit_button:
+                if username_input == "palo" and password_input == "1719":
+                    st.session_state["authenticated"] = True
+                    st.success("Access Granted!")
+                    st.rerun()
+                else:
+                    st.error("Invalid Username or Password.")
 
 
 # Stop execution if user is not authenticated
@@ -160,31 +173,31 @@ if not st.session_state["authenticated"]:
 
 # ================= MAIN APPLICATION LOGIC =================
 
-# Custom UP Maroon, Green & Gold Styling with Sticky Progress Bar CSS
+# Custom Dark Gray Theme Styling with Maroon, Green & Gold Accents
 CSS_STYLE = """<style>
-.stApp {
-    background: linear-gradient(135deg, #7B1113 0%, #50080A 75%, #FACC15 100%) !important;
-    background-attachment: fixed !important;
+.stApp, [data-testid="stAppViewContainer"], [data-testid="stHeader"] {
+    background-color: #1e2022 !important;
+    color: #e2e8f0;
 }
 .sticky-progress-container {
     position: sticky;
     top: 0;
     z-index: 99999;
-    background-color: #FFFFFF;
+    background-color: #2a2d32;
     padding: 14px 10px;
     margin-bottom: 15px;
-    border-bottom: 3px solid #FACC15;
+    border-bottom: 2px solid #3d4148;
     border-radius: 0 0 8px 8px;
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.15);
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2);
 }
 .up-navbar {
     background-color: #7B1113;
-    border-bottom: 4px solid #FACC15;
+    border-bottom: 4px solid #1E4D2B;
     padding: 20px 24px;
     border-radius: 10px;
     text-align: center;
     margin-bottom: 16px;
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2);
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3);
 }
 .up-navbar-title {
     color: #FFFFFF !important;
@@ -218,27 +231,27 @@ CSS_STYLE = """<style>
     letter-spacing: 0.4px;
 }
 div[data-testid="stForm"] {
-    border: 2px solid #FACC15;
+    border: 1px solid #3d4148;
     border-radius: 10px;
-    background-color: #FFFFFF;
+    background-color: #2a2d32;
     padding: 24px;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 section[data-testid="stSidebar"] {
-    background-color: #FFFFFF;
-    border-right: 2px solid #FACC15;
+    background-color: #25282c;
+    border-right: 1px solid #3d4148;
 }
 .adult-card {
-    background-color: #F8FAFC;
-    border: 1px solid #E2E8F0;
+    background-color: #2a2d32;
+    border: 1px solid #3d4148;
     border-left: 4px solid #7B1113;
     padding: 12px 15px;
     border-radius: 6px;
     margin-bottom: 12px;
 }
 .child-card {
-    background-color: #F0FDF4;
-    border: 1px solid #DCFCE7;
+    background-color: #1a2e23;
+    border: 1px solid #2d5a40;
     border-left: 4px solid #16A34A;
     padding: 12px 15px;
     border-radius: 6px;
@@ -339,8 +352,8 @@ overall_progress_pct = int((completed_phases / 6) * 100)
 st.sidebar.markdown(
     f"""
 <div class="sticky-progress-container">
-    <div style="font-weight: 700; color: #1E293B; font-size: 14px; margin-bottom: 4px;">📊 Phase Completion Tracker</div>
-    <div style="font-weight: 800; color: #7B1113; font-size: 18px; margin-bottom: 4px;">{overall_progress_pct}% Completed</div>
+    <div style="font-weight: 700; color: #e2e8f0; font-size: 14px; margin-bottom: 4px;">📊 Phase Completion Tracker</div>
+    <div style="font-weight: 800; color: #f87171; font-size: 18px; margin-bottom: 4px;">{overall_progress_pct}% Completed</div>
 </div>
 """,
     unsafe_allow_html=True,
