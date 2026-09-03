@@ -77,37 +77,47 @@ def show_login_screen():
     st.markdown(
         """
         <style>
+        .stApp {
+            background: linear-gradient(135deg, #7B1113 0%, #50080A 70%, #FACC15 100%) !important;
+            background-attachment: fixed !important;
+        }
         .login-box {
-            max-width: 420px;
-            margin: 60px auto;
-            padding: 30px;
+            max-width: 360px;
+            margin: 40px auto;
+            padding: 20px;
             background-color: #FFFFFF;
             border-radius: 12px;
-            border: 1px solid #CBD5E1;
-            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+            border: 3px solid #FACC15;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
             text-align: center;
         }
         .login-title {
             color: #7B1113;
             font-weight: 800;
-            font-size: 22px;
-            margin-bottom: 4px;
+            font-size: 18px;
+            margin-bottom: 2px;
         }
         .login-sub {
             color: #475569;
-            font-size: 13px;
-            margin-bottom: 15px;
+            font-size: 12px;
+            margin-bottom: 10px;
         }
         .dev-badge-login {
             background-color: #FEF3C7;
-            border: 1px solid #F59E0B;
-            color: #92400E;
-            font-size: 12px;
+            border: 1px solid #FACC15;
+            color: #7B1113;
+            font-size: 11px;
             font-weight: 700;
-            padding: 6px 12px;
-            border-radius: 20px;
+            padding: 4px 10px;
+            border-radius: 16px;
             display: inline-block;
-            margin-bottom: 20px;
+            margin-bottom: 12px;
+        }
+        div[data-testid="stForm"] {
+            padding: 10px !important;
+            border: none !important;
+            box-shadow: none !important;
+            background-color: transparent !important;
         }
         </style>
     """,
@@ -120,13 +130,11 @@ def show_login_screen():
         unsafe_allow_html=True,
     )
     st.markdown(
-        '<div class="login-sub">Comprehensive Community Health Field'
-        ' Portal</div>',
+        '<div class="login-sub">Comprehensive Community Health Field Portal</div>',
         unsafe_allow_html=True,
     )
     st.markdown(
-        '<div class="dev-badge-login">⭐ Lead developer Jan Art A. Serna,'
-        ' RMT</div>',
+        '<div class="dev-badge-login">⭐ Lead developer Jan Art A. Serna, RMT</div>',
         unsafe_allow_html=True,
     )
 
@@ -154,25 +162,29 @@ if not st.session_state["authenticated"]:
 
 # Custom UP Maroon, Green & Gold Styling with Sticky Progress Bar CSS
 CSS_STYLE = """<style>
+.stApp {
+    background: linear-gradient(135deg, #7B1113 0%, #50080A 75%, #FACC15 100%) !important;
+    background-attachment: fixed !important;
+}
 .sticky-progress-container {
     position: sticky;
     top: 0;
     z-index: 99999;
-    background-color: #F1F5F9;
+    background-color: #FFFFFF;
     padding: 14px 10px;
     margin-bottom: 15px;
-    border-bottom: 2px solid #CBD5E1;
+    border-bottom: 3px solid #FACC15;
     border-radius: 0 0 8px 8px;
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.08);
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.15);
 }
 .up-navbar {
     background-color: #7B1113;
-    border-bottom: 4px solid #1E4D2B;
+    border-bottom: 4px solid #FACC15;
     padding: 20px 24px;
     border-radius: 10px;
     text-align: center;
     margin-bottom: 16px;
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.15);
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2);
 }
 .up-navbar-title {
     color: #FFFFFF !important;
@@ -206,15 +218,15 @@ CSS_STYLE = """<style>
     letter-spacing: 0.4px;
 }
 div[data-testid="stForm"] {
-    border: 1px solid #CBD5E1;
+    border: 2px solid #FACC15;
     border-radius: 10px;
     background-color: #FFFFFF;
     padding: 24px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.03);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
 }
 section[data-testid="stSidebar"] {
-    background-color: #F1F5F9;
-    border-right: 1px solid #E2E8F0;
+    background-color: #FFFFFF;
+    border-right: 2px solid #FACC15;
 }
 .adult-card {
     background-color: #F8FAFC;
