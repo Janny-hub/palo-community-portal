@@ -5,7 +5,7 @@ import pydeck as pdk
 
 # Page Configuration (Must be first Streamlit command)
 st.set_page_config(
-    page_title="UP Manila - Community Clerks Portal",
+    page_title="UP Manila - Community Clerks Portal (Dev: Jan Art Serna, RMT)",
     page_icon="🩺",
     layout="wide"
 )
@@ -19,24 +19,35 @@ def show_login_screen():
     st.markdown("""
         <style>
         .login-box {
-            max-width: 400px;
-            margin: 80px auto;
+            max-width: 420px;
+            margin: 60px auto;
             padding: 30px;
             background-color: #FFFFFF;
-            border-radius: 10px;
+            border-radius: 12px;
             border: 1px solid #CBD5E1;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
             text-align: center;
         }
         .login-title {
             color: #7B1113;
             font-weight: 800;
             font-size: 22px;
-            margin-bottom: 5px;
+            margin-bottom: 4px;
         }
         .login-sub {
             color: #475569;
             font-size: 13px;
+            margin-bottom: 15px;
+        }
+        .dev-badge-login {
+            background-color: #FEF3C7;
+            border: 1px solid #F59E0B;
+            color: #92400E;
+            font-size: 12px;
+            font-weight: 700;
+            padding: 6px 12px;
+            border-radius: 20px;
+            display: inline-block;
             margin-bottom: 20px;
         }
         </style>
@@ -44,7 +55,8 @@ def show_login_screen():
 
     st.markdown('<div class="login-box">', unsafe_allow_html=True)
     st.markdown('<div class="login-title">🩺 UP Manila Clerks Portal</div>', unsafe_allow_html=True)
-    st.markdown('<div class="login-sub">Please log in to access the field portal.</div>', unsafe_allow_html=True)
+    st.markdown('<div class="login-sub">Comprehensive Community Health Field Portal</div>', unsafe_allow_html=True)
+    st.markdown('<div class="dev-badge-login">⭐ Lead System Developer: Jan Art Serna, RMT</div>', unsafe_allow_html=True)
     
     with st.form("login_form"):
         username_input = st.text_input("Username")
@@ -69,7 +81,6 @@ if not st.session_state["authenticated"]:
 
 # Custom UP Maroon, Green & Gold Styling with Sticky Progress Bar CSS
 CSS_STYLE = """<style>
-/* Sticky Phase Completion Tracker in Sidebar */
 .sticky-progress-container {
     position: sticky;
     top: 0;
@@ -84,10 +95,10 @@ CSS_STYLE = """<style>
 .up-navbar {
     background-color: #7B1113;
     border-bottom: 4px solid #1E4D2B;
-    padding: 18px 24px;
+    padding: 20px 24px;
     border-radius: 10px;
     text-align: center;
-    margin-bottom: 24px;
+    margin-bottom: 16px;
     box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.15);
 }
 .up-navbar-title {
@@ -109,12 +120,17 @@ CSS_STYLE = """<style>
     font-size: 12px !important;
     margin-top: 4px !important;
 }
-.up-navbar-dev {
-    color: #93C5FD !important;
-    font-size: 13px !important;
-    font-weight: 700 !important;
-    margin-top: 6px !important;
-    letter-spacing: 0.3px;
+.dev-honor-banner {
+    background: linear-gradient(90deg, #1E4D2B 0%, #064E3B 100%);
+    border: 1px solid #10B981;
+    color: #ECFDF5;
+    padding: 8px 16px;
+    border-radius: 8px;
+    text-align: center;
+    font-size: 13px;
+    font-weight: 700;
+    margin-top: 10px;
+    letter-spacing: 0.4px;
 }
 div[data-testid="stForm"] {
     border: 1px solid #CBD5E1;
@@ -146,15 +162,24 @@ section[data-testid="stSidebar"] {
 
 st.markdown(CSS_STYLE, unsafe_allow_html=True)
 
-# UP Header Banner
-HEADER_HTML = """<div class="up-navbar">
-<div class="up-navbar-title">UNIVERSITY OF THE PHILIPPINES MANILA</div>
-<div class="up-navbar-sub">School of Health Sciences — Comprehensive Community Health Field Portal</div>
-<div class="up-navbar-detail">Integrated System: Spatial Mapping, Geocoding, Analytics & Action Planning (Phases 1–6)</div>
-<div class="up-navbar-dev">👨‍💻 Field Enumerators: Aubrey Maye Arrieta | Leila Projimo, PTRP | Jan Art Serna, RMT</div>
-</div>"""
+# Top Bar Header with Developer Honor & Logout Button
+col_header, col_logout = st.columns([8, 2])
 
-st.markdown(HEADER_HTML, unsafe_allow_html=True)
+with col_header:
+    HEADER_HTML = """<div class="up-navbar">
+    <div class="up-navbar-title">UNIVERSITY OF THE PHILIPPINES MANILA</div>
+    <div class="up-navbar-sub">School of Health Sciences — Comprehensive Community Health Field Portal</div>
+    <div class="up-navbar-detail">Integrated System: Spatial Mapping, Geocoding, Analytics & Action Planning (Phases 1–6)</div>
+    <div class="dev-honor-banner">⭐ Lead System Developer & Architect: Jan Art Serna, RMT | Field Enumerators: Aubrey Maye Arrieta | Leila Projimo, PTRP</div>
+    </div>"""
+    st.markdown(HEADER_HTML, unsafe_allow_html=True)
+
+with col_logout:
+    st.write("")
+    st.write("")
+    if st.button("🚪 Log Out System", use_container_width=True, type="secondary"):
+        st.session_state["authenticated"] = False
+        st.rerun()
 
 # Child Nutritional Status Calculation Engine
 def compute_child_nutrition(age_months, weight_kg, height_cm):
@@ -219,10 +244,10 @@ p6_status = len(st.session_state.diag_records) > 0
 completed_phases = sum([p1_status, p2_status, p3_status, p4_status, p5_status, p6_status])
 overall_progress_pct = int((completed_phases / 6) * 100)
 
-# Sidebar - Sticky Progress Tracker & Logout
+# Sidebar - Sticky Progress Tracker & Developer Recognition
 st.sidebar.markdown(f"""
 <div class="sticky-progress-container">
-    <div style="font-weight: 700; color: #1E293B; font-size: 15px; margin-bottom: 6px;">📊 Phase Completion Tracker</div>
+    <div style="font-weight: 700; color: #1E293B; font-size: 14px; margin-bottom: 4px;">📊 Phase Completion Tracker</div>
     <div style="font-weight: 800; color: #7B1113; font-size: 18px; margin-bottom: 4px;">{overall_progress_pct}% Completed</div>
 </div>
 """, unsafe_allow_html=True)
@@ -254,9 +279,12 @@ menu = st.sidebar.radio(
     ]
 )
 
-if st.sidebar.button("🔒 Log Out", use_container_width=True):
+st.sidebar.markdown("---")
+if st.sidebar.button("🔒 Logout Account", use_container_width=True):
     st.session_state["authenticated"] = False
     st.rerun()
+
+st.sidebar.caption("👨‍💻 **Lead Developer:** Jan Art Serna, RMT")
 
 # MODULE 1: INTERACTIVE SPOT MAP
 if menu == "🗺️ Interactive Spot Map":
@@ -424,7 +452,7 @@ elif menu == "🏠 Phase 2: Master Household Survey":
             c1, c2, c3, c4 = st.columns(4)
             lat = c1.number_input("Latitude", value=11.1560, format="%.4f")
             lon = c2.number_input("Longitude", value=124.9920, format="%.4f")
-            enum_name = c3.selectbox("Enumerator Name", ["Aubrey Maye Arrieta", "Leila Projimo, PTRP", "Jan Art Serna, RMT"])
+            enum_name = c3.selectbox("Enumerator Name", ["Jan Art Serna, RMT", "Aubrey Maye Arrieta", "Leila Projimo, PTRP"])
             resp_role = c4.selectbox("Respondent Role", ["Head", "Spouse", "Adult Member", "Other"])
 
             c1, c2, c3 = st.columns(3)
@@ -750,7 +778,7 @@ elif menu == "🔍 Phase 4: Full PERI Windshield Tool":
         c1, c2, c3 = st.columns(3)
         w_brgy = c1.text_input("Barangay Name Evaluated")
         w_purok = c2.selectbox("Zone / Purok Evaluated", [f"Purok {i}" for i in range(1, 8)])
-        w_evaluator = c3.selectbox("Lead Assessor / Enumerator", ["Aubrey Maye Arrieta", "Leila Projimo, PTRP", "Jan Art Serna, RMT"])
+        w_evaluator = c3.selectbox("Lead Assessor / Enumerator", ["Jan Art Serna, RMT", "Aubrey Maye Arrieta", "Leila Projimo, PTRP"])
 
         st.caption("Rating Scale: `1 = Low Risk / Safe Standard`, `2 = Moderate Hazard`, `3 = Critical Concern / Severe Threat`")
         
@@ -792,7 +820,7 @@ elif menu == "🔍 Phase 4: Full PERI Windshield Tool":
 # MODULE 6: PHASE 5 SPATIAL & STATISTICAL ANALYTICS
 elif menu == "📈 Phase 5: Spatial & Statistical Analytics":
     st.subheader("Phase 5: Spatial Mapping, Geocoding, & Advanced Statistical Analytics Framework")
-    st.caption("Transforming raw community assessment data into high-impact public health intelligence through spatial visualization (GIS) and advanced statistical modeling.")
+    st.caption("System Design & Analytics Architecture engineered by Lead Developer Jan Art Serna, RMT.")
 
     t_geo, t_gis, t_stat, t_ref = st.tabs([
         "📍 6.1 Geocoding Protocol",
