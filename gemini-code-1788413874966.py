@@ -10,7 +10,7 @@ st.set_page_config(
     layout="wide"
 )
 
-# Custom UP Maroon, Green & Gold Styling (Clean HTML block, no images)
+# Custom UP Maroon, Green & Gold Styling
 CSS_STYLE = """<style>
 .up-navbar {
     background-color: #7B1113;
@@ -66,15 +66,22 @@ section[data-testid="stSidebar"] {
     border-radius: 6px;
     margin-bottom: 12px;
 }
+.stat-card {
+    background-color: #FFFFFF;
+    border: 1px solid #CBD5E1;
+    border-radius: 8px;
+    padding: 16px;
+    margin-bottom: 16px;
+}
 </style>"""
 
 st.markdown(CSS_STYLE, unsafe_allow_html=True)
 
-# Clean UP Header Banner with Developer Credit
+# UP Header Banner
 HEADER_HTML = """<div class="up-navbar">
 <div class="up-navbar-title">UNIVERSITY OF THE PHILIPPINES MANILA</div>
 <div class="up-navbar-sub">School of Health Sciences — Comprehensive Community Health Field Portal</div>
-<div class="up-navbar-detail">Full System Framework: Complete Protocols for Phases 1, 2, 3, & 4</div>
+<div class="up-navbar-detail">Full System Framework: Complete Protocols for Phases 1, 2, 3, 4, & 5</div>
 <div class="up-navbar-dev">👨‍💻 Lead Developer: Jan Art A. Serna, RMT</div>
 </div>"""
 
@@ -140,22 +147,23 @@ menu = st.sidebar.radio(
         "🏠 Phase 2: Master Household Survey", 
         "🗣️ Phase 3: Qualitative Field Tools", 
         "🔍 Phase 4: Full PERI Windshield Tool", 
+        "📈 Phase 5: Spatial & Statistical Analytics",
         "🩺 Diagnostic Summary & Analytics",
         "💾 Data Management & Export"
     ]
 )
 
-# MODULE 1: INTERACTIVE SPOT MAP WITH FLOOD RISK DETECTION
+# MODULE 1: INTERACTIVE SPOT MAP
 if menu == "🗺️ Interactive Spot Map":
     st.subheader("📍 Interactive Barangay Health & Environmental Hazard Spot Map")
     
     if len(st.session_state.hh_records) == 0:
-        st.info("No household survey records stored yet. Showing baseline map with simulated flood hazard markers.")
+        st.info("No household survey records stored yet. Showing baseline map with simulated hazard markers.")
         map_df = pd.DataFrame([
-            {"HH_ID": "HH-001", "Purok": "Purok 1", "Lat": 11.1562, "Lon": 124.9912, "BP": "145/92", "Risk": "Hypertensive Risk", "Flood_Prone": "Yes", "Color": [192, 38, 211, 230]}, # Purple: Dual Risk
-            {"HH_ID": "HH-002", "Purok": "Purok 1", "Lat": 11.1568, "Lon": 124.9918, "BP": "118/78", "Risk": "Normal", "Flood_Prone": "No", "Color": [34, 197, 94, 200]},   # Green: Safe
-            {"HH_ID": "HH-003", "Purok": "Purok 2", "Lat": 11.1555, "Lon": 124.9905, "BP": "120/80", "Risk": "Normal", "Flood_Prone": "Yes", "Color": [37, 99, 235, 220]},   # Blue: Flood Risk Only
-            {"HH_ID": "HH-004", "Purok": "Purok 3", "Lat": 11.1570, "Lon": 124.9930, "BP": "150/98", "Risk": "Hypertensive Risk", "Flood_Prone": "No", "Color": [123, 17, 19, 220]} # Maroon: Health Risk Only
+            {"HH_ID": "HH-001", "Purok": "Purok 1", "Lat": 11.1562, "Lon": 124.9912, "BP": "145/92", "Risk": "Hypertensive Risk", "Flood_Prone": "Yes", "Color": [192, 38, 211, 230]},
+            {"HH_ID": "HH-002", "Purok": "Purok 1", "Lat": 11.1568, "Lon": 124.9918, "BP": "118/78", "Risk": "Normal", "Flood_Prone": "No", "Color": [34, 197, 94, 200]},
+            {"HH_ID": "HH-003", "Purok": "Purok 2", "Lat": 11.1555, "Lon": 124.9905, "BP": "120/80", "Risk": "Normal", "Flood_Prone": "Yes", "Color": [37, 99, 235, 220]},
+            {"HH_ID": "HH-004", "Purok": "Purok 3", "Lat": 11.1570, "Lon": 124.9930, "BP": "150/98", "Risk": "Hypertensive Risk", "Flood_Prone": "No", "Color": [123, 17, 19, 220]}
         ])
     else:
         map_df = pd.DataFrame(st.session_state.hh_records)
@@ -176,14 +184,12 @@ if menu == "🗺️ Interactive Spot Map":
         st.markdown("🟣 **Purple:** Dual Hazard (Flood + Health Risk)")
         st.markdown("🟢 **Green:** Normal / Low Risk")
 
-    # Apply Filters
     filt_df = map_df[map_df["Purok"].isin(sel_puroks)]
     if flood_filter == "Flood-Prone Zones Only":
         filt_df = filt_df[filt_df["Flood_Prone"] == "Yes"]
     elif flood_filter == "Non-Flood Zones Only":
         filt_df = filt_df[filt_df["Flood_Prone"] == "No"]
 
-    # Metrics Summary
     total_map_hh = len(filt_df)
     flood_detected = sum(1 for _, r in filt_df.iterrows() if r.get("Flood_Prone") == "Yes")
     
@@ -357,7 +363,7 @@ elif menu == "🏠 Phase 2: Master Household Survey":
         with t_socio:
             st.markdown("**C1. Livelihood & Economic Stability**")
             c1, c2, c3 = st.columns(3)
-            income_cat = c1.selectbox("Average Family Income / Month", ["≤ ₱10,000", "₱10,001–₱30,000", "₱30,001–₱45,000", "> ₱50,000"])
+            income_cat = c1.selectbox("Average Family Income / Month", ["≤ ₱10,000 (Q1)", "₱10,001–₱20,000 (Q2)", "₱20,001–₱35,000 (Q3)", "₱35,001–₱50,000 (Q4)", "> ₱50,000 (Q5)"])
             livelihood = c2.selectbox("Primary Livelihood Source", ["Farming (Owned)", "Farming (Tenanted)", "Laborer", "Carpentry", "Fishing", "Peddling", "Gov't Employee", "Small Industry/Sari-Sari", "Other"])
             food_prod = c3.selectbox("Engaged in Food Production?", ["Yes", "No"])
 
@@ -439,20 +445,22 @@ elif menu == "🏠 Phase 2: Master Household Survey":
             primary_bp = adults_data[0]["BP"]
             has_htn = any(a["Sys"] >= 140 or a["Risk"] == "Hypertensive Risk" for a in adults_data)
             
-            # Map Marker Color Logic (Flood Zone vs Health Risk vs Dual Hazard)
             if has_htn and is_flood_prone == "Yes":
-                color_code = [192, 38, 211, 230] # Purple: Dual Hazard
+                color_code = [192, 38, 211, 230]
             elif has_htn:
-                color_code = [123, 17, 19, 220]  # Maroon: Health Risk Only
+                color_code = [123, 17, 19, 220]
             elif is_flood_prone == "Yes":
-                color_code = [37, 99, 235, 220]   # Blue: Flood Hazard Only
+                color_code = [37, 99, 235, 220]
             else:
-                color_code = [34, 197, 94, 200]   # Green: Normal/Safe
+                color_code = [34, 197, 94, 200]
 
             st.session_state.hh_records.append({
                 "HH_ID": hh_id, "Barangay": brgy, "Purok": purok, "Lat": lat, "Lon": lon,
                 "BP": primary_bp, "Risk": "Hypertensive Risk" if has_htn else "Normal",
                 "Flood_Prone": is_flood_prone,
+                "Income_Tier": income_cat,
+                "WASH_Level": water_source,
+                "House_Type": house_type,
                 "Child_Nutritional_Status": child_diag["Wasting"], "Color": color_code
             })
             st.success(f"Master Household Survey Record {hh_id} stored successfully!")
@@ -543,7 +551,176 @@ elif menu == "🔍 Phase 4: Full PERI Windshield Tool":
             })
             st.warning(f"PERI Composite Index: **{peri_index:.2f} / 3.00** — Action Status: **{tier}**")
 
-# MODULE 6: AUTOMATED COMMUNITY DIAGNOSIS
+# MODULE 6: PHASE 5 SPATIAL & STATISTICAL ANALYTICS
+elif menu == "📈 Phase 5: Spatial & Statistical Analytics":
+    st.subheader("Phase 5: Spatial Mapping, Geocoding, & Advanced Statistical Analytics")
+    
+    t_geo, t_gis, t_stat, t_ref = st.tabs([
+        "📍 6.1 Geocoding Protocol",
+        "🗺️ 6.2 Multi-Layer GIS Engine",
+        "📊 6.3 Advanced Statistical Modeling",
+        "📋 Analytics Framework Table"
+    ])
+
+    with t_geo:
+        st.markdown("**6.1 Spot Mapping & Mobile Address Geocoding Workflow**")
+        
+        st.markdown("""
+        * **Step 1: Participatory BHW Spot Mapping:** Mobilize BHWs to draw baseline community spot maps capturing every residential structure, water source, and health facility.
+        * **Step 2: GPS Mobile Geocoding:** Utilizing handheld GPS devices or mobile survey software (KoboToolbox), capture exact latitude and longitude coordinates $(x, y)$ for every surveyed household.
+        * **Step 3: GIS Layering:** Upload geocoded survey points into QGIS or ArcGIS to convert static addresses into spatial shapefiles.
+        """)
+
+        st.markdown("---")
+        st.markdown("**⚡ Mobile Geocoding Coordinate Validator (KoboToolbox Field Test)**")
+        c1, c2, c3 = st.columns(3)
+        input_lat = c1.number_input("Test Latitude (Y)", value=11.1562, format="%.6f")
+        input_lon = c2.number_input("Test Longitude (X)", value=124.9912, format="%.6f")
+        input_acc = c3.number_input("GPS Accuracy Radius (Meters)", value=3.2, step=0.1)
+
+        if input_acc <= 5.0:
+            st.success(f"✅ **GPS Lock Validated:** High accuracy ({input_acc}m) suitable for household shapefile export.")
+        else:
+            st.warning(f"⚠️ **Weak GPS Lock:** Accuracy is {input_acc}m. Re-calibrate device before saving geocode.")
+
+    with t_gis:
+        st.markdown("**6.2 Multi-Layer GIS Visualization Engine**")
+        
+        layer_option = st.radio(
+            "Select Active GIS Analytic Layer",
+            [
+                "Layer 1: Disease Hotspot Mapping (Kernel Density Estimation / Heatmap)",
+                "Layer 2: Environmental SDOH Overlay (Flood Risk & Unsafe WASH)",
+                "Layer 3: Food Desert Buffer Analysis (500m Market Access Radius)",
+                "Layer 4: Catchment Isochrone Modeling (15 & 30 Min RHU Access Zones)"
+            ]
+        )
+
+        gis_data = pd.DataFrame([
+            {"HH_ID": "HH-001", "Lat": 11.1562, "Lon": 124.9912, "Disease": "Hypertension", "WASH": "Unsafe", "Flood": "Yes", "Weight": 0.9, "Color": [220, 38, 38, 200]},
+            {"HH_ID": "HH-002", "Lat": 11.1568, "Lon": 124.9918, "Disease": "None", "WASH": "Level 3", "Flood": "No", "Weight": 0.1, "Color": [34, 197, 94, 200]},
+            {"HH_ID": "HH-003", "Lat": 11.1555, "Lon": 124.9905, "Disease": "Diabetes", "WASH": "Unsafe", "Flood": "Yes", "Weight": 0.8, "Color": [234, 88, 12, 200]},
+            {"HH_ID": "HH-004", "Lat": 11.1570, "Lon": 124.9930, "Disease": "Active TB", "WASH": "Level 1", "Flood": "No", "Weight": 0.95, "Color": [147, 51, 234, 200]},
+            {"HH_ID": "HH-005", "Lat": 11.1548, "Lon": 124.9895, "Disease": "Hypertension", "WASH": "Unsafe", "Flood": "Yes", "Weight": 0.85, "Color": [220, 38, 38, 200]}
+        ])
+
+        view_state = pdk.ViewState(latitude=11.1560, longitude=124.9915, zoom=15, pitch=25)
+
+        if "Layer 1" in layer_option:
+            st.caption("🔥 **KDE Heatmap:** Density clustering of chronic hypertension, diabetes, and active TB cases.")
+            kde_layer = pdk.Layer(
+                "HeatmapLayer",
+                data=gis_data,
+                get_position=["Lon", "Lat"],
+                get_weight="Weight",
+                radiusPixels=60
+            )
+            st.pydeck_chart(pdk.Deck(layers=[kde_layer], initial_view_state=view_state))
+
+        elif "Layer 2" in layer_option:
+            st.caption("🌊 **Environmental SDOH Overlay:** Superimposing unsafe water sources and flood zones.")
+            sdoh_layer = pdk.Layer(
+                "ScatterplotLayer",
+                data=gis_data,
+                get_position=["Lon", "Lat"],
+                get_color="Color",
+                get_radius=22,
+                pickable=True
+            )
+            st.pydeck_chart(pdk.Deck(layers=[sdoh_layer], initial_view_state=view_state, tooltip={"text": "HH: {HH_ID}\nDisease: {Disease}\nWASH: {WASH}\nFlood Prone: {Flood}"}))
+
+        elif "Layer 3" in layer_option:
+            st.caption("🥗 **Food Desert Buffer Analysis:** 500-meter walking radius around fresh markets vs sari-sari store density.")
+            market_point = pd.DataFrame([{"Lat": 11.1560, "Lon": 124.9915, "Name": "Barangay Market (Fresh Food)"}])
+            
+            market_layer = pdk.Layer(
+                "ScatterplotLayer",
+                data=market_point,
+                get_position=["Lon", "Lat"],
+                get_color=[16, 185, 129, 250],
+                get_radius=500,
+                stroked=True,
+                filled=False,
+                get_line_color=[16, 185, 129, 250],
+                get_line_width=3
+            )
+            hh_layer = pdk.Layer("ScatterplotLayer", data=gis_data, get_position=["Lon", "Lat"], get_color=[239, 68, 68, 200], get_radius=12)
+            st.pydeck_chart(pdk.Deck(layers=[market_layer, hh_layer], initial_view_state=view_state, tooltip={"text": "Market 500m Buffer Zone"}))
+
+        else:
+            st.caption("🚑 **Catchment Isochrone Modeling:** 15-min and 30-min travel contours surrounding the Barangay Health Station (BHS).")
+            bhs_center = pd.DataFrame([{"Lat": 11.1560, "Lon": 124.9915}])
+            
+            iso_15 = pdk.Layer("ScatterplotLayer", data=bhs_center, get_position=["Lon", "Lat"], get_color=[59, 130, 246, 100], get_radius=400)
+            iso_30 = pdk.Layer("ScatterplotLayer", data=bhs_center, get_position=["Lon", "Lat"], get_color=[245, 158, 11, 60], get_radius=900)
+            st.pydeck_chart(pdk.Deck(layers=[iso_30, iso_15], initial_view_state=view_state))
+            st.markdown("🟢 **Inner Circle:** 15-Min Travel Isochrone | 🟡 **Outer Circle:** 30-Min Travel Isochrone (GIDA Border)")
+
+    with t_stat:
+        st.markdown("**6.3 Statistical Analysis & Advanced Analytical Modeling Engine**")
+        
+        col_a, col_b = st.columns(2)
+
+        with col_a:
+            st.markdown("<div class='stat-card'><strong>A. Descriptive Analysis & Social Gradient (Odds Ratios)</strong>", unsafe_allow_html=True)
+            st.caption("Measuring chronic disease risk across income quintiles.")
+            
+            low_inc_htn = 28
+            low_inc_norm = 12
+            high_inc_htn = 8
+            high_inc_norm = 32
+
+            or_val = (low_inc_htn * high_inc_norm) / (low_inc_norm * high_inc_htn)
+            rr_val = (low_inc_htn / (low_inc_htn + low_inc_norm)) / (high_inc_htn / (high_inc_htn + high_inc_norm))
+
+            st.metric("Odds Ratio (OR) - Q1 vs Q5 Income Tier", f"{or_val:.2f}")
+            st.metric("Relative Risk (RR)", f"{rr_val:.2f}")
+            st.write(f"💡 **Interpretation:** Households in the lowest income quintile (Q1) have **{or_val:.2f} times higher odds** of developing hypertension compared to the highest tier.")
+            st.markdown("</div>", unsafe_allow_html=True)
+
+        with col_b:
+            st.markdown("<div class='stat-card'><strong>B1. Factor Analysis (PCA) - Deprivation Index</strong>", unsafe_allow_html=True)
+            st.caption("Collapsing wall materials, WASH, income, and cooking fuel into a single composite factor.")
+            
+            w1 = st.slider("Weight: Housing Structure Vulnerability", 0.0, 1.0, 0.35)
+            w2 = st.slider("Weight: Unsafe WASH Source", 0.0, 1.0, 0.40)
+            w3 = st.slider("Weight: Income Poverty Level", 0.0, 1.0, 0.25)
+            
+            composite_score = (w1 * 2.8) + (w2 * 2.5) + (w3 * 2.1)
+            st.metric("Calculated Barangay Socio-Economic Vulnerability Score", f"{composite_score:.2f} / 3.00")
+            st.markdown("</div>", unsafe_allow_html=True)
+
+        st.markdown("<div class='stat-card'><strong>B2. Latent Class Analysis (LCA) - Household Risk Profiling</strong>", unsafe_allow_html=True)
+        c1, c2, c3 = st.columns(3)
+        c1.markdown("**Class 1: Low Risk / High Access**\n* Prevalence: 45%\n* Piped Water + Concrete House\n* Disease Probability: **8.2%**")
+        c2.markdown("**Class 2: Moderate SDOH Risk**\n* Prevalence: 35%\n* Level 2 Water + Light House\n* Disease Probability: **22.5%**")
+        c3.markdown("**Class 3: Severe Multi-Risk Cluster**\n* Prevalence: 20%\n* Food Insecure + Flood Prone + Unsafe WASH\n* Disease Probability: **61.4%**")
+        st.markdown("</div>", unsafe_allow_html=True)
+
+    with t_ref:
+        st.markdown("**Core Statistical Framework & Public Health Outputs**")
+        
+        stat_table = pd.DataFrame([
+            {
+                "Statistical Method": "Descriptive Cross-Tabulation & Odds Ratios",
+                "Input Variables (Survey/GIS)": "Income Quintiles × Hypertension / Diabetes Prevalence",
+                "Target Public Health Output": "Quantifies the slope of the social gradient in health across income tiers."
+            },
+            {
+                "Statistical Method": "Factor Analysis (PCA)",
+                "Input Variables (Survey/GIS)": "Housing materials, WASH level, Income, Cooking fuel",
+                "Target Public Health Output": "Generates a composite 'Barangay Socio-Economic Vulnerability Index'."
+            },
+            {
+                "Statistical Method": "Latent Class Analysis (LCA)",
+                "Input Variables (Survey/GIS)": "Co-occurring food insecurity, housing instability, distance barrier",
+                "Target Public Health Output": "Identifies multi-risk household clusters requiring integrated LGU social protection."
+            }
+        ])
+        
+        st.table(stat_table)
+
+# MODULE 7: AUTOMATED COMMUNITY DIAGNOSIS
 elif menu == "🩺 Diagnostic Summary & Analytics":
     st.subheader("Automated Community Health Diagnosis & Environmental Risk Analytics")
     tot = len(st.session_state.hh_records)
@@ -568,7 +745,7 @@ elif menu == "🩺 Diagnostic Summary & Analytics":
         if flood_rate >= 20.0:
             st.warning(f"🌊 **Environmental Hazard Risk:** Significant proportion ({flood_rate:.1f}%) of households detected in flood-prone zones. Prioritize vector control (dengue/leptospirosis) and disaster preparedness planning.")
 
-# MODULE 7: EXPORT MASTER DATA
+# MODULE 8: EXPORT MASTER DATA
 elif menu == "💾 Data Management & Export":
     st.subheader("💾 Export Full Assessment Datasets")
     if len(st.session_state.hh_records) > 0:
