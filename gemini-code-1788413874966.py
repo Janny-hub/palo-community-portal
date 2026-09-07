@@ -1,43 +1,11 @@
 import json
 import os
+import re
 from collections import Counter
 import numpy as np
 import pandas as pd
 import pydeck as pdk
 import streamlit as st
-
-# ================= FIELD TEAM & PALO, LEYTE REFERENCE OPTIONS =================
-ENUMERATOR_OPTIONS = [
-    ("Jan Art A. Serna, RMT", "E1"),
-    ("Leila Projimo, PTRP", "E2"),
-    ("Aubrey Maye Arrieta", "E3"),
-]
-
-PALO_LEYTE_BARANGAYS = [
-    "Anahaway", "Arado", "Baras", "Barayong", "Buri", "Cabarasan Daku",
-    "Cabarasan Guti", "Campetik", "Candahug", "Cangumbang", "Canhidoc",
-    "Capirawan", "Castilla", "Cavite East", "Cavite West", "Cogon",
-    "Gacao", "Guindapunan", "Libertad", "Luntad", "Naga-naga", "Pawing",
-    "Salvacion", "San Agustin", "San Antonio", "San Fernando", "San Isidro",
-    "San Joaquin", "San Jose", "San Miguel", "Santa Cruz", "Tacuranga",
-    "Teraza",
-]
-
-def barangay_select(label, value=None, key=None):
-    """Palo, Leyte barangay dropdown with safe handling of legacy records."""
-    options = PALO_LEYTE_BARANGAYS[:]
-    if value and value not in options:
-        options = [value] + options
-    index = options.index(value) if value in options else 0
-    return st.selectbox(label, options, index=index, key=key)
-
-def enumerator_select(label="👤 Enumerator"):
-    """Returns display name and stable enumerator code."""
-    names = [f"{name} (Code: {code})" for name, code in ENUMERATOR_OPTIONS]
-    selected = st.selectbox(label, names)
-    idx = names.index(selected)
-    return ENUMERATOR_OPTIONS[idx]
-
 
 # Page Configuration (Must be first Streamlit command)
 st.set_page_config(
@@ -538,153 +506,298 @@ if st.sidebar.button("🔒 Logout Account", use_container_width=True):
 
 # ================= MODULE 0: EXECUTIVE DASHBOARD & SMART RISK ENGINE =================
 if menu == "📊 Executive Health Dashboard & Smart Risk Engine":
-    st.markdown("""
-    <style>
-    .modern-hero {
-        background: linear-gradient(135deg,#111827 0%,#1e3a5f 55%,#0f766e 100%);
-        color: white; padding: 28px 30px; border-radius: 20px;
-        margin-bottom: 18px; box-shadow: 0 12px 30px rgba(15,23,42,.16);
-    }
-    .modern-hero h1 { margin:0; font-size:32px; font-weight:800; color:white; }
-    .modern-hero p { margin:7px 0 0; color:#dbeafe; font-size:14px; }
-    .kpi {
-        background:#fff; border:1px solid #e5e7eb; border-radius:16px;
-        padding:18px; min-height:112px; box-shadow:0 5px 18px rgba(15,23,42,.06);
-    }
-    .kpi .v {font-size:30px;font-weight:850;color:#0f172a;}
-    .kpi .l {font-size:12px;font-weight:700;color:#64748b;text-transform:uppercase;}
-    .priority {
-        background:#f8fafc;border:1px solid #e2e8f0;border-left:6px solid #0f766e;
-        border-radius:14px;padding:15px 18px;margin:8px 0;
-    }
-    .priority.high {border-left-color:#dc2626;background:#fff7f7;}
-    .priority.warn {border-left-color:#d97706;background:#fffbeb;}
-    </style>
-    """, unsafe_allow_html=True)
+    st.subheader(
+        "📊 Executive Field Intelligence Dashboard & Automated Risk Engine"
+    )
+    st.caption(
+        "Real-Time Multi-Phase Field Analytics, Epidemiological Insights &"
+        " Automated Public Health Risk Prediction"
+    )
 
     hh_data = st.session_state.hh_records
     gov_data = st.session_state.gov_records
     peri_data = st.session_state.windshield_records
     qual_data = st.session_state.qual_records
     diag_data = st.session_state.diag_records
+
     all_adults = [a for hh in hh_data for a in hh.get("Adults", [])]
     all_children = [c for hh in hh_data for c in hh.get("Children", [])]
+
     tot_hh = len(hh_data)
     tot_pop = len(all_adults) + len(all_children)
 
-    def _is_htn(hh):
-        if "Diagnosed" in str(hh.get("Hypertension_Status","")):
-            return True
-        return any(
-            (pd.to_numeric(a.get("Sys"), errors="coerce") >= 140) or
-            (pd.to_numeric(a.get("Dia"), errors="coerce") >= 90) or
-            a.get("Risk") == "Hypertensive Risk"
-            for a in hh.get("Adults", [])
+    htn_count = sum(
+        1
+        for a in all_adults
+        if a.get("Risk") == "Hypertensive Risk"
+        or a.get("Sys", 0) >= 140
+        or a.get("Dia", 0) >= 90
+    )
+    htn_rate = (
+        (htn_count / len(all_adults) * 100) if len(all_adults) > 0 else 0.0
+    )
+
+    avg_peri = (
+        np.mean([p.get("PERI_Index", 0) for p in peri_data])
+        if len(peri_data) > 0
+        else 0.0
+    )
+    latest_gov = gov_data[-1].get("Score", 0) if len(gov_data) > 0 else 0
+
+    m1, m2, m3, m4, m5 = st.columns(5)
+    m1.metric(
+        "Total Surveyed HHs",
+        f"{tot_hh}",
+        delta=f"{tot_pop} People Profiled" if tot_pop > 0 else None,
+    )
+    m2.metric(
+        "Adult Hypertensive Risk",
+        f"{htn_rate:.1f}%",
+        delta=f"{htn_count} High BP Adults",
+        delta_color="inverse",
+    )
+    m3.metric(
+        "Avg PERI Risk Index",
+        f"{avg_peri:.2f}",
+        delta=(
+            "Cat C Critical"
+            if avg_peri >= 2.3
+            else ("Cat B Concern" if avg_peri >= 1.5 else "Cat A Low Risk")
+        ),
+        delta_color="inverse",
+    )
+    m4.metric(
+        "BHB Governance Score",
+        f"{latest_gov}/100",
+        delta="High Functioning" if latest_gov >= 80 else "Needs Action",
+        delta_color="normal",
+    )
+    m5.metric(
+        "Action Plans Saved",
+        f"{len(diag_data)} Plans",
+        delta=f"{len(qual_data)} Qualitative Notes",
+    )
+
+    st.markdown("---")
+
+    st.markdown("### 🤖 Automated Community Health Risk & Vulnerability Predictor")
+    st.caption(
+        "Dynamically evaluates multi-phase field vectors and generates priority"
+        " public health interventions."
+    )
+
+    risk_triggers = []
+
+    if htn_rate > 25.0:
+        risk_triggers.append({
+            "type": "high",
+            "title": "🚨 Severe Adult Cardiovascular & Hypertension Surge",
+            "desc": (
+                f"Hyper-prevalence detected: **{htn_rate:.1f}%** of screened"
+                " adults present with high BP (≥140/90 mmHg). Urgent community"
+                " NCD screening and BHS compliance monitoring required."
+            ),
+            "action": (
+                "Deploy BHWs for immediate home BP monitoring & RHU physician"
+                " referral."
+            ),
+        })
+
+    flood_hhs = sum(1 for hh in hh_data if hh.get("Flood_Prone") == "Yes")
+    if tot_hh > 0 and (flood_hhs / tot_hh) >= 0.3:
+        risk_triggers.append({
+            "type": "high",
+            "title": "🌊 Critical Climate & Flood Vector Exposure",
+            "desc": (
+                f"**{(flood_hhs/tot_hh*100):.1f}%** of surveyed households are"
+                " located directly within severe flood-prone zones."
+            ),
+            "action": (
+                "Coordinate with Municipal DRRMO for pre-disaster evacuation"
+                " protocols and waterborne infection prophylaxis."
+            ),
+        })
+
+    stunted_cnt = sum(
+        1
+        for c in all_children
+        if "Stunted" in c.get("Nutr", {}).get("Stunting", "")
+    )
+    if len(all_children) > 0 and (stunted_cnt / len(all_children)) >= 0.2:
+        risk_triggers.append({
+            "type": "warn",
+            "title": "👶 Elevated Child Malnutrition & Stunting Cluster",
+            "desc": (
+                "Child anthropometric screening reveals"
+                f" **{(stunted_cnt/len(all_children)*100):.1f}%** stunting rate"
+                " among profiled children under 5 years."
+            ),
+            "action": (
+                "Enroll affected households in RHU supplementary feeding and"
+                " IYCF nutrition education."
+            ),
+        })
+
+    unsafe_water = sum(
+        1 for hh in hh_data if "Unsafe" in hh.get("Water", "")
+    )
+    if unsafe_water > 0:
+        risk_triggers.append({
+            "type": "warn",
+            "title": "🚰 Environmental WASH Vulnerability (Unsafe Water)",
+            "desc": (
+                f"**{unsafe_water}** household(s) rely on shallow wells or"
+                " unprotected water sources, heightening diarrheal disease"
+                " risk."
+            ),
+            "action": (
+                "Distribute chlorine tablets / point-of-use water disinfection"
+                " units and inspect water sources."
+            ),
+        })
+
+    if not risk_triggers:
+        st.markdown(
+            """<div class="insight-alert-good">
+            <strong>✅ Low Baseline Risk Detected:</strong> Current field data indicates manageable community health indicators. Continue quarterly monitoring and standard BHS preventive interventions.
+            </div>""",
+            unsafe_allow_html=True,
         )
-    def _is_dm(hh):
-        return "Diagnosed" in str(hh.get("Diabetes_Status",""))
-    def _is_tb(hh):
-        s=str(hh.get("TB_Status","")).lower()
-        return "dots" in s or "currently enrolled" in s or "defaulted" in s or "interrupted" in s
-    def _unsafe_water(hh):
-        return any(x in str(hh.get("Water","")).lower() for x in ["unsafe","unprotected","shallow well","river","surface"])
-    def _food_insecure(hh):
-        return any(str(hh.get(k,"")).lower() in ["yes","often","sometimes"] for k in ["Food_Skip","Food_Worry","Food_FullDay"])
-    def _flood(hh):
-        return str(hh.get("Flood_Prone","")).lower() == "yes"
-    def _open_waste(hh):
-        s=str(hh.get("Solid_Disposal","")).lower()
-        return any(x in s for x in ["open","river","burn", "dump"])
-
-    htn_hhs=sum(_is_htn(h) for h in hh_data)
-    dm_hhs=sum(_is_dm(h) for h in hh_data)
-    tb_hhs=sum(_is_tb(h) for h in hh_data)
-    water_hhs=sum(_unsafe_water(h) for h in hh_data)
-    food_hhs=sum(_food_insecure(h) for h in hh_data)
-    flood_hhs=sum(_flood(h) for h in hh_data)
-    waste_hhs=sum(_open_waste(h) for h in hh_data)
-    stunted=sum("Stunted" in str(c.get("Nutr",{}).get("Stunting","")) for c in all_children)
-    avg_peri=float(np.mean([p.get("PERI_Index",0) for p in peri_data])) if peri_data else 0
-    latest_gov=gov_data[-1].get("Score",0) if gov_data else 0
-
-    st.markdown(f"""
-    <div class="modern-hero">
-      <h1>Community Health Intelligence Dashboard</h1>
-      <p>Palo, Leyte • Automated situation analysis → priority setting → project planning</p>
-    </div>
-    """, unsafe_allow_html=True)
-
-    metrics=[
-        ("🏠","Households",tot_hh),
-        ("👥","People profiled",tot_pop),
-        ("🩺","HTN households",f"{htn_hhs} ({htn_hhs/tot_hh*100:.1f}%)" if tot_hh else "0"),
-        ("🩸","Diabetes households",f"{dm_hhs} ({dm_hhs/tot_hh*100:.1f}%)" if tot_hh else "0"),
-        ("🦠","TB-affected households",tb_hhs),
-        ("💧","Unsafe water",f"{water_hhs} ({water_hhs/tot_hh*100:.1f}%)" if tot_hh else "0"),
-    ]
-    cols=st.columns(6)
-    for col,(icon,label,val) in zip(cols,metrics):
-        col.markdown(f'<div class="kpi"><div class="l">{icon} {label}</div><div class="v">{val}</div></div>',unsafe_allow_html=True)
-
-    st.markdown("### 🎯 What needs attention first?")
-    priorities=[]
-    def add_priority(score,title,detail,action,kind="warn"):
-        priorities.append((score,title,detail,action,kind))
-    if tot_hh:
-        add_priority(htn_hhs/tot_hh, "Hypertension", f"{htn_hhs}/{tot_hh} households show a hypertension signal.", "Community BP screening, adherence review, BHS referral and repeat measurement.")
-        add_priority(dm_hhs/tot_hh, "Diabetes", f"{dm_hhs}/{tot_hh} households have a documented diabetes signal.", "Diabetes case finding, treatment adherence review and PhilHealth/YAKAP linkage.")
-        add_priority(water_hhs/tot_hh, "Unsafe water / WASH", f"{water_hhs}/{tot_hh} households have an unsafe-water signal.", "Water-source assessment, household water treatment and sanitation education.")
-        add_priority(flood_hhs/tot_hh, "Flood exposure", f"{flood_hhs}/{tot_hh} households are marked flood-prone.", "DRRM coordination, evacuation preparedness and post-flood WASH protection.")
-        add_priority(food_hhs/tot_hh, "Food insecurity", f"{food_hhs}/{tot_hh} households show food-insecurity signals.", "Nutrition screening, social protection referral and livelihood/food-access interventions.")
-        add_priority(waste_hhs/tot_hh, "Solid-waste risk", f"{waste_hhs}/{tot_hh} households show open/unsafe disposal signals.", "Barangay clean-up, waste segregation and local enforcement.")
-    if all_children:
-        add_priority(stunted/len(all_children), "Child nutrition", f"{stunted}/{len(all_children)} profiled children have a stunting signal.", "Growth monitoring, nutrition counselling and referral of children needing assessment.")
-    priorities=sorted(priorities,key=lambda x:x[0],reverse=True)
-    if priorities:
-        for score,title,detail,action,kind in priorities[:6]:
-            css="high" if score>=.30 else "warn"
-            st.markdown(f'<div class="priority {css}"><b>{title}</b> — {score*100:.1f}%<br>{detail}<br><b>Suggested project response:</b> {action}</div>',unsafe_allow_html=True)
     else:
-        st.info("No household data yet. Start Phase 2 household surveying.")
+        for trig in risk_triggers:
+            box_cls = (
+                "insight-alert-high"
+                if trig["type"] == "high"
+                else "insight-alert-warn"
+            )
+            st.markdown(
+                f"""<div class="{box_cls}">
+                <strong>{trig['title']}</strong><br>
+                {trig['desc']}<br>
+                <em>🎯 Recommended Action: {trig['action']}</em>
+                </div>""",
+                unsafe_allow_html=True,
+            )
 
-    st.markdown("### 📍 Where should resources go?")
-    c1,c2=st.columns(2)
-    with c1:
-        if hh_data:
-            brgy_rows=[]
-            for b in sorted(set(str(h.get("Barangay","")) for h in hh_data)):
-                bh=[h for h in hh_data if str(h.get("Barangay",""))==b]
-                n=len(bh)
-                burden=np.mean([_is_htn(h) or _is_dm(h) or _is_tb(h) or _unsafe_water(h) or _flood(h) for h in bh])*100 if n else 0
-                brgy_rows.append({"Barangay":b,"Households":n,"Composite Priority %":round(float(burden),1)})
-            st.dataframe(pd.DataFrame(brgy_rows).sort_values("Composite Priority %",ascending=False),use_container_width=True,hide_index=True)
+    st.markdown("---")
+
+    dash_tab1, dash_tab2, dash_tab3 = st.tabs([
+        "📈 Disease & Vitals Analytics",
+        "🌍 Environmental & PERI Breakdown",
+        "🔍 Real-Time Master Household Roster",
+    ])
+
+    with dash_tab1:
+        c_left, c_right = st.columns(2)
+        with c_left:
+            st.markdown("**Adult Systolic BP Distribution**")
+            if len(all_adults) > 0:
+                sys_vals = [
+                    a.get("Sys", 120) for a in all_adults if a.get("Sys", 0) > 0
+                ]
+                df_sys = pd.DataFrame({"Systolic BP": sys_vals})
+                st.bar_chart(df_sys["Systolic BP"].value_counts().sort_index())
+            else:
+                st.info("No adult BP vitals recorded yet.")
+
+        with c_right:
+            st.markdown("**Chronic Disease Prevalence in Households**")
+            if tot_hh > 0:
+                htn_hhs = sum(
+                    1
+                    for hh in hh_data
+                    if "Diagnosed" in hh.get("Hypertension_Status", "")
+                )
+                dm_hhs = sum(
+                    1
+                    for hh in hh_data
+                    if "Diagnosed" in hh.get("Diabetes_Status", "")
+                )
+                asthma_hhs = sum(
+                    1
+                    for hh in hh_data
+                    if "Diagnosed" in hh.get("Asthma_Status", "")
+                )
+                tb_hhs = sum(
+                    1 for hh in hh_data if "DOTS" in hh.get("TB_Status", "")
+                )
+
+                df_chronic = pd.DataFrame({
+                    "Condition": [
+                        "Hypertension",
+                        "Diabetes",
+                        "Asthma/COPD",
+                        "Tuberculosis",
+                    ],
+                    "Diagnosed HH Count": [
+                        htn_hhs,
+                        dm_hhs,
+                        asthma_hhs,
+                        tb_hhs,
+                    ],
+                }).set_index("Condition")
+                st.bar_chart(df_chronic)
+            else:
+                st.info("No household morbidity records available.")
+
+    with dash_tab2:
+        if len(peri_data) > 0:
+            st.markdown(
+                "**Purok Environmental Risk Index (PERI) Domain Breakdown**"
+            )
+            peri_df = pd.DataFrame(peri_data)[[
+                "Purok",
+                "DS1_Sanitation",
+                "DS2_Food",
+                "DS3_BuiltEnv",
+                "DS4_HealthInfra",
+                "DS5_DRR",
+                "DS6_Vector",
+                "PERI_Index",
+            ]]
+            st.dataframe(peri_df, use_container_width=True)
+            st.bar_chart(
+                peri_df.set_index("Purok")[[
+                    "DS1_Sanitation",
+                    "DS2_Food",
+                    "DS3_BuiltEnv",
+                    "DS4_HealthInfra",
+                    "DS5_DRR",
+                    "DS6_Vector",
+                ]]
+            )
         else:
-            st.info("No barangay data yet.")
-    with c2:
-        st.metric("Average PERI",f"{avg_peri:.2f}", "Critical" if avg_peri>=2.3 else ("Moderate" if avg_peri>=1.5 else "Low"))
-        st.metric("Latest Governance Score",f"{latest_gov}/100", "High functioning" if latest_gov>=80 else "Needs improvement")
-        st.metric("Existing Action Plans",len(diag_data))
-        st.caption("The dashboard prioritizes conditions observed in your actual survey records; it does not replace clinical or local-government validation.")
+            st.info("No Phase 4 PERI windshield evaluations stored yet.")
 
-    st.markdown("### 📊 Data story")
-    tab1,tab2,tab3=st.tabs(["Disease","Social & Environment","Household Explorer"])
-    with tab1:
-        df=pd.DataFrame({"Condition":["Hypertension","Diabetes","TB"],"Households":[htn_hhs,dm_hhs,tb_hhs]}).set_index("Condition")
-        st.bar_chart(df)
-        if all_adults:
-            bp=pd.to_numeric(pd.Series([a.get("Sys") for a in all_adults]),errors="coerce").dropna()
-            if len(bp): st.line_chart(bp.reset_index(drop=True))
-    with tab2:
-        df=pd.DataFrame({"Indicator":["Unsafe water","Food insecurity","Flood","Unsafe waste"],"Households":[water_hhs,food_hhs,flood_hhs,waste_hhs]}).set_index("Indicator")
-        st.bar_chart(df)
-    with tab3:
-        if hh_data:
-            q=st.text_input("Search household / barangay / purok / head name","")
-            rows=[{"HH ID":h.get("HH_ID"),"Barangay":h.get("Barangay"),"Purok":h.get("Purok"),"Head":h.get("Head_Name"),"HTN":_is_htn(h),"DM":_is_dm(h),"TB":_is_tb(h),"Flood":_flood(h)} for h in hh_data]
-            df=pd.DataFrame(rows)
-            if q: df=df[df.astype(str).apply(lambda r:q.lower() in " ".join(r).lower(),axis=1)]
-            st.dataframe(df,use_container_width=True,hide_index=True)
-        else: st.info("No household records yet.")
+    with dash_tab3:
+        st.markdown("**Live Master Household Explorer**")
+        if tot_hh > 0:
+            search_query = st.text_input(
+                "🔎 Search by Household ID, Barangay, or Head Name", ""
+            )
+            flat_hhs = []
+            for h in hh_data:
+                flat_hhs.append({
+                    "HH ID": h.get("HH_ID"),
+                    "Barangay": h.get("Barangay"),
+                    "Purok": h.get("Purok"),
+                    "Head Name": h.get("Head_Name"),
+                    "Vitals BP": h.get("BP"),
+                    "Health Risk": h.get("Risk"),
+                    "Flood Zone": h.get("Flood_Prone"),
+                    "Income": h.get("Income"),
+                    "Water Source": h.get("Water"),
+                })
+            df_display = pd.DataFrame(flat_hhs)
+            if search_query:
+                df_display = df_display[
+                    df_display.apply(
+                        lambda r: search_query.lower() in str(r).lower(), axis=1
+                    )
+                ]
+            st.dataframe(df_display, use_container_width=True)
+        else:
+            st.info("No household data logged.")
 
 # MODULE 1: INTERACTIVE SPOT MAP
 elif menu == "🗺️ Interactive Spot Map":
@@ -874,7 +987,7 @@ elif menu == "📋 Phase 1: Full Governance Scorecard":
 
             with t1:
                 c1, c2, c3 = st.columns(3)
-                b_name = barangay_select("Barangay Name")
+                b_name = c1.text_input("Barangay Name")
                 city = c2.text_input("City / Municipality")
                 prov = c3.text_input("Province")
 
@@ -1139,7 +1252,7 @@ elif menu == "📋 Phase 1: Full Governance Scorecard":
             rec = st.session_state.gov_records[selected_idx]
 
             with st.form("edit_gov_form"):
-                e_brgy = barangay_select(
+                e_brgy = st.text_input(
                     "Barangay Name", value=rec.get("Barangay", "")
                 )
                 e_city = st.text_input(
@@ -1257,7 +1370,20 @@ elif menu == "🏠 Phase 2: Master Household Survey":
 
         # Enumerator selection outside form to calculate dynamic prefix
         c_e1, c_e2 = st.columns(2)
-        enum_name_selected, enum_code = enumerator_select("👤 Enumerator Identifier")
+        enum_select = c_e1.selectbox(
+            "👤 Enumerator Identifier",
+            [
+                "Enumerator 1 (Code: E1)",
+                "Enumerator 2 (Code: E2)",
+                "Enumerator 3 (Code: E3)",
+            ],
+            index=0,
+        )
+        enum_code = (
+            "E1"
+            if "E1" in enum_select
+            else ("E2" if "E2" in enum_select else "E3")
+        )
 
         existing_hh_ids = [
             r.get("HH_ID", "") for r in st.session_state.hh_records
@@ -1294,7 +1420,7 @@ elif menu == "🏠 Phase 2: Master Household Survey":
                 hh_id = c1.text_input(
                     "Household ID (Enumerator Prefixed)", value=auto_suggested_id
                 )
-                brgy = barangay_select("Barangay Name")
+                brgy = c2.text_input("Barangay Name")
                 purok = c3.selectbox(
                     "Purok / Zone", [f"Purok {i}" for i in range(1, 8)]
                 )
@@ -1315,7 +1441,7 @@ elif menu == "🏠 Phase 2: Master Household Survey":
                     "Longitude", value=124.9920, format="%.4f"
                 )
                 enum_name = c3.text_input(
-                    "Enumerator Full Name", enum_name_selected
+                    "Enumerator Full Name", f"Field Enumerator ({enum_code})"
                 )
                 resp_role = c4.selectbox(
                     "Respondent Role",
@@ -2659,7 +2785,7 @@ elif menu == "🏠 Phase 2: Master Household Survey":
                 e_hh_id = st.text_input(
                     "Household ID", value=rec.get("HH_ID", "")
                 )
-                e_brgy = barangay_select(
+                e_brgy = st.text_input(
                     "Barangay Name", value=rec.get("Barangay", "")
                 )
                 e_purok = st.text_input("Purok", value=rec.get("Purok", ""))
@@ -3761,14 +3887,209 @@ elif menu == "📈 Phase 5: Spatial & Statistical Analytics":
     hh_data = st.session_state.hh_records
     peri_data = st.session_state.windshield_records
 
+    # ------------------------------------------------------------------
+    # PHASE 5 ANALYTICAL HELPERS
+    # All calculations are derived from the existing Phase 2 household/
+    # adult/child records and Phase 4 PERI records. No other phase is changed.
+    # ------------------------------------------------------------------
+    def _yes(value):
+        return str(value).strip().lower() in {"yes", "y", "true", "1"}
+
+    def _disease_household(hh, field):
+        value = str(hh.get(field, ""))
+        return "diagnosed" in value.lower() or value.lower() in {"yes", "active"}
+
+    def _adult_disease(hh, field):
+        # Household morbidity fields are the primary source.
+        if _disease_household(hh, field):
+            return True
+        # Also recognize elevated measured BP for hypertension.
+        if field == "Hypertension_Status":
+            for a in hh.get("Adults", []):
+                try:
+                    if float(a.get("Sys", 0)) >= 140 or float(a.get("Dia", 0)) >= 90:
+                        return True
+                except (TypeError, ValueError):
+                    pass
+        return False
+
+    def _education_score(value):
+        order = {
+            "No Formal Education": 0,
+            "Elementary Unfinished": 1,
+            "Elementary Graduate": 2,
+            "High School Unfinished": 3,
+            "High School Graduate": 4,
+            "Vocational / College Unfinished": 5,
+            "College Graduate": 6,
+            "Post-Graduate": 7,
+        }
+        return order.get(str(value), np.nan)
+
+    def _household_education(hh):
+        vals = [
+            _education_score(a.get("Edu"))
+            for a in hh.get("Adults", [])
+            if not pd.isna(_education_score(a.get("Edu")))
+        ]
+        return max(vals) if vals else np.nan
+
+    def _binary_indicators(hh):
+        food = (
+            _yes(hh.get("Food_Skip"))
+            or _yes(hh.get("Food_Worry"))
+            or _yes(hh.get("Food_FullDay"))
+        )
+        unsafe_water = "unsafe" in str(hh.get("Water", "")).lower()
+        poor_sanitation = any(
+            x in str(hh.get("Sanitation", "")).lower()
+            for x in ["open defecation", "none"]
+        )
+        open_dump = any(
+            x in str(hh.get("Solid_Disposal", "")).lower()
+            for x in ["open dumping", "river disposal", "burning"]
+        )
+        housing_risk = any(
+            x in str(hh.get("House_Type", "")).lower()
+            for x in ["light", "medium"]
+        )
+        cooking_risk = any(
+            x in str(hh.get("Cook_Fuel", "")).lower()
+            for x in ["charcoal", "wood", "kerosene"]
+        )
+        flood = _yes(hh.get("Flood_Prone"))
+        no_piped = "piped water connection" not in [
+            str(x).lower() for x in (hh.get("Utilities") or [])
+        ]
+        emergency_barrier = str(hh.get("Emergency_5k", "")).lower() == "no"
+        return {
+            "Food insecurity": int(food),
+            "Unsafe water": int(unsafe_water),
+            "Poor sanitation": int(poor_sanitation),
+            "Open/unsafe waste disposal": int(open_dump),
+            "Housing vulnerability": int(housing_risk),
+            "Indoor cooking-fuel risk": int(cooking_risk),
+            "Flood exposure": int(flood),
+            "No piped water connection": int(no_piped),
+            "No ₱5k emergency cushion": int(emergency_barrier),
+        }
+
+    def _income_rank(value):
+        match = re.search(r"\(Q([1-5])\)", str(value))
+        return int(match.group(1)) if match else np.nan
+
+    def _safe_or_rr(a, b, c, d):
+        # 2x2 table:
+        # exposed disease=a, exposed no disease=b, reference disease=c,
+        # reference no disease=d. Haldane correction for zero cells.
+        vals = [float(a), float(b), float(c), float(d)]
+        if any(v < 0 for v in vals):
+            return np.nan, np.nan
+        if min(vals) == 0:
+            vals = [v + 0.5 for v in vals]
+        a, b, c, d = vals
+        odds_exposed = a / b
+        odds_ref = c / d
+        risk_exposed = a / (a + b)
+        risk_ref = c / (c + d)
+        return odds_exposed / odds_ref, risk_exposed / risk_ref
+
+    def _kde_points(df, bandwidth_m=500, grid_n=55):
+        """Return KDE grid as lon/lat/intensity using a Gaussian kernel.
+        This is intentionally implemented with NumPy so Phase 5 does not
+        require an additional GIS/statistics package."""
+        if len(df) < 2:
+            return pd.DataFrame(columns=["lon", "lat", "weight"])
+        lat = pd.to_numeric(df["Lat"], errors="coerce").to_numpy()
+        lon = pd.to_numeric(df["Lon"], errors="coerce").to_numpy()
+        ok = np.isfinite(lat) & np.isfinite(lon)
+        lat, lon = lat[ok], lon[ok]
+        if len(lat) < 2:
+            return pd.DataFrame(columns=["lon", "lat", "weight"])
+        lat0 = np.mean(lat)
+        x = (lon - np.mean(lon)) * 111320 * np.cos(np.radians(lat0))
+        y = (lat - lat0) * 110540
+        span = max(np.ptp(x), np.ptp(y), bandwidth_m * 2)
+        pad = max(bandwidth_m, span * 0.12)
+        gx = np.linspace(x.min() - pad, x.max() + pad, grid_n)
+        gy = np.linspace(y.min() - pad, y.max() + pad, grid_n)
+        xx, yy = np.meshgrid(gx, gy)
+        dx = xx[..., None] - x
+        dy = yy[..., None] - y
+        density = np.exp(-(dx**2 + dy**2) / (2 * bandwidth_m**2)).sum(axis=2)
+        density = density / max(len(x) * 2 * np.pi * bandwidth_m**2, 1.0)
+        if np.nanmax(density) > 0:
+            density = density / np.nanmax(density)
+        out = pd.DataFrame({
+            "lon": np.mean(lon) + xx.ravel() / (111320 * np.cos(np.radians(lat0))),
+            "lat": lat0 + yy.ravel() / 110540,
+            "weight": density.ravel(),
+        })
+        return out[out["weight"] > 0.10].reset_index(drop=True)
+
+    def _parse_points(text):
+        """Parse 'lat,lon; lat,lon' into a DataFrame."""
+        rows = []
+        for token in str(text).split(";"):
+            token = token.strip()
+            if not token:
+                continue
+            try:
+                a, b = [float(x.strip()) for x in token.split(",")[:2]]
+                if -90 <= a <= 90 and -180 <= b <= 180:
+                    rows.append({"lat": a, "lon": b})
+            except (ValueError, TypeError):
+                continue
+        return pd.DataFrame(rows, columns=["lat", "lon"])
+
+    def _circle_polygon(lat, lon, radius_m, n=64):
+        angles = np.linspace(0, 2 * np.pi, n)
+        dlat = radius_m * np.cos(angles) / 110540
+        dlon = radius_m * np.sin(angles) / (
+            111320 * max(np.cos(np.radians(lat)), 0.1)
+        )
+        return [[lon + dx, lat + dy] for dx, dy in zip(dlon, dlat)]
+
+    def _lca_bernoulli(X, n_classes=3, max_iter=250, seed=42):
+        """Small self-contained Bernoulli latent class model using EM."""
+        X = np.asarray(X, dtype=float)
+        if len(X) < max(10, n_classes * 3):
+            return None
+        rng = np.random.default_rng(seed)
+        n, p = X.shape
+        best = None
+        for _ in range(4):
+            priors = rng.dirichlet(np.ones(n_classes))
+            probs = np.clip(rng.uniform(0.20, 0.80, size=(n_classes, p)), 0.05, 0.95)
+            for _it in range(max_iter):
+                log_prob = np.log(priors + 1e-12)[None, :] + (
+                    X[:, None, :] * np.log(probs[None, :, :] + 1e-12)
+                    + (1 - X[:, None, :]) * np.log(1 - probs[None, :, :] + 1e-12)
+                ).sum(axis=2)
+                mx = np.max(log_prob, axis=1, keepdims=True)
+                resp = np.exp(log_prob - mx)
+                resp = resp / np.maximum(resp.sum(axis=1, keepdims=True), 1e-12)
+                new_priors = resp.mean(axis=0)
+                new_probs = (resp.T @ X) / np.maximum(resp.sum(axis=0)[:, None], 1e-12)
+                new_probs = np.clip(new_probs, 0.02, 0.98)
+                if np.max(np.abs(new_probs - probs)) < 1e-5:
+                    probs, priors = new_probs, new_priors
+                    break
+                probs, priors = new_probs, new_priors
+            ll = float(np.sum(mx + np.log(np.maximum(resp.sum(axis=1, keepdims=True), 1e-12))))
+            # Recalculate stable observed-data log likelihood.
+            lp = np.log(priors + 1e-12)[None, :] + (
+                X[:, None, :] * np.log(probs[None, :, :] + 1e-12)
+                + (1 - X[:, None, :]) * np.log(1 - probs[None, :, :] + 1e-12)
+            ).sum(axis=2)
+            ll = float(np.sum(np.max(lp, axis=1) + np.log(np.exp(lp - np.max(lp, axis=1, keepdims=True)).sum(axis=1))))
+            if best is None or ll > best["ll"]:
+                best = {"priors": priors, "probs": probs, "resp": resp, "ll": ll}
+        return best
+
     if len(hh_data) == 0:
         st.info("No household survey data available for Phase 5 analytics.")
     else:
-        st.markdown(
-            "#### 📊 Comprehensive Statistical Breakdown of All Asked Survey"
-            " Questions"
-        )
-
         total_hhs = len(hh_data)
         all_adults = [a for hh in hh_data for a in hh.get("Adults", [])]
         all_children = [c for hh in hh_data for c in hh.get("Children", [])]
@@ -3779,340 +4100,934 @@ elif menu == "📈 Phase 5: Spatial & Statistical Analytics":
             " Children Profiled"
         )
 
-        res_tab1, res_tab2, res_tab3 = st.tabs([
-            "📋 Full Research Frequency & Percentage Tables (All Items)",
-            "📊 Environmental PERI Correlations",
-            "🗺️ Spatial Cluster & Vulnerability Mapping",
+        # 6.2 + 6.3 are integrated into the Phase 5 interface.
+        res_tab1, res_tab2, res_tab3, res_tab4, res_tab5 = st.tabs([
+            "📋 Full Research Frequency Tables",
+            "📊 Social Gradient & Effect Measures",
+            "🧩 Factor Analysis & Latent Classes",
+            "🗺️ 6.2 Multi-Layer GIS Visualization",
+            "📈 Automated Interpretation & Outputs",
         ])
 
         with res_tab1:
             st.markdown(
                 "##### Research Analytics: Complete Itemized Frequency ($n$) &"
-                " Percentage ($\%$) Table"
+                " Percentage ($\\%$) Table"
             )
-
-            # Build full research table
             all_tables = []
 
-            # 1. Respondent & Dialect
-            all_tables.append(
-                generate_research_table(
-                    [r.get("Respondent_Role") for r in hh_data],
-                    total_hhs,
-                    "Demographics: Respondent Role",
-                )
-            )
-            all_tables.append(
-                generate_research_table(
-                    [r.get("Dialect") for r in hh_data],
-                    total_hhs,
-                    "Demographics: Primary Spoken Dialect",
-                )
-            )
-            all_tables.append(
-                generate_research_table(
-                    [r.get("Religion") for r in hh_data],
-                    total_hhs,
-                    "Demographics: Household Religion",
-                )
-            )
-
-            # 2. Income & Economic Stability
-            all_tables.append(
-                generate_research_table(
-                    [r.get("Income") for r in hh_data],
-                    total_hhs,
-                    "Economics: Monthly Family Income Quintile",
-                )
-            )
-            all_tables.append(
-                generate_research_table(
-                    [r.get("Livelihood") for r in hh_data],
-                    total_hhs,
-                    "Economics: Primary Livelihood Source",
-                )
-            )
-            all_tables.append(
-                generate_research_table(
-                    [r.get("Emergency_5k") for r in hh_data],
-                    total_hhs,
-                    "Economics: ₱5k Emergency Cushion Access",
-                )
-            )
-            all_tables.append(
-                generate_research_table(
-                    [r.get("Four_Ps") for r in hh_data],
-                    total_hhs,
-                    "Economics: Active 4Ps Beneficiary",
-                )
-            )
-
-            # 3. Food Security
-            all_tables.append(
-                generate_research_table(
-                    [r.get("Food_Skip") for r in hh_data],
-                    total_hhs,
-                    "Food Security: Skipped Meals / Reduced Portion",
-                )
-            )
-            all_tables.append(
-                generate_research_table(
-                    [r.get("Food_Worry") for r in hh_data],
-                    total_hhs,
-                    "Food Security: Worried About Food Outage",
-                )
-            )
-            all_tables.append(
-                generate_research_table(
-                    [r.get("Food_FullDay") for r in hh_data],
-                    total_hhs,
-                    "Food Security: Full Day Without Food",
-                )
-            )
-
-            # 4. Housing & Environmental WASH
-            all_tables.append(
-                generate_research_table(
-                    [r.get("Tenure") for r in hh_data],
-                    total_hhs,
-                    "WASH & Housing: Housing Tenurial Status",
-                )
-            )
-            all_tables.append(
-                generate_research_table(
-                    [r.get("House_Type") for r in hh_data],
-                    total_hhs,
-                    "WASH & Housing: Housing Structure Type",
-                )
-            )
-            all_tables.append(
-                generate_research_table(
-                    [r.get("Cook_Fuel") for r in hh_data],
-                    total_hhs,
-                    "WASH & Housing: Indoor Cooking Fuel Risk",
-                )
-            )
-            all_tables.append(
-                generate_research_table(
-                    [r.get("Water") for r in hh_data],
-                    total_hhs,
-                    "WASH & Housing: Drinking Water Source Level",
-                )
-            )
-            all_tables.append(
-                generate_research_table(
-                    [r.get("Sanitation") for r in hh_data],
-                    total_hhs,
-                    "WASH & Housing: Toilet / Sanitation Facility",
-                )
-            )
-            all_tables.append(
-                generate_research_table(
-                    [r.get("Solid_Disposal") for r in hh_data],
-                    total_hhs,
-                    "WASH & Housing: Solid Waste Disposal Method",
-                )
-            )
-
-            # 5. Morbidity & Compliance
-            all_tables.append(
-                generate_research_table(
-                    [r.get("Hypertension_Status") for r in hh_data],
-                    total_hhs,
-                    "Morbidity: Hypertension Status & Med Adherence",
-                )
-            )
-            all_tables.append(
-                generate_research_table(
-                    [r.get("Diabetes_Status") for r in hh_data],
-                    total_hhs,
-                    "Morbidity: Diabetes Status & Med Adherence",
-                )
-            )
-            all_tables.append(
-                generate_research_table(
-                    [r.get("TB_Status") for r in hh_data],
-                    total_hhs,
-                    "Morbidity: Tuberculosis (TB-DOTS) History",
-                )
-            )
-
-            # 6. PhilHealth YAKAP
-            all_tables.append(
-                generate_research_table(
-                    [r.get("Yakap") for r in hh_data],
-                    total_hhs,
-                    "Health Systems: PhilHealth YAKAP Registration",
-                )
-            )
-            all_tables.append(
-                generate_research_table(
-                    [r.get("Yakap_Availed") for r in hh_data],
-                    total_hhs,
-                    "Health Systems: Availed First Patient Encounter (FPE)",
-                )
-            )
+            all_tables.append(generate_research_table(
+                [r.get("Respondent_Role") for r in hh_data],
+                total_hhs, "Demographics: Respondent Role"))
+            all_tables.append(generate_research_table(
+                [r.get("Dialect") for r in hh_data],
+                total_hhs, "Demographics: Primary Spoken Dialect"))
+            all_tables.append(generate_research_table(
+                [r.get("Religion") for r in hh_data],
+                total_hhs, "Demographics: Household Religion"))
+            all_tables.append(generate_research_table(
+                [r.get("Income") for r in hh_data],
+                total_hhs, "Economics: Monthly Family Income Quintile"))
+            all_tables.append(generate_research_table(
+                [r.get("Livelihood") for r in hh_data],
+                total_hhs, "Economics: Primary Livelihood Source"))
+            all_tables.append(generate_research_table(
+                [r.get("Emergency_5k") for r in hh_data],
+                total_hhs, "Economics: ₱5k Emergency Cushion Access"))
+            all_tables.append(generate_research_table(
+                [r.get("Four_Ps") for r in hh_data],
+                total_hhs, "Economics: Active 4Ps Beneficiary"))
+            all_tables.append(generate_research_table(
+                [r.get("Food_Skip") for r in hh_data],
+                total_hhs, "Food Security: Skipped Meals / Reduced Portion"))
+            all_tables.append(generate_research_table(
+                [r.get("Food_Worry") for r in hh_data],
+                total_hhs, "Food Security: Worried About Food Outage"))
+            all_tables.append(generate_research_table(
+                [r.get("Food_FullDay") for r in hh_data],
+                total_hhs, "Food Security: Full Day Without Food"))
+            all_tables.append(generate_research_table(
+                [r.get("Tenure") for r in hh_data],
+                total_hhs, "WASH & Housing: Housing Tenurial Status"))
+            all_tables.append(generate_research_table(
+                [r.get("House_Type") for r in hh_data],
+                total_hhs, "WASH & Housing: Housing Structure Type"))
+            all_tables.append(generate_research_table(
+                [r.get("Cook_Fuel") for r in hh_data],
+                total_hhs, "WASH & Housing: Indoor Cooking Fuel Risk"))
+            all_tables.append(generate_research_table(
+                [r.get("Water") for r in hh_data],
+                total_hhs, "WASH & Housing: Drinking Water Source Level"))
+            all_tables.append(generate_research_table(
+                [r.get("Sanitation") for r in hh_data],
+                total_hhs, "WASH & Housing: Toilet / Sanitation Facility"))
+            all_tables.append(generate_research_table(
+                [r.get("Solid_Disposal") for r in hh_data],
+                total_hhs, "WASH & Housing: Solid Waste Disposal Method"))
+            all_tables.append(generate_research_table(
+                [r.get("Hypertension_Status") for r in hh_data],
+                total_hhs, "Morbidity: Hypertension Status & Med Adherence"))
+            all_tables.append(generate_research_table(
+                [r.get("Diabetes_Status") for r in hh_data],
+                total_hhs, "Morbidity: Diabetes Status & Med Adherence"))
+            all_tables.append(generate_research_table(
+                [r.get("TB_Status") for r in hh_data],
+                total_hhs, "Morbidity: Tuberculosis (TB-DOTS) History"))
+            all_tables.append(generate_research_table(
+                [r.get("Yakap") for r in hh_data],
+                total_hhs, "Health Systems: PhilHealth YAKAP Registration"))
+            all_tables.append(generate_research_table(
+                [r.get("Yakap_Availed") for r in hh_data],
+                total_hhs, "Health Systems: Availed First Patient Encounter (FPE)"))
 
             full_res_table = pd.concat(all_tables, ignore_index=True)
             st.dataframe(full_res_table, use_container_width=True)
-
-            # Download CSV option for researchers
-            csv_data = full_res_table.to_csv(index=False).encode("utf-8")
             st.download_button(
                 "📥 Download Publication-Ready Research Analytics (CSV)",
-                csv_data,
+                full_res_table.to_csv(index=False).encode("utf-8"),
                 "Master_Household_Survey_Research_Analytics.csv",
                 "text/csv",
             )
 
+        # --------------------------------------------------------------
+        # 6.3 A. DESCRIPTIVE ANALYSIS — SOCIAL GRADIENT, OR AND RR
+        # --------------------------------------------------------------
         with res_tab2:
-            st.markdown(
-                "##### Environmental Risk Index (PERI) vs Household Morbidity"
+            st.markdown("### 6.3 Statistical Analysis — Measuring the Social Gradient")
+            st.caption(
+                "Household-level disease outcomes are automatically cross-tabulated "
+                "against income quintile and household educational attainment. "
+                "Q5/highest education is used as the reference category when "
+                "calculating OR and RR."
             )
-            if len(peri_data) > 0:
-                p_df = pd.DataFrame(peri_data)
-                st.dataframe(p_df, use_container_width=True)
+
+            analytic_rows = []
+            for hh in hh_data:
+                edu = _household_education(hh)
+                analytic_rows.append({
+                    "HH_ID": hh.get("HH_ID"),
+                    "Purok": hh.get("Purok"),
+                    "Income_Q": _income_rank(hh.get("Income")),
+                    "Education_Score": edu,
+                    "Education": (
+                        {
+                            0: "No Formal Education",
+                            1: "Elementary Unfinished",
+                            2: "Elementary Graduate",
+                            3: "High School Unfinished",
+                            4: "High School Graduate",
+                            5: "Vocational / College Unfinished",
+                            6: "College Graduate",
+                            7: "Post-Graduate",
+                        }.get(int(edu), "Not recorded")
+                        if not pd.isna(edu) else "Not recorded"
+                    ),
+                    "Hypertension": int(_adult_disease(hh, "Hypertension_Status")),
+                    "Diabetes": int(_adult_disease(hh, "Diabetes_Status")),
+                })
+            analytic_df = pd.DataFrame(analytic_rows)
+
+            def gradient_table(group_col, label):
+                rows = []
+                valid = analytic_df.dropna(subset=[group_col]).copy()
+                if valid.empty:
+                    return pd.DataFrame()
+                groups = sorted(valid[group_col].unique())
+                ref = groups[-1]
+                for g in groups:
+                    sub = valid[valid[group_col] == g]
+                    row = {
+                        label: g,
+                        "Households (n)": len(sub),
+                        "HTN n (%)": f"{sub['Hypertension'].sum()} ({sub['Hypertension'].mean()*100:.1f}%)",
+                        "DM n (%)": f"{sub['Diabetes'].sum()} ({sub['Diabetes'].mean()*100:.1f}%)",
+                    }
+                    if g != ref:
+                        exp = valid[valid[group_col] == g]
+                        rr_htn = _safe_or_rr(
+                            exp["Hypertension"].sum(),
+                            len(exp) - exp["Hypertension"].sum(),
+                            valid.loc[valid[group_col] == ref, "Hypertension"].sum(),
+                            len(valid[valid[group_col] == ref]) - valid.loc[valid[group_col] == ref, "Hypertension"].sum(),
+                        )
+                        rr_dm = _safe_or_rr(
+                            exp["Diabetes"].sum(),
+                            len(exp) - exp["Diabetes"].sum(),
+                            valid.loc[valid[group_col] == ref, "Diabetes"].sum(),
+                            len(valid[valid[group_col] == ref]) - valid.loc[valid[group_col] == ref, "Diabetes"].sum(),
+                        )
+                        row["HTN OR vs reference"] = round(rr_htn[0], 3)
+                        row["HTN RR vs reference"] = round(rr_htn[1], 3)
+                        row["DM OR vs reference"] = round(rr_dm[0], 3)
+                        row["DM RR vs reference"] = round(rr_dm[1], 3)
+                    else:
+                        row["HTN OR vs reference"] = 1.0
+                        row["HTN RR vs reference"] = 1.0
+                        row["DM OR vs reference"] = 1.0
+                        row["DM RR vs reference"] = 1.0
+                    rows.append(row)
+                return pd.DataFrame(rows)
+
+            st.markdown("#### Income Quintiles × Chronic Disease")
+            income_table = gradient_table("Income_Q", "Income Quintile")
+            if income_table.empty:
+                st.info("Income quintile data are not available.")
             else:
-                st.info(
-                    "No Phase 4 PERI evaluation data available for correlation."
+                st.dataframe(income_table, use_container_width=True)
+                st.caption(
+                    "Reference = highest observed income quintile (normally Q5). "
+                    "OR > 1 or RR > 1 means greater disease burden than the reference."
                 )
 
+            st.markdown("#### Educational Attainment × Chronic Disease")
+            edu_table = gradient_table("Education_Score", "Highest Adult Education Score")
+            if edu_table.empty:
+                st.info("Educational attainment data are not available.")
+            else:
+                st.dataframe(edu_table, use_container_width=True)
+
+            # Purok social-gradient view.
+            purok_rows = []
+            for purok_name, sub in analytic_df.groupby("Purok", dropna=False):
+                purok_rows.append({
+                    "Purok": purok_name,
+                    "Households": len(sub),
+                    "HTN prevalence": f"{sub['Hypertension'].mean()*100:.1f}%",
+                    "Diabetes prevalence": f"{sub['Diabetes'].mean()*100:.1f}%",
+                    "Mean income quintile": round(sub["Income_Q"].mean(), 2) if sub["Income_Q"].notna().any() else np.nan,
+                })
+            st.markdown("#### Geographic Zone Comparison")
+            st.dataframe(pd.DataFrame(purok_rows), use_container_width=True)
+
+        # --------------------------------------------------------------
+        # 6.3 B. FACTOR ANALYSIS / PCA + LCA
+        # --------------------------------------------------------------
         with res_tab3:
+            st.markdown("### 6.3 B. Advanced Multivariate Modeling")
             st.markdown(
-                "##### Spatial Vulnerability & High-Risk Cluster Analysis"
+                "**1. Principal Component & Factor Analysis:** correlated "
+                "economic/environmental variables are collapsed into a latent "
+                "**Household Deprivation Index (HDI)**."
             )
-            df_map = pd.DataFrame(hh_data)
-            st.map(df_map[["Lat", "Lon"]])
+
+            factor_rows = []
+            for hh in hh_data:
+                ind = _binary_indicators(hh)
+                # Lower income is more deprivation; Q1=1 -> 1.0, Q5=5 -> 0.
+                q = _income_rank(hh.get("Income"))
+                ind["Low income burden"] = (
+                    1.0 - ((q - 1) / 4.0) if not pd.isna(q) else 0.5
+                )
+                factor_rows.append(ind)
+            factor_df = pd.DataFrame(factor_rows)
+
+            if len(factor_df) >= 3 and factor_df.shape[1] >= 2:
+                X = factor_df.astype(float).fillna(factor_df.mean()).to_numpy()
+                sd = X.std(axis=0, ddof=0)
+                keep = sd > 1e-9
+                Xk = X[:, keep]
+                cols = factor_df.columns[keep]
+                Z = (Xk - Xk.mean(axis=0)) / np.maximum(Xk.std(axis=0, ddof=0), 1e-9)
+                u, sv, vt = np.linalg.svd(Z, full_matrices=False)
+                pc1 = u[:, 0] * sv[0]
+                loadings = vt[0]
+                # Orient so positive scores mean more structural deprivation.
+                if np.mean(loadings) < 0:
+                    pc1 = -pc1
+                    loadings = -loadings
+                hdi = 50 + 10 * (pc1 - np.mean(pc1)) / max(np.std(pc1), 1e-9)
+                hdi = np.clip(hdi, 0, 100)
+
+                factor_loading_df = pd.DataFrame({
+                    "Variable": cols,
+                    "PC1 Loading": np.round(loadings, 3),
+                    "Interpretation": [
+                        "Positive loading = contributes to greater household deprivation"
+                        if x >= 0 else
+                        "Negative loading = relatively protective / lower deprivation"
+                        for x in loadings
+                    ],
+                })
+                st.markdown("#### PCA Factor Loadings")
+                st.dataframe(factor_loading_df, use_container_width=True)
+
+                hdi_df = pd.DataFrame({
+                    "HH_ID": [h.get("HH_ID") for h in hh_data],
+                    "Purok": [h.get("Purok") for h in hh_data],
+                    "Household Deprivation Index (0–100)": np.round(hdi, 1),
+                    "Hypertension": [
+                        int(_adult_disease(h, "Hypertension_Status")) for h in hh_data
+                    ],
+                    "Diabetes": [
+                        int(_adult_disease(h, "Diabetes_Status")) for h in hh_data
+                    ],
+                })
+                st.markdown("#### Automatically Generated Household Deprivation Index")
+                st.dataframe(hdi_df, use_container_width=True)
+
+                mean_hdi = float(np.mean(hdi))
+                st.metric("Community Mean Deprivation Index", f"{mean_hdi:.1f}/100")
+                if mean_hdi >= 67:
+                    st.warning(
+                        "Interpretation: high structural vulnerability. Multiple "
+                        "economic, WASH, food-security, housing or access risks are "
+                        "co-occurring and should be addressed as an integrated package."
+                    )
+                elif mean_hdi >= 34:
+                    st.info(
+                        "Interpretation: moderate structural vulnerability. "
+                        "Target the highest-scoring households and Puroks first."
+                    )
+                else:
+                    st.success(
+                        "Interpretation: lower aggregate deprivation. Continue "
+                        "surveillance while maintaining services for high-risk households."
+                    )
+
+                st.download_button(
+                    "📥 Download Household Deprivation Index",
+                    hdi_df.to_csv(index=False).encode("utf-8"),
+                    "Household_Deprivation_Index.csv",
+                    "text/csv",
+                )
+            else:
+                st.info("PCA requires at least 3 household records with variable variation.")
+
+            st.markdown("---")
+            st.markdown(
+                "**2. Latent Class Analysis (LCA):** households are automatically "
+                "grouped into discrete vulnerability classes based on overlapping "
+                "social risks."
+            )
+            lca_cols = [
+                "Food insecurity",
+                "Unsafe water",
+                "Poor sanitation",
+                "Open/unsafe waste disposal",
+                "Housing vulnerability",
+                "Indoor cooking-fuel risk",
+                "Flood exposure",
+                "No piped water connection",
+                "No ₱5k emergency cushion",
+            ]
+            if len(factor_df) >= 10 and factor_df[lca_cols].nunique().gt(1).sum() >= 3:
+                lca_input = factor_df[lca_cols].astype(float)
+                variable_keep = lca_input.nunique() > 1
+                lca_input = lca_input.loc[:, variable_keep]
+                model = _lca_bernoulli(lca_input.to_numpy(), n_classes=3)
+                if model is not None:
+                    assigned = np.argmax(model["resp"], axis=1) + 1
+                    class_sizes = pd.Series(assigned).value_counts().sort_index()
+                    class_risk = []
+                    for k in range(3):
+                        mask = assigned == (k + 1)
+                        prevalence_htn = np.mean([
+                            _adult_disease(hh_data[i], "Hypertension_Status")
+                            for i in range(len(hh_data)) if mask[i]
+                        ]) if mask.any() else np.nan
+                        prevalence_dm = np.mean([
+                            _adult_disease(hh_data[i], "Diabetes_Status")
+                            for i in range(len(hh_data)) if mask[i]
+                        ]) if mask.any() else np.nan
+                        class_risk.append({
+                            "Latent Class": k + 1,
+                            "Households": int(class_sizes.get(k + 1, 0)),
+                            "Share": f"{class_sizes.get(k + 1, 0)/len(hh_data)*100:.1f}%",
+                            "HTN prevalence": f"{prevalence_htn*100:.1f}%" if not pd.isna(prevalence_htn) else "N/A",
+                            "Diabetes prevalence": f"{prevalence_dm*100:.1f}%" if not pd.isna(prevalence_dm) else "N/A",
+                            "Estimated class profile": "",
+                        })
+
+                    # Describe each class using the highest-probability risks.
+                    for k in range(3):
+                        top_idx = np.argsort(model["probs"][k])[::-1][:3]
+                        profile = ", ".join(
+                            [str(lca_input.columns[i]) for i in top_idx]
+                        )
+                        class_risk[k]["Estimated class profile"] = profile
+
+                    lca_summary = pd.DataFrame(class_risk)
+                    st.dataframe(lca_summary, use_container_width=True)
+
+                    household_lca = pd.DataFrame({
+                        "HH_ID": [h.get("HH_ID") for h in hh_data],
+                        "Purok": [h.get("Purok") for h in hh_data],
+                        "Latent Vulnerability Class": assigned,
+                        "Posterior Probability": np.round(model["resp"].max(axis=1), 3),
+                    })
+                    st.markdown("#### Household Class Assignment")
+                    st.dataframe(household_lca, use_container_width=True)
+
+                    highest_class = int(
+                        lca_summary.assign(
+                            htn=lca_summary["HTN prevalence"].str.rstrip("%").astype(float),
+                            dm=lca_summary["Diabetes prevalence"].str.rstrip("%").astype(float),
+                        ).sort_values(["htn", "dm"], ascending=False).iloc[0]["Latent Class"]
+                    )
+                    profile_text = lca_summary.loc[
+                        lca_summary["Latent Class"] == highest_class,
+                        "Estimated class profile"
+                    ].iloc[0]
+                    st.info(
+                        f"Automatic interpretation: **Latent Class {highest_class}** "
+                        f"has the highest combined chronic-disease burden. Its dominant "
+                        f"social-risk profile is **{profile_text}**. Prioritize this "
+                        "class for integrated LGU social protection, WASH, nutrition, "
+                        "transport/access and chronic-care interventions."
+                    )
+                    st.download_button(
+                        "📥 Download LCA Household Classes",
+                        household_lca.to_csv(index=False).encode("utf-8"),
+                        "Latent_Class_Household_Vulnerability.csv",
+                        "text/csv",
+                    )
+                else:
+                    st.info("LCA could not converge on the available sample.")
+            else:
+                st.info(
+                    "LCA requires at least 10 households and at least 3 varying "
+                    "social-risk indicators."
+                )
+
+        # --------------------------------------------------------------
+        # 6.2 MULTI-LAYER GIS VISUALIZATION
+        # --------------------------------------------------------------
+        with res_tab4:
+            st.markdown("### 6.2 Multi-Layer GIS Visualization Framework")
+            st.caption(
+                "Toggle layers to combine disease hotspots, environmental SDOH, "
+                "food access and health-facility accessibility."
+            )
+
+            valid_hh = pd.DataFrame(hh_data)
+            for col in ["Lat", "Lon"]:
+                valid_hh[col] = pd.to_numeric(valid_hh.get(col), errors="coerce")
+            valid_hh = valid_hh.dropna(subset=["Lat", "Lon"]).copy()
+
+            controls = st.columns(4)
+            with controls[0]:
+                show_disease = st.checkbox("Layer 1: Disease KDE", True)
+                disease_choice = st.multiselect(
+                    "Disease hotspots",
+                    ["Hypertension", "Diabetes", "Active TB"],
+                    default=["Hypertension", "Diabetes", "Active TB"],
+                )
+            with controls[1]:
+                show_env = st.checkbox("Layer 2: Environmental SDOH", True)
+                show_flood = st.checkbox("Flood-risk households", True)
+                show_water = st.checkbox("Unsafe water households", True)
+                show_dump = st.checkbox("Open-dumping households", True)
+            with controls[2]:
+                show_food = st.checkbox("Layer 3: Food Desert", True)
+                market_text = st.text_input(
+                    "Fresh food market coordinates (lat,lon; ...)",
+                    "",
+                    help="Enter mapped market points from field/GIS data."
+                )
+                sari_text = st.text_input(
+                    "Sari-sari store coordinates (lat,lon; ...)",
+                    "",
+                    help="Enter mapped sari-sari store points from field/GIS data."
+                )
+            with controls[3]:
+                show_access = st.checkbox("Layer 4: Catchment", True)
+                facility_type = st.selectbox(
+                    "Facility center",
+                    ["BHS / Barangay Health Station", "RHU / Health Center"],
+                )
+                facility_lat = st.number_input(
+                    "Facility latitude", value=float(valid_hh["Lat"].mean()) if len(valid_hh) else 11.1560,
+                    format="%.6f"
+                )
+                facility_lon = st.number_input(
+                    "Facility longitude", value=float(valid_hh["Lon"].mean()) if len(valid_hh) else 124.9920,
+                    format="%.6f"
+                )
+
+            # Layer 1: disease point sets + KDE.
+            disease_frames = {}
+            disease_frames["Hypertension"] = valid_hh[
+                valid_hh.apply(lambda r: _adult_disease(r, "Hypertension_Status"), axis=1)
+            ].copy()
+            disease_frames["Diabetes"] = valid_hh[
+                valid_hh.apply(lambda r: _adult_disease(r, "Diabetes_Status"), axis=1)
+            ].copy()
+            disease_frames["Active TB"] = valid_hh[
+                valid_hh["TB_Status"].astype(str).str.contains(
+                    "currently enrolled|defaulted|interrupted", case=False, regex=True
+                )
+            ].copy()
+
+            layers = []
+            layer_summaries = []
+
+            if show_disease:
+                for disease in disease_choice:
+                    ddf = disease_frames[disease]
+                    if len(ddf) >= 2:
+                        kde = _kde_points(ddf, bandwidth_m=500)
+                        if len(kde):
+                            kde["radius"] = 250
+                            layers.append(
+                                pdk.Layer(
+                                    "HeatmapLayer",
+                                    data=kde,
+                                    get_position="[lon, lat]",
+                                    get_weight="weight",
+                                    radius_pixels=55,
+                                    intensity=1.0,
+                                    threshold=0.05,
+                                    opacity=0.65,
+                                )
+                            )
+                    layer_summaries.append({
+                        "Layer": f"KDE — {disease}",
+                        "Cases/households": len(ddf),
+                        "Status": "Rendered" if len(ddf) >= 2 else "Need ≥2 mapped cases",
+                    })
+
+            # Layer 2: environmental overlays from existing household fields.
+            env_df = valid_hh.copy()
+            env_df["UnsafeWater"] = env_df["Water"].astype(str).str.contains(
+                "unsafe|unprotected|shallow well|river|surface", case=False, regex=True
+            )
+            env_df["OpenDumping"] = env_df["Solid_Disposal"].astype(str).str.contains(
+                "open dumping|river disposal", case=False, regex=True
+            )
+            env_df["Flood"] = env_df["Flood_Prone"].astype(str).str.lower().eq("yes")
+
+            if show_env:
+                if show_flood:
+                    flood_df = env_df[env_df["Flood"]]
+                    if len(flood_df):
+                        layers.append(
+                            pdk.Layer(
+                                "ScatterplotLayer",
+                                data=flood_df,
+                                get_position="[Lon, Lat]",
+                                get_radius=35,
+                                get_fill_color="[30, 144, 255, 150]",
+                                pickable=True,
+                            )
+                        )
+                if show_water:
+                    water_df = env_df[env_df["UnsafeWater"]]
+                    if len(water_df):
+                        layers.append(
+                            pdk.Layer(
+                                "ScatterplotLayer",
+                                data=water_df,
+                                get_position="[Lon, Lat]",
+                                get_radius=25,
+                                get_fill_color="[255, 165, 0, 190]",
+                                pickable=True,
+                            )
+                        )
+                if show_dump:
+                    dump_df = env_df[env_df["OpenDumping"]]
+                    if len(dump_df):
+                        layers.append(
+                            pdk.Layer(
+                                "ScatterplotLayer",
+                                data=dump_df,
+                                get_position="[Lon, Lat]",
+                                get_radius=28,
+                                get_fill_color="[90, 90, 90, 210]",
+                                pickable=True,
+                            )
+                        )
+
+            layer_summaries.extend([
+                {"Layer": "Environmental — Flood", "Cases/HHs": int(env_df["Flood"].sum()), "Status": "Mapped"},
+                {"Layer": "Environmental — Unsafe Water", "Cases/HHs": int(env_df["UnsafeWater"].sum()), "Status": "Mapped"},
+                {"Layer": "Environmental — Open Dumping", "Cases/HHs": int(env_df["OpenDumping"].sum()), "Status": "Mapped"},
+            ])
+
+            # Layer 3: fresh-food markets vs sari-sari stores.
+            markets = _parse_points(market_text)
+            stores = _parse_points(sari_text)
+            if show_food:
+                if len(markets):
+                    layers.append(
+                        pdk.Layer(
+                            "ScatterplotLayer",
+                            data=markets,
+                            get_position="[lon, lat]",
+                            get_radius=45,
+                            get_fill_color="[34, 139, 34, 230]",
+                            pickable=True,
+                        )
+                    )
+                if len(stores):
+                    layers.append(
+                        pdk.Layer(
+                            "ScatterplotLayer",
+                            data=stores,
+                            get_position="[lon, lat]",
+                            get_radius=18,
+                            get_fill_color="[160, 82, 45, 190]",
+                            pickable=True,
+                        )
+                    )
+
+                # 500-metre straight-line service buffers around fresh-food markets.
+                # This is a GIS proximity proxy; walking-network distance requires
+                # an external road-network dataset.
+                if len(markets):
+                    market_polys = pd.DataFrame({
+                        "polygon": [
+                            _circle_polygon(row["lat"], row["lon"], 500)
+                            for _, row in markets.iterrows()
+                        ]
+                    })
+                    layers.append(
+                        pdk.Layer(
+                            "PolygonLayer",
+                            data=market_polys,
+                            get_polygon="polygon",
+                            get_fill_color="[34, 139, 34, 35]",
+                            get_line_color="[34, 139, 34, 180]",
+                            get_line_width=2,
+                            stroked=True,
+                            filled=True,
+                        )
+                    )
+
+                food_rows = []
+                child_hh_ids = {
+                    hh.get("HH_ID")
+                    for hh in hh_data
+                    if any(
+                        "Wasted" in str(c.get("Nutr", {}).get("Wasting", ""))
+                        or "Stunted" in str(c.get("Nutr", {}).get("Stunting", ""))
+                        or "Underweight" in str(c.get("Nutr", {}).get("Underweight", ""))
+                        for c in hh.get("Children", [])
+                    )
+                }
+                if len(markets):
+                    for _, hh in valid_hh.iterrows():
+                        dist_m = min(
+                            np.sqrt(
+                                (((markets["lon"] - hh["Lon"]) * 111320 * np.cos(np.radians(hh["Lat"]))) ** 2)
+                                + (((markets["lat"] - hh["Lat"]) * 110540) ** 2)
+                            )
+                        )
+                        # Sari-sari store density within a 500-metre local buffer.
+                        if len(stores):
+                            store_dist = np.sqrt(
+                                (((stores["lon"] - hh["Lon"]) * 111320 * np.cos(np.radians(hh["Lat"]))) ** 2)
+                                + (((stores["lat"] - hh["Lat"]) * 110540) ** 2)
+                            )
+                            nearby_stores = int((store_dist <= 500).sum())
+                            local_area_km2 = np.pi * (0.5 ** 2)
+                            store_density = nearby_stores / local_area_km2
+                        else:
+                            nearby_stores = 0
+                            store_density = np.nan
+
+                        if dist_m > 500:
+                            food_rows.append({
+                                "HH_ID": hh.get("HH_ID"),
+                                "Purok": hh.get("Purok"),
+                                "Lat": hh["Lat"],
+                                "Lon": hh["Lon"],
+                                "Distance_to_fresh_food_m": round(float(dist_m), 1),
+                                "Sari_sari_stores_within_500m": nearby_stores,
+                                "Sari_sari_density_per_km2": (
+                                    round(float(store_density), 2)
+                                    if not pd.isna(store_density) else "Not mapped"
+                                ),
+                                "Child_malnutrition": "Yes" if hh.get("HH_ID") in child_hh_ids else "No",
+                            })
+                    food_desert_df = pd.DataFrame(food_rows)
+                    if len(food_desert_df):
+                        layers.append(
+                            pdk.Layer(
+                                "ScatterplotLayer",
+                                data=food_desert_df,
+                                get_position="[Lon, Lat]",
+                                get_radius=20,
+                                get_fill_color="[178, 34, 34, 190]",
+                                pickable=True,
+                            )
+                        )
+                        maln_desert = int(
+                            food_desert_df["Child_malnutrition"].eq("Yes").sum()
+                        )
+                        st.metric(
+                            "Food-desert households",
+                            len(food_desert_df),
+                            delta=f"{maln_desert} with child malnutrition indicators",
+                        )
+                elif show_food:
+                    st.info(
+                        "Add fresh-food market coordinates to calculate the 500-metre "
+                        "food-access buffer and automatically identify food-desert households."
+                    )
+
+            # Layer 4: 15- and 30-minute catchment contours.
+            if show_access:
+                catchment_df = pd.DataFrame([
+                    {
+                        "polygon": _circle_polygon(facility_lat, facility_lon, 15 * 80),
+                        "minutes": 15,
+                    },
+                    {
+                        "polygon": _circle_polygon(facility_lat, facility_lon, 30 * 80),
+                        "minutes": 30,
+                    },
+                ])
+                layers.append(
+                    pdk.Layer(
+                        "PolygonLayer",
+                        data=catchment_df,
+                        get_polygon="polygon",
+                        get_fill_color="[123, 17, 19, 35]",
+                        get_line_color="[123, 17, 19, 200]",
+                        get_line_width=3,
+                        stroked=True,
+                        filled=True,
+                        pickable=True,
+                    )
+                )
+
+                access_rows = []
+                for _, hh in valid_hh.iterrows():
+                    dist_m = np.sqrt(
+                        (((hh["Lon"] - facility_lon) * 111320 * np.cos(np.radians(facility_lat))) ** 2)
+                        + (((hh["Lat"] - facility_lat) * 110540) ** 2)
+                    )
+                    walk_min = dist_m / 80.0
+                    zone = "≤15 min" if walk_min <= 15 else ("16–30 min" if walk_min <= 30 else ">30 min")
+                    access_rows.append({
+                        "HH_ID": hh.get("HH_ID"),
+                        "Purok": hh.get("Purok"),
+                        "Straight-line distance (m)": round(float(dist_m), 1),
+                        "Estimated walking time (min)": round(float(walk_min), 1),
+                        "Catchment": zone,
+                        "GIDA accessibility proxy": "Potentially geographically disadvantaged" if walk_min > 30 else "Within 30-min proxy",
+                    })
+                access_df = pd.DataFrame(access_rows)
+                st.markdown(f"#### {facility_type} Catchment")
+                st.dataframe(
+                    access_df.groupby("Catchment", dropna=False)
+                    .size()
+                    .reset_index(name="Households"),
+                    use_container_width=True,
+                )
+                st.caption(
+                    "Accessibility model uses 80 m/min (~4.8 km/h) and straight-line "
+                    "distance. These are proximity isochrone proxies, not road-network "
+                    "travel times; replace with network-based routing data for formal GIDA classification."
+                )
+
+            if valid_hh.empty:
+                st.warning("No valid household latitude/longitude records are available.")
+            else:
+                view = pdk.ViewState(
+                    latitude=float(valid_hh["Lat"].mean()),
+                    longitude=float(valid_hh["Lon"].mean()),
+                    zoom=14,
+                    pitch=35,
+                )
+                st.pydeck_chart(
+                    pdk.Deck(
+                        layers=layers,
+                        initial_view_state=view,
+                        tooltip={
+                            "html": "<b>HH:</b> {HH_ID}<br/><b>Purok:</b> {Purok}"
+                        },
+                    ),
+                    use_container_width=True,
+                )
+
+            st.markdown("#### GIS Layer Processing Status")
+            st.dataframe(pd.DataFrame(layer_summaries), use_container_width=True)
+
+        # --------------------------------------------------------------
+        # AUTOMATED INTERPRETATION / PUBLIC HEALTH OUTPUT
+        # --------------------------------------------------------------
+        with res_tab5:
+            st.markdown("### 🤖 Automatic Calculation & Interpretation Engine")
+            st.caption(
+                "The following findings are recalculated every time Phase 5 is opened "
+                "from the current persistent household/PERI dataset."
+            )
+
+            interpretations = []
+
+            htn_prev = np.mean([
+                _adult_disease(h, "Hypertension_Status") for h in hh_data
+            ])
+            dm_prev = np.mean([
+                _adult_disease(h, "Diabetes_Status") for h in hh_data
+            ])
+            tb_active = np.mean([
+                "currently enrolled" in str(h.get("TB_Status", "")).lower()
+                or "defaulted" in str(h.get("TB_Status", "")).lower()
+                for h in hh_data
+            ])
+
+            if htn_prev >= 0.20:
+                interpretations.append(
+                    f"🚨 Hypertension burden is high at **{htn_prev*100:.1f}%** of households "
+                    "with a household-level hypertension signal. Prioritize BP confirmation, "
+                    "continuity of care and adherence monitoring."
+                )
+            else:
+                interpretations.append(
+                    f"Hypertension signal: **{htn_prev*100:.1f}%** of households."
+                )
+
+            if dm_prev >= 0.10:
+                interpretations.append(
+                    f"⚠️ Diabetes signal is **{dm_prev*100:.1f}%**. Strengthen screening, "
+                    "risk-factor counseling and chronic-care linkage."
+                )
+            else:
+                interpretations.append(
+                    f"Diabetes signal: **{dm_prev*100:.1f}%** of households."
+                )
+
+            unsafe_pct = np.mean([
+                "unsafe" in str(h.get("Water", "")).lower()
+                for h in hh_data
+            ])
+            flood_pct = np.mean([_yes(h.get("Flood_Prone")) for h in hh_data])
+            food_pct = np.mean([
+                _yes(h.get("Food_Skip")) or _yes(h.get("Food_Worry")) or _yes(h.get("Food_FullDay"))
+                for h in hh_data
+            ])
+            dump_pct = np.mean([
+                "open dumping" in str(h.get("Solid_Disposal", "")).lower()
+                or "river disposal" in str(h.get("Solid_Disposal", "")).lower()
+                for h in hh_data
+            ])
+
+            interpretations.extend([
+                f"🚰 Unsafe-water exposure: **{unsafe_pct*100:.1f}%** of households.",
+                f"🌊 Flood exposure: **{flood_pct*100:.1f}%** of households.",
+                f"🍚 Food-insecurity signal: **{food_pct*100:.1f}%** of households.",
+                f"🗑️ Open/river waste-disposal signal: **{dump_pct*100:.1f}%** of households.",
+            ])
+
+            for item in interpretations:
+                st.markdown(item)
+
+            st.markdown("---")
+            st.markdown("### Public Health Interpretation Rules")
+            st.markdown(
+                "- **OR/RR > 1:** higher disease burden than the reference group.\n"
+                "- **OR/RR = 1:** same observed burden as the reference group.\n"
+                "- **OR/RR < 1:** lower observed burden than the reference group.\n"
+                "- **PCA/HDI:** higher scores indicate more overlapping structural deprivation.\n"
+                "- **LCA:** classes describe co-occurring risk patterns; they are not diagnoses.\n"
+                "- **KDE hotspots:** higher intensity indicates greater spatial concentration of mapped cases.\n"
+                "- **Food desert:** household lies >500 m straight-line from an entered fresh-food market; "
+                "child malnutrition is overlaid when a child record contains wasting, stunting or underweight signals.\n"
+                "- **Catchment:** 15/30-minute zones are walking-time proxies based on straight-line distance."
+            )
+
+            output_df = pd.DataFrame({
+                "Automated Indicator": [
+                    "Hypertension household signal",
+                    "Diabetes household signal",
+                    "Active/current TB-DOTS signal",
+                    "Unsafe water",
+                    "Flood exposure",
+                    "Food insecurity",
+                    "Open/river waste disposal",
+                ],
+                "Value": [
+                    f"{htn_prev*100:.1f}%",
+                    f"{dm_prev*100:.1f}%",
+                    f"{tb_active*100:.1f}%",
+                    f"{unsafe_pct*100:.1f}%",
+                    f"{flood_pct*100:.1f}%",
+                    f"{food_pct*100:.1f}%",
+                    f"{dump_pct*100:.1f}%",
+                ],
+            })
+            st.dataframe(output_df, use_container_width=True)
+            st.download_button(
+                "📥 Download Phase 5 Automated Summary",
+                output_df.to_csv(index=False).encode("utf-8"),
+                "Phase_5_Automated_Analytics_Summary.csv",
+                "text/csv",
+            )
 
 # MODULE 7: PHASE 6 COMMUNITY DIAGNOSIS & ACTION PLAN
 elif menu == "📋 Phase 6: Community Diagnosis & Action Plan":
-    st.subheader("Phase 6: Automated Community Diagnosis & Project Planning")
-    hh_data=st.session_state.hh_records
-    peri_data=st.session_state.windshield_records
-    gov_data=st.session_state.gov_records
-    qual_data=st.session_state.qual_records
+    st.subheader("Phase 6: Community Diagnosis & COPAR Action Planning Portal")
 
-    def dx_flags(h):
-        adults=h.get("Adults",[])
-        htn=("Diagnosed" in str(h.get("Hypertension_Status",""))) or any(
-            pd.to_numeric(a.get("Sys"),errors="coerce")>=140 or pd.to_numeric(a.get("Dia"),errors="coerce")>=90 or a.get("Risk")=="Hypertensive Risk" for a in adults
+    with st.form("phase6_action_form"):
+        st.markdown("### 🎯 Formulate Priority Community Health Action Plan")
+        c1, c2 = st.columns(2)
+        target_brgy = c1.text_input("Barangay Target Name")
+        plan_date = c2.date_input("Planning Date")
+
+        prio_problem = st.text_input(
+            "Priority Diagnosed Health / Environmental Problem",
+            "High Adult Hypertensive Risk (32.4%) & Unsafe Drinking Water",
         )
-        dm="Diagnosed" in str(h.get("Diabetes_Status",""))
-        tb=any(x in str(h.get("TB_Status","")).lower() for x in ["dots","currently enrolled","defaulted","interrupted"])
-        water=any(x in str(h.get("Water","")).lower() for x in ["unsafe","unprotected","shallow well","river","surface"])
-        food=any(str(h.get(k,"")).lower() in ["yes","often","sometimes"] for k in ["Food_Skip","Food_Worry","Food_FullDay"])
-        flood=str(h.get("Flood_Prone","")).lower()=="yes"
-        waste=any(x in str(h.get("Solid_Disposal","")).lower() for x in ["open","river","dump"])
-        return {"Hypertension":htn,"Diabetes":dm,"TB":tb,"Unsafe Water":water,"Food Insecurity":food,"Flood Exposure":flood,"Unsafe Waste":waste}
 
-    diagnoses=[]
-    if hh_data:
-        flags=[dx_flags(h) for h in hh_data]
-        denom=len(hh_data)
-        definitions={
-            "Hypertension":("NCD / Hypertension burden","BP screening, repeat measurement, adherence and referral"),
-            "Diabetes":("Diabetes care gap","Case finding, glucose assessment, adherence and YAKAP linkage"),
-            "TB":("Tuberculosis transmission / treatment gap","TB-DOTS referral, contact investigation and treatment support"),
-            "Unsafe Water":("WASH / water safety gap","Water-source protection and household water treatment"),
-            "Food Insecurity":("Food security and nutrition vulnerability","Nutrition screening, food/social-protection referral"),
-            "Flood Exposure":("Climate and disaster vulnerability","DRRM preparedness and flood-related WASH protection"),
-            "Unsafe Waste":("Solid waste / environmental sanitation gap","Segregation, collection, clean-up and local enforcement"),
-        }
-        for name,(label,action) in definitions.items():
-            n=sum(f[name] for f in flags)
-            pct=n/denom*100
-            if n:
-                diagnoses.append({"Problem":name,"n":n,"Prevalence %":round(pct,1),"Diagnosis":label,"Suggested Response":action})
-        diagnoses=sorted(diagnoses,key=lambda x:x["Prevalence %"],reverse=True)
-
-    if not hh_data:
-        st.info("No household survey records yet. Complete Phase 2 first.")
-    else:
-        st.markdown("### 🧠 Automatically Generated Community Diagnosis")
-        st.caption("The diagnosis is generated directly from the household, environmental, governance and PERI records currently stored in the app.")
-        if diagnoses:
-            dx_df=pd.DataFrame(diagnoses)
-            st.dataframe(dx_df,use_container_width=True,hide_index=True)
-        else:
-            st.success("No major coded priority signal detected in the current household dataset.")
-
-        top=diagnoses[:5]
-        st.markdown("### 🚀 Automatically Suggested Project Portfolio")
-        project_rows=[]
-        templates={
-            "Hypertension":("Palo BP Check & Control Project","BHW-led BP screening + referral + medication adherence follow-up","Adults with hypertension/high BP signal"),
-            "Diabetes":("Palo Diabetes Case-Finding & Care Project","Community diabetes screening + care navigation + YAKAP linkage","Households with documented diabetes"),
-            "TB":("Palo TB Treatment Support Project","TB-DOTS navigation, treatment support and contact follow-up","TB-affected households and contacts"),
-            "Unsafe Water":("Palo Safe Water Project","Household water treatment + source assessment + WASH education","Households using unsafe/unprotected sources"),
-            "Food Insecurity":("Palo Food Security & Nutrition Project","Nutrition screening + social protection/livelihood referral","Food-insecure households and children"),
-            "Flood Exposure":("Palo Flood-Ready Health Project","Barangay DRRM coordination + evacuation/WASH preparedness","Flood-prone households"),
-            "Unsafe Waste":("Palo Clean & Safe Barangay Project","Waste segregation, collection, clean-up and enforcement","Households with unsafe disposal"),
-        }
-        for i,d in enumerate(top,1):
-            key=d["Problem"]
-            name,activities,target=templates[key]
-            priority="HIGH" if d["Prevalence %"]>=30 else ("MODERATE" if d["Prevalence %"]>=15 else "EMERGING")
-            project_rows.append({"Rank":i,"Priority":priority,"Project":name,"Need":f'{d["Prevalence %"]:.1f}% ({d["n"]}/{len(hh_data)} HH)',"Core Activities":activities,"Target":target})
-        if project_rows:
-            st.dataframe(pd.DataFrame(project_rows),use_container_width=True,hide_index=True)
-            st.download_button("📥 Download Automated Project Portfolio",pd.DataFrame(project_rows).to_csv(index=False).encode("utf-8"),"Palo_Automated_Project_Portfolio.csv","text/csv")
-
-        st.markdown("### 🗺️ Barangay-Level Priority Ranking")
-        brgy_rows=[]
-        for b in sorted(set(str(h.get("Barangay","")) for h in hh_data)):
-            bh=[h for h in hh_data if str(h.get("Barangay",""))==b]
-            if not bh: continue
-            bf=[dx_flags(h) for h in bh]
-            burden=np.mean([sum(f.values()) for f in bf])
-            brgy_rows.append({"Barangay":b,"Households":len(bh),"Avg Priority Signals/HH":round(float(burden),2),"Priority Score %":round(float(min(100,burden/7*100)),1)})
-        bdf=pd.DataFrame(brgy_rows).sort_values("Priority Score %",ascending=False)
-        st.dataframe(bdf,use_container_width=True,hide_index=True)
-
-        st.markdown("### 📝 Finalize a Community Project")
-        if top:
-            default_problem=top[0]["Problem"]
-            default_brgy=str(bdf.iloc[0]["Barangay"]) if len(bdf) else PALO_LEYTE_BARANGAYS[0]
-            template=templates[default_problem]
-        else:
-            default_problem="Hypertension"; default_brgy=PALO_LEYTE_BARANGAYS[0]; template=templates[default_problem]
-
-        with st.form("phase6_action_form"):
-            c1,c2=st.columns(2)
-            target_brgy=c1.selectbox("Barangay Target Name",PALO_LEYTE_BARANGAYS,index=PALO_LEYTE_BARANGAYS.index(default_brgy) if default_brgy in PALO_LEYTE_BARANGAYS else 0)
-            plan_date=c2.date_input("Planning Date")
-            problem_options=[d["Problem"] for d in diagnoses] or list(templates)
-            prio_problem=st.selectbox("Priority Diagnosed Health / Environmental Problem",problem_options)
-            chosen=templates[prio_problem]
-            target_pop=st.text_input("Target Population / Beneficiaries",chosen[2])
-            lead_dept=st.text_input("Lead Implementing Agency / Committee","Barangay Health Board / BHS / BHWs / RHU")
-            strat_obj=st.text_area("Strategic Objectives & KPIs",f"Reduce the identified {prio_problem.lower()} burden through targeted community action, referral and follow-up.")
-            activities=st.text_area("Concrete Community Mobilization Activities",chosen[1])
-            c1,c2=st.columns(2)
-            budget_req=c1.number_input("Required Budget Allocation (₱)",0,1000000,25000)
-            timeframe=c2.selectbox("Implementation Timeframe",["1 Month","3 Months","6 Months","12 Months"])
-            if st.form_submit_button("💾 Save & Finalize Project Plan"):
-                st.session_state.diag_records.append({
-                    "Barangay":target_brgy,"Date":str(plan_date),"Problem":prio_problem,
-                    "Target":target_pop,"Lead":lead_dept,"Objectives":strat_obj,
-                    "Activities":activities,"Budget":budget_req,"Timeframe":timeframe,
-                    "Auto_Generated_From_Data":True,
-                })
-                save_session_to_disk()
-                st.success("Project plan saved permanently.")
+        c1, c2 = st.columns(2)
+        target_pop = c1.text_input(
+            "Target Population / Beneficiaries", "Adults >40 yrs & Flood HHs"
+        )
+        lead_dept = c2.text_input(
+            "Lead Implementing Agency / Committee", "BHB & BHS Midwife/BHWs"
+        )
 
         st.markdown("---")
-        st.markdown("### 📂 Saved Community Project Plans")
-        if not st.session_state.diag_records:
-            st.info("No project plans saved yet.")
-        else:
-            for i,plan in enumerate(st.session_state.diag_records):
-                with st.expander(f"🎯 Plan #{i+1}: {plan.get('Barangay')} — {plan.get('Problem')}"):
-                    st.write(f"**Lead:** {plan.get('Lead')}")
-                    st.write(f"**Budget:** ₱{plan.get('Budget'):,}")
-                    st.write(f"**Objectives:** {plan.get('Objectives')}")
-                    st.write(f"**Activities:** {plan.get('Activities')}")
-                    if st.button("🗑️ Delete Plan",key=f"del_plan_{i}"):
-                        st.session_state.diag_records.pop(i); save_session_to_disk(); st.rerun()
+        st.markdown("#### 🛠️ COPAR Strategic Intervention Matrix")
+        strat_obj = st.text_area(
+            "1. Strategic Objectives & Key Performance Indicators (KPIs):"
+        )
+        activities = st.text_area(
+            "2. Concrete Community Mobilization Activities:"
+        )
+
+        c1, c2 = st.columns(2)
+        budget_req = c1.number_input(
+            "Required Budget Allocation (₱)", 0, 1000000, 25000
+        )
+        timeframe = c2.text_input("Implementation Timeframe", "3 Months (Q4)")
+
+        if st.form_submit_button("💾 Save & Finalize Action Plan"):
+            st.session_state.diag_records.append({
+                "Barangay": target_brgy,
+                "Date": str(plan_date),
+                "Problem": prio_problem,
+                "Target": target_pop,
+                "Lead": lead_dept,
+                "Objectives": strat_obj,
+                "Activities": activities,
+                "Budget": budget_req,
+                "Timeframe": timeframe,
+            })
+            save_session_to_disk()
+            st.success("Community Action Plan Saved Permanently!")
+
+    st.markdown("---")
+    st.markdown("### 📂 Saved Community Action Plans")
+    if len(st.session_state.diag_records) == 0:
+        st.info("No action plans created yet.")
+    else:
+        for i, plan in enumerate(st.session_state.diag_records):
+            with st.expander(
+                f"🎯 Plan #{i+1}: {plan.get('Barangay')} -"
+                f" {plan.get('Problem')}"
+            ):
+                st.write(f"**Lead:** {plan.get('Lead')}")
+                st.write(f"**Budget:** ₱{plan.get('Budget'):,}")
+                st.write(f"**Objectives:** {plan.get('Objectives')}")
+                st.write(f"**Activities:** {plan.get('Activities')}")
+                if st.button("🗑️ Delete Plan", key=f"del_plan_{i}"):
+                    st.session_state.diag_records.pop(i)
+                    save_session_to_disk()
+                    st.success("Plan deleted!")
+                    st.rerun()
 
 # MODULE 8: DATA MANAGEMENT & EXPORT
 elif menu == "💾 Data Management & Export":
