@@ -13,6 +13,24 @@ st.set_page_config(
     layout="wide",
 )
 
+# ================= PALO LEYTE BARANGAYS & ENUMERATORS =================
+PALO_BARANGAYS = [
+    "Anibong", "Arado", "Baras", "Barayong", "Bawi",
+    "Cabarasan Daku", "Cabarasan Guti", "Campetic", "Candahug", "Cangumbang",
+    "Canipaan", "Castilla", "Cogon", "Gogon", "Guindapunan",
+    "Libertad", "Naga-naga", "Pawing", "San Agustin", "San Antonio",
+    "San Fernando", "San Isidro", "San Joaquin", "San Jose", "San Martin",
+    "San Roque", "San Vicente", "Santa Cruz", "Santing", "Santo Niño",
+    "Tacuranga", "Teraza", "Zone 1 (Poblacion)", "Zone 2 (Poblacion)",
+    "Zone 3 (Poblacion)", "Zone 4 (Poblacion)"
+]
+
+ENUMERATORS = [
+    "Jan Art A. Serna, RMT",
+    "Leila Projimo, PTRP",
+    "Aubrey Maye Arrieta"
+]
+
 # ================= PERMANENT MULTI-ENUMERATOR DATA PERSISTENCE =================
 DATA_FILE = "shared_survey_data.json"
 
@@ -115,7 +133,7 @@ def show_login_screen():
         unsafe_allow_html=True,
     )
     st.markdown(
-        '<div class="login-sub">Lead Developer: Jan Art A. Serna, RMT</div>',
+        '<div class="login-sub">Palo, Leyte Field Operations</div>',
         unsafe_allow_html=True,
     )
 
@@ -328,9 +346,9 @@ col_header, col_logout = st.columns([8.5, 1.5])
 with col_header:
     HEADER_HTML = """<div class="up-navbar">
     <div class="up-navbar-title">UNIVERSITY OF THE PHILIPPINES MANILA</div>
-    <div class="up-navbar-sub">School of Health Sciences — Comprehensive Community Health Field Portal</div>
+    <div class="up-navbar-sub">School of Health Sciences — Palo, Leyte Community Field Portal</div>
     <div class="up-navbar-detail">Integrated System: Spatial Mapping, Geocoding, Analytics & Action Planning (Phases 1–6)</div>
-    <div class="up-navbar-lead">Lead Developer: Jan Art A. Serna, RMT</div>
+    <div class="up-navbar-lead">Enumerators: Jan Art A. Serna, RMT | Leila Projimo, PTRP | Aubrey Maye Arrieta</div>
     </div>"""
     st.markdown(HEADER_HTML, unsafe_allow_html=True)
 
@@ -454,7 +472,7 @@ if st.sidebar.button("🔒 Logout Account", use_container_width=True):
 # ================= MODULE 0: EXECUTIVE DASHBOARD & SMART RISK ENGINE =================
 if menu == "📊 Executive Health Dashboard & Smart Risk Engine":
     st.subheader("📊 Executive Field Intelligence Dashboard & Automated Risk Engine")
-    st.caption("Real-Time Multi-Phase Field Analytics, Epidemiological Insights & Automated Public Health Risk Prediction")
+    st.caption("Real-Time Multi-Phase Field Analytics, Epidemiological Insights & Automated Public Health Risk Prediction (Palo, Leyte)")
 
     hh_data = st.session_state.hh_records
     gov_data = st.session_state.gov_records
@@ -501,8 +519,8 @@ if menu == "📊 Executive Health Dashboard & Smart Risk Engine":
         risk_triggers.append({
             "type": "high",
             "title": "🌊 Critical Climate & Flood Vector Exposure",
-            "desc": f"**{(flood_hhs/tot_hh*100):.1f}%** of surveyed households are located directly within severe flood-prone zones.",
-            "action": "Coordinate with Municipal DRRMO for pre-disaster evacuation protocols and waterborne infection prophylaxis."
+            "desc": f"**{(flood_hhs/tot_hh*100):.1f}%** of surveyed households in Palo, Leyte are located directly within severe flood-prone zones.",
+            "action": "Coordinate with Palo DRRMO for pre-disaster evacuation protocols and waterborne infection prophylaxis."
         })
 
     stunted_cnt = sum(1 for c in all_children if "Stunted" in c.get("Nutr", {}).get("Stunting", ""))
@@ -544,9 +562,146 @@ if menu == "📊 Executive Health Dashboard & Smart Risk Engine":
 
     st.markdown("---")
 
-    dash_tab1, dash_tab2, dash_tab3 = st.tabs(["📈 Disease & Vitals Analytics", "🌍 Environmental & PERI Breakdown", "🔍 Real-Time Master Household Roster"])
+    dash_tab1, dash_tab2, dash_tab3, dash_tab4, dash_tab5 = st.tabs([
+        "🩸 Diabetic & Hypertensive Patient Roster",
+        "📋 Households Profiled by Enumerator",
+        "📈 Disease & Vitals Analytics",
+        "🌍 Environmental & PERI Breakdown",
+        "🔍 Real-Time Master Household Roster"
+    ])
 
+    # --- TAB 1: DIABETIC & HYPERTENSIVE PATIENT ROSTER ---
     with dash_tab1:
+        st.markdown("### 🩸 Roster of Diabetic and Hypertensive Patients")
+        st.caption("Complete full name and detailed address of patients identified with Hypertension or Diabetes in Palo, Leyte.")
+
+        patient_roster = []
+
+        for hh in hh_data:
+            hh_id_val = hh.get("HH_ID", "N/A")
+            brgy_val = hh.get("Barangay", "N/A")
+            purok_val = hh.get("Purok", "N/A")
+            head_val = hh.get("Head_Name", "N/A")
+            enum_val = hh.get("Enumerator", "N/A")
+            full_address = f"{purok_val}, Barangay {brgy_val}, Palo, Leyte"
+
+            htn_hh = "Diagnosed" in hh.get("Hypertension_Status", "")
+            dm_hh = "Diagnosed" in hh.get("Diabetes_Status", "")
+
+            # Check individual adults in household
+            adults_list = hh.get("Adults", [])
+            has_adult_matches = False
+
+            for a in adults_list:
+                a_name = a.get("Name", "").strip()
+                a_sys = a.get("Sys", 0)
+                a_dia = a.get("Dia", 0)
+                a_risk = a.get("Risk", "")
+
+                is_htn_adult = (a_sys >= 140 or a_dia >= 90 or a_risk == "Hypertensive Risk" or htn_hh)
+                is_dm_adult = dm_hh
+
+                if is_htn_adult or is_dm_adult:
+                    has_adult_matches = True
+                    conds = []
+                    if is_htn_adult:
+                        conds.append("Hypertension")
+                    if is_dm_adult:
+                        conds.append("Diabetes")
+                    
+                    patient_roster.append({
+                        "Full Name": a_name if a_name else f"{head_val} (HH Head)",
+                        "Condition Identified": " & ".join(conds),
+                        "Full Address": full_address,
+                        "Barangay": brgy_val,
+                        "Purok": purok_val,
+                        "HH ID": hh_id_val,
+                        "BP Vitals": f"{a_sys}/{a_dia}" if a_sys > 0 else hh.get("BP", "N/A"),
+                        "Enumerator": enum_val
+                    })
+
+            # If no adult individual records but HH status is positive, add HH Head
+            if not has_adult_matches and (htn_hh or dm_hh):
+                conds = []
+                if htn_hh:
+                    conds.append("Hypertension")
+                if dm_hh:
+                    conds.append("Diabetes")
+                patient_roster.append({
+                    "Full Name": head_val,
+                    "Condition Identified": " & ".join(conds),
+                    "Full Address": full_address,
+                    "Barangay": brgy_val,
+                    "Purok": purok_val,
+                    "HH ID": hh_id_val,
+                    "BP Vitals": hh.get("BP", "N/A"),
+                    "Enumerator": enum_val
+                })
+
+        if len(patient_roster) == 0:
+            st.info("No diabetic or hypertensive patients currently recorded in survey data.")
+        else:
+            df_patient = pd.DataFrame(patient_roster)
+            
+            # Filters
+            col_f1, col_f2 = st.columns(2)
+            sel_brgy_p = col_f1.multiselect("Filter by Barangay", options=list(df_patient["Barangay"].unique()), default=list(df_patient["Barangay"].unique()))
+            sel_cond_p = col_f2.multiselect("Filter by Condition", options=["Hypertension", "Diabetes", "Hypertension & Diabetes"], default=["Hypertension", "Diabetes", "Hypertension & Diabetes"])
+
+            filt_patient = df_patient[df_patient["Barangay"].isin(sel_brgy_p)]
+            if sel_cond_p:
+                filt_patient = filt_patient[filt_patient["Condition Identified"].apply(lambda c: any(sc in c for sc in sel_cond_p))]
+
+            st.markdown(f"**Total Patients Identified:** `{len(filt_patient)}`")
+            st.dataframe(filt_patient, use_container_width=True)
+
+    # --- TAB 2: LIST OF HOUSEHOLDS BY ENUMERATOR ---
+    with dash_tab2:
+        st.markdown("### 📋 List of Households by Head Interviewed by Enumerators")
+        st.caption("Structured roster of households grouped by Head Name and assigned Enumerator.")
+
+        c_enum_filter, c_brgy_filter = st.columns(2)
+        selected_enum = c_enum_filter.selectbox("Select Enumerator Filter", ["All Enumerators"] + ENUMERATORS)
+        selected_brgy_hh = c_brgy_filter.multiselect("Filter Barangay", options=PALO_BARANGAYS, default=[])
+
+        enum_hh_list = []
+        for hh in hh_data:
+            enum_hh_list.append({
+                "HH ID": hh.get("HH_ID", "N/A"),
+                "Head of Household Name": hh.get("Head_Name", "N/A"),
+                "Barangay": hh.get("Barangay", "N/A"),
+                "Purok": hh.get("Purok", "N/A"),
+                "Full Address": f"{hh.get('Purok', 'N/A')}, Barangay {hh.get('Barangay', 'N/A')}, Palo, Leyte",
+                "Enumerator": hh.get("Enumerator", "N/A"),
+                "Survey Date": hh.get("Date", "N/A"),
+                "Survey Status": hh.get("Survey_Status", "Completed"),
+                "Adults Profiled": len(hh.get("Adults", [])),
+                "Children Profiled": len(hh.get("Children", []))
+            })
+
+        if len(enum_hh_list) == 0:
+            st.info("No household entries logged yet.")
+        else:
+            df_enum = pd.DataFrame(enum_hh_list)
+
+            if selected_enum != "All Enumerators":
+                df_enum = df_enum[df_enum["Enumerator"] == selected_enum]
+
+            if selected_brgy_hh:
+                df_enum = df_enum[df_enum["Barangay"].isin(selected_brgy_hh)]
+
+            st.markdown("#### 📊 Enumerator Interview Metrics Summary")
+            ec1, ec2, ec3, ec4 = st.columns(4)
+            ec1.metric("Total Displayed", f"{len(df_enum)}")
+            ec2.metric("Jan Art A. Serna, RMT", f"{sum(1 for h in enum_hh_list if h['Enumerator'] == 'Jan Art A. Serna, RMT')}")
+            ec3.metric("Leila Projimo, PTRP", f"{sum(1 for h in enum_hh_list if h['Enumerator'] == 'Leila Projimo, PTRP')}")
+            ec4.metric("Aubrey Maye Arrieta", f"{sum(1 for h in enum_hh_list if h['Enumerator'] == 'Aubrey Maye Arrieta')}")
+
+            st.markdown("---")
+            st.dataframe(df_enum, use_container_width=True)
+
+    # --- TAB 3: DISEASE & VITALS ANALYTICS ---
+    with dash_tab3:
         c_left, c_right = st.columns(2)
         with c_left:
             st.markdown("**Adult Systolic BP Distribution**")
@@ -573,7 +728,8 @@ if menu == "📊 Executive Health Dashboard & Smart Risk Engine":
             else:
                 st.info("No household morbidity records available.")
 
-    with dash_tab2:
+    # --- TAB 4: ENVIRONMENTAL & PERI BREAKDOWN ---
+    with dash_tab4:
         if len(peri_data) > 0:
             st.markdown("**Purok Environmental Risk Index (PERI) Domain Breakdown**")
             peri_df = pd.DataFrame(peri_data)[["Purok", "DS1_Sanitation", "DS2_Food", "DS3_BuiltEnv", "DS4_HealthInfra", "DS5_DRR", "DS6_Vector", "PERI_Index"]]
@@ -582,7 +738,8 @@ if menu == "📊 Executive Health Dashboard & Smart Risk Engine":
         else:
             st.info("No Phase 4 PERI windshield evaluations stored yet.")
 
-    with dash_tab3:
+    # --- TAB 5: MASTER HOUSEHOLD EXPLORER ---
+    with dash_tab5:
         st.markdown("**Live Master Household Explorer**")
         if tot_hh > 0:
             search_query = st.text_input("🔎 Search by Household ID, Barangay, or Head Name", "")
@@ -593,6 +750,7 @@ if menu == "📊 Executive Health Dashboard & Smart Risk Engine":
                     "Barangay": h.get("Barangay"),
                     "Purok": h.get("Purok"),
                     "Head Name": h.get("Head_Name"),
+                    "Enumerator": h.get("Enumerator"),
                     "Vitals BP": h.get("BP"),
                     "Health Risk": h.get("Risk"),
                     "Flood Zone": h.get("Flood_Prone"),
@@ -608,15 +766,15 @@ if menu == "📊 Executive Health Dashboard & Smart Risk Engine":
 
 # MODULE 1: INTERACTIVE SPOT MAP
 elif menu == "🗺️ Interactive Spot Map":
-    st.subheader("📍 Interactive Barangay Health & Environmental Hazard Spot Map")
+    st.subheader("📍 Interactive Barangay Health & Environmental Hazard Spot Map (Palo, Leyte)")
 
     if len(st.session_state.hh_records) == 0:
-        st.info("No household survey records stored yet. Showing baseline map with simulated hazard markers.")
+        st.info("No household survey records stored yet. Showing baseline map with simulated hazard markers for Palo, Leyte.")
         map_df = pd.DataFrame([
-            {"HH_ID": "HH-001", "Purok": "Purok 1", "Lat": 11.1562, "Lon": 124.9912, "BP": "145/92", "Risk": "Hypertensive Risk", "Flood_Prone": "Yes", "Color": [192, 38, 211, 230]},
-            {"HH_ID": "HH-002", "Purok": "Purok 1", "Lat": 11.1568, "Lon": 124.9918, "BP": "118/78", "Risk": "Normal", "Flood_Prone": "No", "Color": [34, 197, 94, 200]},
-            {"HH_ID": "HH-003", "Purok": "Purok 2", "Lat": 11.1555, "Lon": 124.9905, "BP": "120/80", "Risk": "Normal", "Flood_Prone": "Yes", "Color": [37, 99, 235, 220]},
-            {"HH_ID": "HH-004", "Purok": "Purok 3", "Lat": 11.1570, "Lon": 124.9930, "BP": "150/98", "Risk": "Hypertensive Risk", "Flood_Prone": "No", "Color": [123, 17, 19, 220]},
+            {"HH_ID": "HH-001", "Barangay": "Pawing", "Purok": "Purok 1", "Lat": 11.1562, "Lon": 124.9912, "BP": "145/92", "Risk": "Hypertensive Risk", "Flood_Prone": "Yes", "Color": [192, 38, 211, 230]},
+            {"HH_ID": "HH-002", "Barangay": "Campetic", "Purok": "Purok 1", "Lat": 11.1568, "Lon": 124.9918, "BP": "118/78", "Risk": "Normal", "Flood_Prone": "No", "Color": [34, 197, 94, 200]},
+            {"HH_ID": "HH-003", "Barangay": "Guindapunan", "Purok": "Purok 2", "Lat": 11.1555, "Lon": 124.9905, "BP": "120/80", "Risk": "Normal", "Flood_Prone": "Yes", "Color": [37, 99, 235, 220]},
+            {"HH_ID": "HH-004", "Barangay": "San Jose", "Purok": "Purok 3", "Lat": 11.1570, "Lon": 124.9930, "BP": "150/98", "Risk": "Hypertensive Risk", "Flood_Prone": "No", "Color": [123, 17, 19, 220]},
         ])
     else:
         map_df = pd.DataFrame(st.session_state.hh_records)
@@ -625,7 +783,8 @@ elif menu == "🗺️ Interactive Spot Map":
 
     with col_f:
         st.markdown("**Map Controls & Filters**")
-        puroks = list(map_df["Purok"].unique())
+        sel_brgy_m = st.multiselect("Filter Barangays (Palo)", options=PALO_BARANGAYS, default=PALO_BARANGAYS)
+        puroks = list(map_df["Purok"].unique()) if "Purok" in map_df.columns else ["Purok 1"]
         sel_puroks = st.multiselect("Filter Puroks", options=puroks, default=puroks)
         flood_filter = st.selectbox("Flood Risk Filter", ["Show All Households", "Flood-Prone Zones Only", "Non-Flood Zones Only"])
 
@@ -636,7 +795,12 @@ elif menu == "🗺️ Interactive Spot Map":
         st.markdown("🟣 **Purple:** Dual Hazard (Flood + Health Risk)")
         st.markdown("🟢 **Green:** Normal / Low Risk")
 
-    filt_df = map_df[map_df["Purok"].isin(sel_puroks)]
+    filt_df = map_df
+    if "Barangay" in filt_df.columns:
+        filt_df = filt_df[filt_df["Barangay"].isin(sel_brgy_m)]
+    if "Purok" in filt_df.columns:
+        filt_df = filt_df[filt_df["Purok"].isin(sel_puroks)]
+
     if flood_filter == "Flood-Prone Zones Only":
         filt_df = filt_df[filt_df["Flood_Prone"] == "Yes"]
     elif flood_filter == "Non-Flood Zones Only":
@@ -666,49 +830,13 @@ elif menu == "🗺️ Interactive Spot Map":
             pdk.Deck(
                 layers=[layer],
                 initial_view_state=view,
-                tooltip={"text": "HH: {HH_ID}\nPurok: {Purok}\nBP: {BP}\nHealth Risk: {Risk}\nFlood Prone: {Flood_Prone}"},
+                tooltip={"text": "HH: {HH_ID}\nBarangay: {Barangay}\nPurok: {Purok}\nBP: {BP}\nHealth Risk: {Risk}\nFlood Prone: {Flood_Prone}"},
             )
         )
 
 # MODULE 2: PHASE 1 BHB GOVERNANCE SCORECARD
 elif menu == "📋 Phase 1: Full Governance Scorecard":
     st.subheader("Phase 1: Barangay Health Board (BHB) Governance Scorecard (100-Point Instrument)")
-
-    with st.expander("📖 View Formal Scoring Criteria Matrix & Governance Categorization Guide", expanded=False):
-        st.markdown("""
-        ### Official Scoring Matrix & Verification Guide
-        * **Domain 1. Legal Reconstitution (Max: 10 pts)**
-          * **1.1** Signed Executive Order (EO) / Resolution reconstituting the BHB for the current term (5 pts) | *Verification Source:* Signed EO / Barangay Resolution Copy
-          * **1.2** Mandatory Multi-sectoral Representation present: NGO/CBO, Youth/SK, BHW/BNS, Senior Citizen, DepEd (5 pts) | *Verification Source:* Appointment Papers / Roster of Members
-        * **Domain 2. Meeting Regularity (Max: 20 pts)**
-          * **2.1** Conduct of Regular Quarterly BHB Meetings (3 pts per quarter conducted = 12 pts max) | *Verification Source:* Minutes of Meeting & Attendance Sheets (Q1-Q4)
-          * **2.2** Official Quorum (>50% member attendance) consistently documented in all meetings (4 pts) | *Verification Source:* Signed Attendance Logs
-          * **2.3** Approved Action-Oriented Minutes with clear resolution/action point tracking (4 pts) | *Verification Source:* Approved BHB Minutes of Meetings
-        * **Domain 3. Legislative Output (Max: 20 pts)**
-          * **3.1** Enactment of specific local ordinances on Sanitation, WASH, Dengue, Rabies, or Tobacco/Vape Control (10 pts) | *Verification Source:* Official Barangay Ordinances
-          * **3.2** Active enforcement mechanism, Task Force creation, or penalty/monitoring protocols (5 pts) | *Verification Source:* Enforcement Reports / Inspection Records
-          * **3.3** Policy alignment with DOH Universal Health Care (UHC) & Municipal Health Priorities (5 pts) | *Verification Source:* Barangay Health Plan / Policy Framework
-        * **Domain 4. AIP Budget Allocation (Max: 20 pts)**
-          * **4.1** Dedicated, itemized Health & Sanitation budget line-items in the approved Barangay AIP (8 pts) | *Verification Source:* Approved Barangay AIP Document
-          * **4.2** Adequate budget allocation for essential drugs, BHW honoraria, and emergency health response (6 pts) | *Verification Source:* Itemized Budget Breakdown
-          * **4.3** Budget execution and liquidation status (>75% budget utilized for intended health programs) (6 pts) | *Verification Source:* Barangay Financial & Liquidation Reports
-        * **Domain 5. Accomplishment Reports (Max: 15 pts)**
-          * **5.1** Regular quarterly health tracking & epidemiological reports submitted on time to RHU/MHO (8 pts) | *Verification Source:* Submitted RHU/MHO Transmittals & Reports
-          * **5.2** Presentation of Barangay Health Status & Progress during semi-annual Barangay Assemblies (4 pts) | *Verification Source:* Barangay Assembly Minutes / Slides
-          * **5.3** Functional Barangay Health Information Board maintained at BHS / Barangay Hall (3 pts) | *Verification Source:* Updated BHS Data Board / Spot Map
-        * **Domain 6. Committee Functionality (Max: 15 pts)**
-          * **6.1** Functional Technical Working Committees created (e.g., Dengue Task Force, WASH Committee, Nutrition Committee) (6 pts) | *Verification Source:* TMC / Task Force Executive Orders
-          * **6.2** Monthly/Regular operational meetings and activity implementation reports by committees (6 pts) | *Verification Source:* TMC Activity Reports & Logbooks
-          * **6.3** Execution of community mobilization campaigns (e.g., Clean-up drives, Immunization, Operation Timbang) (3 pts) | *Verification Source:* Photo Documentation & Activity Logs
-        
-        ---
-        ### III. GOVERNANCE FUNCTIONALITY RATING & CATEGORIZATION
-        | Score Bracket | Category Level | Description & Operational Implications | Assessed Status |
-        | :--- | :--- | :--- | :--- |
-        | **80 – 100 Points** | **HIGH FUNCTIONING** | Fully compliant with legal, legislative, budgetary, and operational standards. Demonstrates proactive local health governance. | `[ ] HIGH FUNCTIONING` |
-        | **50 – 79 Points** | **MODERATE FUNCTIONING** | Partially compliant. Basic structure exists but lacks consistency in meeting regularity, legislative output, or committee operations. | `[ ] MODERATE FUNCTIONING` |
-        | **0 – 49 Points** | **LOW FUNCTIONING** | Non-compliant or severe operational gaps. Urgent technical assistance, reconstitution, and budgetary alignment required. | `[ ] LOW FUNCTIONING` |
-        """)
 
     mode_p1 = st.radio("Select Operation", ["➕ New Scorecard Entry", "📂 Review, Edit & Delete Submitted Scorecards"], horizontal=True)
 
@@ -718,9 +846,9 @@ elif menu == "📋 Phase 1: Full Governance Scorecard":
 
             with t1:
                 c1, c2, c3 = st.columns(3)
-                b_name = c1.text_input("Barangay Name")
-                city = c2.text_input("City / Municipality")
-                prov = c3.text_input("Province")
+                b_name = c1.selectbox("Barangay Name (Palo, Leyte)", PALO_BARANGAYS)
+                city = c2.text_input("City / Municipality", "Palo")
+                prov = c3.text_input("Province", "Leyte")
 
                 c1, c2, c3 = st.columns(3)
                 eval_date = c1.date_input("Date of Evaluation")
@@ -730,40 +858,40 @@ elif menu == "📋 Phase 1: Full Governance Scorecard":
             with t2:
                 st.markdown("**Domain 1: Legal Reconstitution (Max 10 Points)**")
                 c1, c2 = st.columns(2)
-                g1_1 = c1.number_input("1.1 Signed Executive Order (EO) / Resolution reconstituting the BHB for current term (Max 5 pts)", 0, 5, 0, help="Verification: Signed EO / Barangay Resolution Copy")
-                g1_2 = c2.number_input("1.2 Mandatory Multi-sectoral Representation present: NGO/CBO, Youth/SK, BHW/BNS, Senior Citizen, DepEd (Max 5 pts)", 0, 5, 0, help="Verification: Appointment Papers / Roster of Members")
+                g1_1 = c1.number_input("1.1 Signed Executive Order (EO) / Resolution reconstituting the BHB for current term (Max 5 pts)", 0, 5, 0)
+                g1_2 = c2.number_input("1.2 Mandatory Multi-sectoral Representation present (Max 5 pts)", 0, 5, 0)
 
                 st.markdown("**Domain 2: Meeting Regularity (Max 20 Points)**")
                 c1, c2, c3 = st.columns(3)
-                g2_1 = c1.number_input("2.1 Conduct of Regular Quarterly BHB Meetings (3 pts per quarter conducted = 12 pts max)", 0, 12, 0, help="Verification: Minutes of Meeting & Attendance Sheets (Q1-Q4)")
-                g2_2 = c2.number_input("2.2 Official Quorum (>50% member attendance) consistently documented in all meetings (Max 4 pts)", 0, 4, 0, help="Verification: Signed Attendance Logs")
-                g2_3 = c3.number_input("2.3 Approved Action-Oriented Minutes with clear resolution/action point tracking (Max 4 pts)", 0, 4, 0, help="Verification: Approved BHB Minutes of Meetings")
+                g2_1 = c1.number_input("2.1 Regular Quarterly BHB Meetings (Max 12 pts)", 0, 12, 0)
+                g2_2 = c2.number_input("2.2 Official Quorum (>50% attendance) (Max 4 pts)", 0, 4, 0)
+                g2_3 = c3.number_input("2.3 Approved Action-Oriented Minutes (Max 4 pts)", 0, 4, 0)
 
                 st.markdown("**Domain 3: Legislative Output (Max 20 Points)**")
                 c1, c2, c3 = st.columns(3)
-                g3_1 = c1.number_input("3.1 Enactment of specific local ordinances on Sanitation, WASH, Dengue, Rabies, or Tobacco/Vape Control (Max 10 pts)", 0, 10, 0, help="Verification: Official Barangay Ordinances")
-                g3_2 = c2.number_input("3.2 Active enforcement mechanism, Task Force creation, or penalty/monitoring protocols (Max 5 pts)", 0, 5, 0, help="Verification: Enforcement Reports / Inspection Records")
-                g3_3 = c3.number_input("3.3 Policy alignment with DOH Universal Health Care (UHC) & Municipal Health Priorities (Max 5 pts)", 0, 5, 0, help="Verification: Barangay Health Plan / Policy Framework")
+                g3_1 = c1.number_input("3.1 Enactment of local ordinances (Max 10 pts)", 0, 10, 0)
+                g3_2 = c2.number_input("3.2 Active enforcement mechanism (Max 5 pts)", 0, 5, 0)
+                g3_3 = c3.number_input("3.3 Policy alignment with UHC (Max 5 pts)", 0, 5, 0)
 
             with t3:
                 st.markdown("**Domain 4: AIP Budget Allocation (Max 20 Points)**")
                 c1, c2, c3 = st.columns(3)
-                g4_1 = c1.number_input("4.1 Dedicated, itemized Health & Sanitation budget line-items in approved Barangay AIP (Max 8 pts)", 0, 8, 0, help="Verification: Approved Barangay AIP Document")
-                g4_2 = c2.number_input("4.2 Adequate budget allocation for essential drugs, BHW honoraria, and emergency health response (Max 6 pts)", 0, 6, 0, help="Verification: Itemized Budget Breakdown")
-                g4_3 = c3.number_input("4.3 Budget execution and liquidation status (>75% budget utilized for intended health programs) (Max 6 pts)", 0, 6, 0, help="Verification: Barangay Financial & Liquidation Reports")
+                g4_1 = c1.number_input("4.1 Health budget line-items in AIP (Max 8 pts)", 0, 8, 0)
+                g4_2 = c2.number_input("4.2 Essential drugs & honoraria budget (Max 6 pts)", 0, 6, 0)
+                g4_3 = c3.number_input("4.3 Budget execution >75% (Max 6 pts)", 0, 6, 0)
 
                 st.markdown("**Domain 5: Accomplishment Reports (Max 15 Points)**")
                 c1, c2, c3 = st.columns(3)
-                g5_1 = c1.number_input("5.1 Regular quarterly health tracking & epidemiological reports submitted on time to RHU/MHO (Max 8 pts)", 0, 8, 0, help="Verification: Submitted RHU/MHO Transmittals & Reports")
-                g5_2 = c2.number_input("5.2 Presentation of Barangay Health Status & Progress during semi-annual Barangay Assemblies (Max 4 pts)", 0, 4, 0, help="Verification: Barangay Assembly Minutes / Slides")
-                g5_3 = c3.number_input("5.3 Functional Barangay Health Information Board maintained at BHS / Barangay Hall (Max 3 pts)", 0, 3, 0, help="Verification: Updated BHS Data Board / Spot Map")
+                g5_1 = c1.number_input("5.1 Health reports submitted to RHU (Max 8 pts)", 0, 8, 0)
+                g5_2 = c2.number_input("5.2 Barangay Assembly health reporting (Max 4 pts)", 0, 4, 0)
+                g5_3 = c3.number_input("5.3 BHS Health Information Board (Max 3 pts)", 0, 3, 0)
 
             with t4:
                 st.markdown("**Domain 6: Committee Functionality (Max 15 Points)**")
                 c1, c2, c3 = st.columns(3)
-                g6_1 = c1.number_input("6.1 Functional Technical Working Committees created (e.g., Dengue Task Force, WASH, Nutrition) (Max 6 pts)", 0, 6, 0, help="Verification: TMC / Task Force Executive Orders")
-                g6_2 = c2.number_input("6.2 Monthly/Regular operational meetings and activity implementation reports by committees (Max 6 pts)", 0, 6, 0, help="Verification: TMC Activity Reports & Logbooks")
-                g6_3 = c3.number_input("6.3 Execution of community mobilization campaigns (e.g., Clean-up drives, Immunization, Operation Timbang) (Max 3 pts)", 0, 3, 0, help="Verification: Photo Documentation & Activity Logs")
+                g6_1 = c1.number_input("6.1 Technical Working Committees (Max 6 pts)", 0, 6, 0)
+                g6_2 = c2.number_input("6.2 Monthly operational meetings (Max 6 pts)", 0, 6, 0)
+                g6_3 = c3.number_input("6.3 Community mobilization campaigns (Max 3 pts)", 0, 3, 0)
 
                 gap_summary = st.text_area("Identify primary governance bottlenecks & legislative gaps:")
                 action_plan = st.text_area("Recommended technical assistance & corrective intervention plan:")
@@ -790,9 +918,9 @@ elif menu == "📋 Phase 1: Full Governance Scorecard":
             rec = st.session_state.gov_records[selected_idx]
 
             with st.form("edit_gov_form"):
-                e_brgy = st.text_input("Barangay Name", value=rec.get("Barangay", ""))
-                e_city = st.text_input("City / Municipality", value=rec.get("City", ""))
-                e_prov = st.text_input("Province", value=rec.get("Province", ""))
+                e_brgy = st.selectbox("Barangay Name", PALO_BARANGAYS, index=PALO_BARANGAYS.index(rec.get("Barangay", PALO_BARANGAYS[0])) if rec.get("Barangay") in PALO_BARANGAYS else 0)
+                e_city = st.text_input("City / Municipality", value=rec.get("City", "Palo"))
+                e_prov = st.text_input("Province", value=rec.get("Province", "Leyte"))
                 e_score = st.number_input("Total Score (0–100)", 0, 100, int(rec.get("Score", 0)))
                 e_rating = "HIGH FUNCTIONING" if e_score >= 80 else ("MODERATE FUNCTIONING" if e_score >= 50 else "LOW FUNCTIONING / CRITICAL INTERVENTION REQUIRED")
                 e_gaps = st.text_area("Governance Bottlenecks", value=rec.get("Gaps", ""))
@@ -815,7 +943,7 @@ elif menu == "📋 Phase 1: Full Governance Scorecard":
 
 # MODULE 3: PHASE 2 MASTER HOUSEHOLD SURVEY
 elif menu == "🏠 Phase 2: Master Household Survey":
-    st.subheader("Phase 2: Master Household Survey Instrument (Dynamic Profile Entry & Cross-Module Interpretation)")
+    st.subheader("Phase 2: Master Household Survey Instrument (Palo, Leyte Field Operations)")
 
     mode_p2 = st.radio(
         "Select Operation",
@@ -829,7 +957,6 @@ elif menu == "🏠 Phase 2: Master Household Survey":
 
     if mode_p2 == "➕ New Household Survey Entry":
         st.markdown("#### ⚙️ Profile Roster Count Configuration & Controls")
-        st.info("💡 Adjust the counters or click the buttons below to dynamically add profiling forms without submitting the overall survey record.")
         
         if "adult_count" not in st.session_state:
             st.session_state.adult_count = 1
@@ -873,21 +1000,21 @@ elif menu == "🏠 Phase 2: Master Household Survey":
             with t_meta:
                 st.markdown("**Survey Metadata Control Block**")
                 c1, c2, c3, c4 = st.columns(4)
-                hh_id = c1.text_input("Household ID", "HH-001")
-                brgy = c2.text_input("Barangay Name")
+                hh_id = c1.text_input("Household ID", f"HH-PL-{len(st.session_state.hh_records)+1:03d}")
+                brgy = c2.selectbox("Barangay Name (Palo, Leyte)", PALO_BARANGAYS)
                 purok = c3.selectbox("Purok / Zone", [f"Purok {i}" for i in range(1, 8)])
                 date_survey = c4.date_input("Date of Survey")
 
                 c1, c2, c3, c4 = st.columns(4)
                 lat = c1.number_input("Latitude", value=11.1560, format="%.4f")
                 lon = c2.number_input("Longitude", value=124.9920, format="%.4f")
-                enum_name = c3.text_input("Enumerator Name", "Field Officer 1")
+                enum_name = c3.selectbox("Enumerator Name", ENUMERATORS)
                 resp_role = c4.selectbox("Respondent Role", ["Head", "Spouse", "Adult Member", "Other"])
 
                 c1, c2, c3 = st.columns(3)
                 surv_status = c1.selectbox("Survey Status", ["Completed", "Partially Completed", "Refused"])
-                dialect = c2.selectbox("Primary Dialect Spoken at Home", ["Waray", "Tagalog", "English", "Mixed", "Cebuano / Bisaya", "Ilocano", "Bicolano", "Hiligaynon / Ilonggo", "Pangasinan", "Other Language"])
-                religion = c3.selectbox("Religion", ["Roman Catholic", "Islam", "Iglesia ni Cristo (INC)", "Evangelical / Protestant", "Seventh-day Adventist", "Aglipayan (IFI)", "Jehovah's Witnesses", "Church of Jesus Christ of Latter-day Saints", "Born Again Christian", "None / Secular", "Other Religion"])
+                dialect = c2.selectbox("Primary Dialect Spoken at Home", ["Waray", "Tagalog", "English", "Cebuano / Bisaya", "Other"])
+                religion = c3.selectbox("Religion", ["Roman Catholic", "Evangelical / Protestant", "Iglesia ni Cristo (INC)", "Islam", "Seventh-day Adventist", "Other"])
 
                 st.markdown("---")
                 st.markdown("**Household Demographic Roster**")
@@ -905,7 +1032,7 @@ elif menu == "🏠 Phase 2: Master Household Survey":
                 for i in range(1, int(num_adults) + 1):
                     st.markdown(f"<div class='adult-card'><strong>Adult Member {i} Full Profile & Physical Screening</strong></div>", unsafe_allow_html=True)
                     c1, c2, c3, c4, c5 = st.columns(5)
-                    a_name = c1.text_input(f"Adult {i} Name / Initials", key=f"a_name_{i}")
+                    a_name = c1.text_input(f"Adult {i} Full Name", key=f"a_name_{i}")
                     a_gender = c2.selectbox(f"Adult {i} Gender", ["Male", "Female", "Other"], key=f"a_gen_{i}")
                     a_age = c3.number_input(f"Adult {i} Age", 18, 120, 30, key=f"a_age_{i}")
                     a_edu = c4.selectbox(f"Adult {i} Education", ["No Formal Education", "Elementary Unfinished", "Elementary Graduate", "High School Unfinished", "High School Graduate", "Vocational / College Unfinished", "College Graduate", "Post-Graduate"], key=f"a_edu_{i}")
@@ -921,15 +1048,15 @@ elif menu == "🏠 Phase 2: Master Household Survey":
                     c1, c2 = st.columns(2)
                     a_symptoms = c1.multiselect(
                         f"Adult {i} Current Complaints / Symptoms",
-                        ["None", "Cough", "Fever / feeling feverish", "Headache", "Colds / runny nose", "Body aches / muscle pain", "Abdominal pain", "Diarrhea", "Back pain", "Dizziness", "Sore throat", "Others"],
+                        ["None", "Cough", "Fever", "Headache", "Colds", "Body aches", "Abdominal pain", "Diarrhea", "Back pain", "Dizziness", "Sore throat", "Others"],
                         default=["None"], key=f"a_sym_{i}"
                     )
                     a_risk = c2.selectbox(f"Adult {i} Risk Category", ["Normal", "Hypertensive Risk", "Hypoxemic (<95%)", "Fever / Febrile", "Tachycardic / Bradycardic"], key=f"a_risk_{i}")
 
                     a_action = st.multiselect(
                         f"🩺 Adult {i} Action Taken",
-                        ["Referral to RHU / MHO Physician", "Referral to BHS / Barangay Midwife", "Health Education & Lifestyle Counseling", "Medication Compliance Check", "Follow-up Visit Scheduled", "Immediate Emergency Hospital Referral", "None / Normal Vitals"],
-                        default=["None / Normal Vitals"] if a_risk == "Normal" else ["Referral to RHU / MHO Physician"],
+                        ["Referral to RHU Palo Physician", "Referral to BHS / Barangay Midwife", "Health Education & Counseling", "Medication Compliance Check", "Follow-up Visit Scheduled", "Immediate Emergency Hospital Referral", "None / Normal Vitals"],
+                        default=["None / Normal Vitals"] if a_risk == "Normal" else ["Referral to RHU Palo Physician"],
                         key=f"a_action_{i}"
                     )
 
@@ -952,7 +1079,7 @@ elif menu == "🏠 Phase 2: Master Household Survey":
                 emergency_5k = c1.selectbox("Emergency Cushion: Can raise ₱5,000 in 24 hrs?", ["Yes", "No"])
                 p4ps_status = c2.selectbox("Active 4Ps Beneficiary?", ["Yes", "No"])
 
-                st.markdown("**Domestic Assets, Utilities & Transportation Owned**")
+                st.markdown("Domestic Assets, Utilities & Transportation Owned")
                 c1, c2, c3 = st.columns(3)
                 transpo_owned = c1.multiselect("Type of Transportation Owned", ["None", "Bicycle", "Motorcycle / Tricycle", "Private Car / Van", "Motorized Banca / Boat"], default=["None"])
                 utilities_avail = c2.multiselect("Utilities / Services Available", ["Grid Electricity", "Solar Power", "Piped Water Connection", "Cellular Signal", "Internet / Broadband", "Garbage Collection Service"], default=["Grid Electricity"])
@@ -1046,7 +1173,7 @@ elif menu == "🏠 Phase 2: Master Household Survey":
                 for c_i in range(1, int(num_children) + 1):
                     st.markdown(f"<div class='child-card'><strong>👶 Child Member {c_i} Profile & Immunization Screening</strong></div>", unsafe_allow_html=True)
                     c1, c2, c3, c4, c5 = st.columns(5)
-                    c_name = c1.text_input(f"Child {c_i} Name / Initials", key=f"c_name_{c_i}")
+                    c_name = c1.text_input(f"Child {c_i} Full Name", key=f"c_name_{c_i}")
                     c_sex = c2.selectbox(f"Child {c_i} Sex", ["Male", "Female"], key=f"c_sex_{c_i}")
                     c_age_m = c3.number_input(f"Child {c_i} Age (Months)", 0, 59, 12, key=f"c_age_{c_i}")
                     c_wt_kg = c4.number_input(f"Child {c_i} Weight (kg)", 0.0, 35.0, 8.5, key=f"c_wt_{c_i}")
@@ -1069,8 +1196,8 @@ elif menu == "🏠 Phase 2: Master Household Survey":
 
                     c_action = st.multiselect(
                         f"👶 Child {c_i} Action Taken",
-                        ["Referral to RHU / Nutrition Officer", "Referral for Supplementary Feeding", "IYCF Counseling", "Immunization Catch-up", "Vitamin A Supplementation", "Deworming Administration", "None / Normal"],
-                        default=["None / Normal"] if (is_fic and "Normal" in c_nutr["Wasting"]) else ["Referral to RHU / Nutrition Officer"],
+                        ["Referral to RHU Palo / Nutrition Officer", "Referral for Supplementary Feeding", "IYCF Counseling", "Immunization Catch-up", "Vitamin A Supplementation", "Deworming Administration", "None / Normal"],
+                        default=["None / Normal"] if (is_fic and "Normal" in c_nutr["Wasting"]) else ["Referral to RHU Palo / Nutrition Officer"],
                         key=f"c_action_{c_i}"
                     )
 
@@ -1086,7 +1213,7 @@ elif menu == "🏠 Phase 2: Master Household Survey":
             with t_yakap:
                 st.markdown("**Module G: Health-Seeking Behavior & PhilHealth YAKAP Access**")
                 hsb_initial_actions = st.multiselect("Initial Actions When Unwell", ["Rest and wait", "Use home/herbal remedies", "Buy OTC medication", "Search symptoms online", "Ask family/friends", "Contact healthcare provider"], default=["Rest and wait"])
-                hsb_providers_used = st.multiselect("Facilities/Providers Used", ["Public hospital", "Private clinic/hospital", "Community health center / RHU", "Local pharmacy", "Traditional practitioner", "Telehealth"], default=["Community health center / RHU"])
+                hsb_providers_used = st.multiselect("Facilities/Providers Used", ["Public hospital", "Private clinic/hospital", "Community health center / RHU Palo", "Local pharmacy", "Traditional practitioner", "Telehealth"], default=["Community health center / RHU Palo"])
                 hsb_travel_time = st.selectbox("Travel Time to Nearest Health Facility", ["Less than 15 minutes", "15 to 30 minutes", "30 minutes to 1 hour", "More than 1 hour"])
                 hsb_barriers = st.multiselect("Barriers to Seeking Care", ["High cost of consultation/meds", "Long waiting times", "Distance / lack of transpo", "Work/caregiving responsibilities", "Fear of diagnosis", "Lack of insurance coverage"])
                 hsb_influencers = st.multiselect("Key Influencers in Decisions", ["Spouse / Immediate family", "Parents / Relatives", "Friends / Peers", "Community / Religious leaders", "Independent decision"], default=["Independent decision"])
@@ -1158,16 +1285,6 @@ elif menu == "🏠 Phase 2: Master Household Survey":
                 abnormal_vitals = sum(1 for a in all_adults if a.get("Risk") != "Normal")
                 col4.metric("Abnormal Vitals Total", f"{abnormal_vitals} Adults")
 
-                with st.expander("📌 View Symptoms, Age, Gender & Occupation Breakdown"):
-                    c_sym, c_occ = st.columns(2)
-                    all_symptoms = [sym for a in all_adults for sym in a.get("Complaints", []) if sym != "None"]
-                    c_sym.markdown("**Top Adult Complaints / Symptoms:**")
-                    c_sym.write(pd.Series(all_symptoms).value_counts().rename("Count") if all_symptoms else "No reported symptoms.")
-
-                    all_occs = [a.get("Occupation") for a in all_adults if a.get("Occupation")]
-                    c_occ.markdown("**Adult Primary Occupations:**")
-                    c_occ.write(pd.Series(all_occs).value_counts().rename("Count") if all_occs else "No reported occupations.")
-
                 st.markdown("---")
                 st.markdown("##### 2. Socio-Economic Profile, Assets & Household Food Security")
                 c1, c2, c3, c4, c5 = st.columns(5)
@@ -1187,70 +1304,8 @@ elif menu == "🏠 Phase 2: Master Household Survey":
                 flood_hh_cnt = sum(1 for hh in st.session_state.hh_records if hh.get("Flood_Prone") == "Yes")
                 c5.metric("Flood-Prone HHs", f"{flood_hh_cnt} ({(flood_hh_cnt/total_hhs)*100:.1f}%)")
 
-                with st.expander("📌 View Income, Housing Built, Appliances & Transportation Details"):
-                    ca, cb, cc = st.columns(3)
-                    ca.markdown("**Income Category Distribution:**")
-                    ca.write(pd.Series([hh.get("Income") for hh in st.session_state.hh_records]).value_counts())
-
-                    cb.markdown("**Housing Construction Type:**")
-                    cb.write(pd.Series([hh.get("House_Type") for hh in st.session_state.hh_records]).value_counts())
-
-                    cc.markdown("**Indoor Cooking Fuel Risk:**")
-                    cc.write(pd.Series([hh.get("Cook_Fuel") for hh in st.session_state.hh_records]).value_counts())
-
-                st.markdown("---")
-                st.markdown("##### 3. WASH Infrastructure & Decision-Making Patterns")
-                w1, w2, w3, w4 = st.columns(4)
-
-                unsafe_w = sum(1 for hh in st.session_state.hh_records if "Unsafe" in hh.get("Water", ""))
-                w1.metric("Unsafe Drinking Water", f"{unsafe_w} HHs")
-
-                open_def = sum(1 for hh in st.session_state.hh_records if "Open Defecation" in hh.get("Sanitation", ""))
-                w2.metric("Open Defecation Risk", f"{open_def} HHs")
-
-                siga_burn = sum(1 for hh in st.session_state.hh_records if "Burning" in hh.get("Solid_Disposal", ""))
-                w3.metric("Waste Burning (Siga)", f"{siga_burn} HHs")
-
-                health_dec_mom = sum(1 for hh in st.session_state.hh_records if "Mother" in hh.get("Decisions_Health", []))
-                w4.metric("Health Decisions by Mother", f"{health_dec_mom} HHs")
-
-                st.markdown("---")
-                st.markdown("##### 4. Infectious Morbidity & Chronic Disease Compliance")
-                m1, m2, m3, m4 = st.columns(4)
-
-                diarrhea_cnt = sum(1 for hh in st.session_state.hh_records if hh.get("Diarrhea") == "Yes")
-                m1.metric("Diarrheal Outbreaks", f"{diarrhea_cnt} HHs")
-
-                dengue_cnt = sum(1 for hh in st.session_state.hh_records if hh.get("Dengue") == "Yes")
-                m2.metric("Dengue Cases", f"{dengue_cnt} HHs")
-
-                htn_diag_cnt = sum(1 for hh in st.session_state.hh_records if "Diagnosed" in hh.get("Hypertension_Status", ""))
-                m3.metric("Diagnosed Hypertension", f"{htn_diag_cnt} HHs")
-
-                dm_diag_cnt = sum(1 for hh in st.session_state.hh_records if "Diagnosed" in hh.get("Diabetes_Status", ""))
-                m4.metric("Diagnosed Diabetes", f"{dm_diag_cnt} HHs")
-
-                st.markdown("---")
-                st.markdown("##### 5. Maternal Care, Child Anthropometrics & PhilHealth YAKAP Access")
-                p1, p2, p3, p4, p5 = st.columns(5)
-
-                preg_cnt = sum(1 for hh in st.session_state.hh_records if hh.get("Is_Pregnant") == "Yes")
-                p1.metric("Active Pregnancies", f"{preg_cnt}")
-
-                fic_cnt = sum(1 for c in all_children if c.get("FIC_Status") == "Fully Immunized Child (FIC)")
-                p2.metric("Child FIC Rate", f"{fic_cnt} / {len(all_children)} ({(fic_cnt/len(all_children)*100 if len(all_children) else 0):.1f}%)")
-
-                stunted_cnt = sum(1 for c in all_children if "Stunted" in c.get("Nutr", {}).get("Stunting", ""))
-                p3.metric("Stunted Children", f"{stunted_cnt}")
-
-                yakap_reg = sum(1 for hh in st.session_state.hh_records if hh.get("Yakap") == "Yes")
-                p4.metric("PhilHealth YAKAP Reg.", f"{yakap_reg} ({(yakap_reg/total_hhs)*100:.1f}%)")
-
-                yakap_avail = sum(1 for hh in st.session_state.hh_records if hh.get("Yakap_Availed") == "Yes")
-                p5.metric("Availed YAKAP FPE", f"{yakap_avail}")
-
             with tab_indiv:
-                hh_ids = [f"{r.get('HH_ID', 'N/A')} - {r.get('Barangay', 'N/A')} ({r.get('Head_Name', 'No Head')})" for r in st.session_state.hh_records]
+                hh_ids = [f"{r.get('HH_ID', 'N/A')} - Barangay {r.get('Barangay', 'N/A')} ({r.get('Head_Name', 'No Head')})" for r in st.session_state.hh_records]
                 sel_hh_idx = st.selectbox("Select Household Record to Inspect", range(len(hh_ids)), format_func=lambda x: hh_ids[x])
                 selected_record = st.session_state.hh_records[sel_hh_idx]
                 
@@ -1301,19 +1356,20 @@ elif menu == "🏠 Phase 2: Master Household Survey":
         if len(st.session_state.hh_records) == 0:
             st.info("No household records found.")
         else:
-            hh_options = [f"[{i+1}] {r.get('HH_ID', 'N/A')} - {r.get('Barangay', 'N/A')} ({r.get('Purok', 'N/A')})" for i, r in enumerate(st.session_state.hh_records)]
+            hh_options = [f"[{i+1}] {r.get('HH_ID', 'N/A')} - Barangay {r.get('Barangay', 'N/A')} ({r.get('Purok', 'N/A')})" for i, r in enumerate(st.session_state.hh_records)]
             selected_idx = st.selectbox("Select Household Record to Review / Edit", range(len(hh_options)), format_func=lambda x: hh_options[x])
             rec = st.session_state.hh_records[selected_idx]
 
             with st.form("edit_hh_form"):
                 e_hh_id = st.text_input("Household ID", value=rec.get("HH_ID", ""))
-                e_brgy = st.text_input("Barangay Name", value=rec.get("Barangay", ""))
+                e_brgy = st.selectbox("Barangay Name", PALO_BARANGAYS, index=PALO_BARANGAYS.index(rec.get("Barangay", PALO_BARANGAYS[0])) if rec.get("Barangay") in PALO_BARANGAYS else 0)
                 e_purok = st.text_input("Purok", value=rec.get("Purok", ""))
+                e_enum = st.selectbox("Enumerator", ENUMERATORS, index=ENUMERATORS.index(rec.get("Enumerator", ENUMERATORS[0])) if rec.get("Enumerator") in ENUMERATORS else 0)
 
                 col_btn1, col_btn2 = st.columns(2)
                 with col_btn1:
                     if st.form_submit_button("💾 Save Household Edits"):
-                        rec.update({"HH_ID": e_hh_id, "Barangay": e_brgy, "Purok": e_purok})
+                        rec.update({"HH_ID": e_hh_id, "Barangay": e_brgy, "Purok": e_purok, "Enumerator": e_enum})
                         st.session_state.hh_records[selected_idx] = rec
                         save_session_to_disk()
                         st.success("Household record updated successfully!")
@@ -1327,7 +1383,7 @@ elif menu == "🏠 Phase 2: Master Household Survey":
 
 # MODULE 4: PHASE 3 QUALITATIVE FIELD TOOLS
 elif menu == "🗣️ Phase 3: Qualitative Field Tools":
-    st.subheader("Phase 3: Qualitative Field Tools (KII & FGD Structured Guides)")
+    st.subheader("Phase 3: Qualitative Field Tools (KII & FGD Structured Guides - Palo, Leyte)")
 
     tool_choice = st.selectbox(
         "Select Qualitative Tool Instrument",
@@ -1340,54 +1396,29 @@ elif menu == "🗣️ Phase 3: Qualitative Field Tools":
 
     if tool_choice == "TOOL 3.1: KEY INFORMANT INTERVIEW (KII) GUIDE — GOVERNANCE & LEADERSHIP":
         st.markdown("### 🏛️ TOOL 3.1: KEY INFORMANT INTERVIEW (KII) GUIDE — GOVERNANCE & LEADERSHIP")
-        st.caption("**Target Respondents / Participants:** Punong Barangay, Committee Chair on Health, Municipal Health Officer (MHO)")
-        st.caption("**Objective:** Assess political commitment, budget prioritization, legislative output, supply chain resilience, and health equity vision.")
 
         with st.form("kii_gov_form"):
-            st.markdown("#### 📋 Respondent & Interview Administrative Metadata")
             c1, c2 = st.columns(2)
             resp_name = c1.text_input("Respondent Name")
-            pos_desig = c2.multiselect("Position / Designation", ["Punong Barangay", "Health Chair", "MHO"], default=["Punong Barangay"])
+            pos_desig = c2.multiselect("Position / Designation", ["Punong Barangay", "Health Chair", "MHO Palo"], default=["Punong Barangay"])
 
             c1, c2 = st.columns(2)
-            brgy_lgu = c1.text_input("Barangay / LGU")
+            brgy_lgu = c1.selectbox("Barangay / LGU (Palo, Leyte)", PALO_BARANGAYS)
             date_time = c2.text_input("Date & Time of Interview", "09 / 07 / 2026 | 09:00 AM")
 
             c1, c2 = st.columns(2)
-            interviewer = c1.text_input("Interviewer Name")
+            interviewer = c1.selectbox("Interviewer Name", ENUMERATORS)
             note_taker = c2.text_input("Note-Taker Name")
 
             c1, c2 = st.columns(2)
             consent = c1.radio("Informed Consent Signed?", ["Yes", "No"], horizontal=True)
             audio_rec = c2.radio("Audio Recorded?", ["Yes (Permission Granted)", "No"], horizontal=True)
 
-            st.markdown("---")
-            st.markdown("#### 🗣️ Qualitative Interview Domains & Probing Prompts")
-
-            st.markdown("**1. Resource Allocation & AIP Prioritization**")
-            st.info("How does the Barangay Council prioritize health within the Annual Investment Plan (AIP)? What specific percentage of local revenue is earmarked for healthcare operations?")
-            st.caption("• What specific health line-items were funded this year vs last year?\n• How are competing development priorities (e.g., roads, infrastructure vs health) negotiated during budget calls?\n• Is the health budget sufficient to meet actual community needs? If not, what gets cut?\n• Are discretionary or emergency contingency funds accessible for unexpected disease outbreaks?")
-            q1_notes = st.text_area("Qualitative Notes / Key Quotations (Domain 1)", key="kii_g_q1")
-
-            st.markdown("**2. Policy Infrastructure & Enforcement**")
-            st.info("What local health ordinances passed over the last 3 years have had the most direct impact on community health, and what are the key enforcement hurdles?")
-            st.caption("• Which specific ordinances (e.g., Sanitation, Dengue, Anti-Smoking, WASH, Rabies Control) are actively enforced?\n• What are the main obstacles to enforcement (e.g., lack of enforcers, political friction, community resistance, lack of penalties)?\n• How is the Barangay Health Board involved in policy drafting and monitoring?")
-            q2_notes = st.text_area("Qualitative Notes / Key Quotations (Domain 2)", key="kii_g_q2")
-
-            st.markdown("**3. Supply Chain Integrity & Emergency Procurement**")
-            st.info("When the Barangay Health Station experiences stock-outs of essential medicines, what is the protocol for emergency procurement through the RHU or LGU?")
-            st.caption("• What essential drugs or medical supplies suffer from frequent stock-outs (e.g., maintenance meds, vaccines, testing kits)?\n• How long does the emergency requisition process take from request to delivery?\n• Is there a dedicated barangay petty cash / buffer fund for urgent medical supply purchases?")
-            q3_notes = st.text_area("Qualitative Notes / Key Quotations (Domain 3)", key="kii_g_q3")
-
-            st.markdown("**4. Health Inequity & Disadvantaged Populations**")
-            st.info("In your view, which specific Purok or sub-population in this barangay suffers from the most severe health disadvantages, and why?")
-            st.caption("• What drive these disparities (e.g., geographical isolation, informal settler status, lack of clean water, poverty, transport barriers)?\n• What targeted health programs or budget allocations are specifically directed at these vulnerable groups?\n• How are PWDs, senior citizens, and malnourished children tracked and prioritized?")
-            q4_notes = st.text_area("Qualitative Notes / Key Quotations (Domain 4)", key="kii_g_q4")
-
-            st.markdown("**5. Strategic Governance Synthesis & Vision**")
-            st.info("What single administrative or policy change at the Municipal / LGU level would most dramatically improve health governance in this barangay?")
-            st.caption("• What support is most urgently needed from the Municipal Health Office (MHO) or Provincial Health Office (PHO)?\n• How can inter-local health zone cooperation or RHU-Barangay coordination be strengthened?")
-            q5_notes = st.text_area("Qualitative Notes / Key Quotations (Domain 5)", key="kii_g_q5")
+            q1_notes = st.text_area("1. Resource Allocation & AIP Prioritization Notes:", key="kii_g_q1")
+            q2_notes = st.text_area("2. Policy Infrastructure & Enforcement Notes:", key="kii_g_q2")
+            q3_notes = st.text_area("3. Supply Chain Integrity & Emergency Procurement Notes:", key="kii_g_q3")
+            q4_notes = st.text_area("4. Health Inequity & Disadvantaged Populations Notes:", key="kii_g_q4")
+            q5_notes = st.text_area("5. Strategic Governance Synthesis & Vision Notes:", key="kii_g_q5")
 
             if st.form_submit_button("💾 Save TOOL 3.1 Interview Record"):
                 st.session_state.qual_records.append({
@@ -1402,55 +1433,30 @@ elif menu == "🗣️ Phase 3: Qualitative Field Tools":
 
     elif tool_choice == "TOOL 3.2: KEY INFORMANT INTERVIEW (KII) GUIDE — FRONTLINE PERSONNEL":
         st.markdown("### 👩‍⚕️ TOOL 3.2: KEY INFORMANT INTERVIEW (KII) GUIDE — FRONTLINE PERSONNEL")
-        st.caption("**Target Respondents / Participants:** Rural Health Midwife, Barangay Health Worker (BHW) President, Barangay Nutrition Scholar (BNS)")
-        st.caption("**Objective:** Uncover operational bottlenecks, clinical workload realities, supply deficits, emergency referral breakdowns, and treatment adherence barriers.")
 
         with st.form("kii_frontline_form"):
-            st.markdown("#### 📋 Respondent & Administrative Metadata")
             c1, c2 = st.columns(2)
             resp_name = c1.text_input("Respondent Name")
             role = c2.multiselect("Frontline Role", ["Midwife", "BHW President", "BNS"], default=["Midwife"])
 
             c1, c2 = st.columns(2)
-            bhs_name = c1.text_input("Barangay Health Station")
+            bhs_name = c1.selectbox("Barangay Health Station (Palo, Leyte)", PALO_BARANGAYS)
             date_time = c2.text_input("Date & Time", "09 / 07 / 2026 | 10:30 AM")
 
             c1, c2 = st.columns(2)
-            interviewer = c1.text_input("Interviewer Name")
+            interviewer = c1.selectbox("Interviewer Name", ENUMERATORS)
             years_service = c2.number_input("Years of Service in Barangay", 0, 50, 5)
 
-            c1, c2 = st.columns(2)
-            consent = c1.radio("Informed Consent Signed?", ["Yes", "No"], horizontal=True)
-            audio_rec = c2.radio("Audio Recorded?", ["Yes", "No"], horizontal=True)
-
-            st.markdown("---")
-            st.markdown("#### 🗣️ Qualitative Interview Domains & Probing Prompts")
-
-            st.markdown("**1. Clinical Workload & Essential Supply Deficits**")
-            st.info("What are the top three health conditions you encounter daily among residents, and what medical supplies do you routinely lack to address them?")
-            st.caption("• Which specific drugs, equipment, or diagnostic reagents are routinely missing at the BHS (e.g., BP apparatus, glucometer strips, prenatal vitamins, antibiotics)?\n• How do you manage patient care when essential supplies are unavailable?\n• What is the average daily patient load per frontline worker, and how does it impact care quality?")
-            q1_notes = st.text_area("Qualitative Notes / Key Quotations (Domain 1)", key="kii_f_q1")
-
-            st.markdown("**2. Emergency Referral Pathway & Pipeline Breakdown**")
-            st.info("Walk us through a critical patient emergency in a remote Purok. What breaks down in the transportation and referral pipeline to the RHU or Provincial Hospital?")
-            st.caption("• Is a functional ambulance or barangay patrol vehicle available 24/7? Who pays for fuel and driver honoraria during emergencies?\n• What communication challenges exist between BHS workers and the RHU/hospital during pre-referral transfers?\n• How are financial barriers to emergency transport handled for indigent patients?")
-            q2_notes = st.text_area("Qualitative Notes / Key Quotations (Domain 2)", key="kii_f_q2")
-
-            st.markdown("**3. Non-Medical Treatment Adherence Barriers**")
-            st.info("How frequently do patients fail to adhere to chronic treatment (e.g., TB-DOTS, hypertension, diabetes) because they cannot afford food or transport fare?")
-            st.caption("• What percentage of chronic disease patients drop out or skip medications due to poverty or inability to pay fare to RHU?\n• How do frontline workers perform home visits or follow-ups for non-compliant patients?\n• Are there supplementary food or transport assistance programs available for patients on long-term treatment?")
-            q3_notes = st.text_area("Qualitative Notes / Key Quotations (Domain 3)", key="kii_f_q3")
-
-            st.markdown("**4. Systemic Worker Bottlenecks & Capacity Needs**")
-            st.info("What structural or personal challenges (e.g., delayed honoraria, lack of training, personal safety, excessive reporting) affect your daily performance and morale?")
-            st.caption("• Are BHW/BNS honoraria paid regularly and on time? If delayed, by how many months?\n• What specific clinical, record-keeping, or emergency management training do you feel you lack?\n• How adequate are the BHS facilities (electricity, clean water, privacy, waste management)?")
-            q4_notes = st.text_area("Qualitative Notes / Key Quotations (Domain 4)", key="kii_f_q4")
+            q1_notes = st.text_area("1. Clinical Workload & Essential Supply Deficits Notes:", key="kii_f_q1")
+            q2_notes = st.text_area("2. Emergency Referral Pathway & Pipeline Breakdown Notes:", key="kii_f_q2")
+            q3_notes = st.text_area("3. Non-Medical Treatment Adherence Barriers Notes:", key="kii_f_q3")
+            q4_notes = st.text_area("4. Systemic Worker Bottlenecks & Capacity Needs Notes:", key="kii_f_q4")
 
             if st.form_submit_button("💾 Save TOOL 3.2 Interview Record"):
                 st.session_state.qual_records.append({
                     "Tool": "TOOL 3.2: KII — Frontline Personnel",
                     "Respondent": resp_name, "Role": role, "BHS": bhs_name, "Date_Time": date_time,
-                    "Interviewer": interviewer, "Years_Service": years_service, "Consent": consent, "Audio": audio_rec,
+                    "Interviewer": interviewer, "Years_Service": years_service,
                     "D1_SupplyDeficits": q1_notes, "D2_ReferralBreakdown": q2_notes, "D3_AdherenceBarriers": q3_notes, "D4_WorkerBottlenecks": q4_notes
                 })
                 save_session_to_disk()
@@ -1458,21 +1464,10 @@ elif menu == "🗣️ Phase 3: Qualitative Field Tools":
 
     elif tool_choice == "TOOL 3.3: FOCUS GROUP DISCUSSION (FGD) GUIDE — COMMUNITY MEMBERS":
         st.markdown("### 👥 TOOL 3.3: FOCUS GROUP DISCUSSION (FGD) GUIDE — COMMUNITY MEMBERS")
-        st.caption("**Target Respondents / Participants:** 6–10 Community Representatives (Mothers, Senior Citizens, Informal Settlers, PWDs, Youth Leaders)")
-        st.caption("**Objective:** Capture community healthcare-seeking behavior, financial hardship, catastrophic expenses, provider interaction quality, and grassroots priorities.")
-
-        with st.expander("📜 GROUND RULES FOR FACILITATOR", expanded=True):
-            st.markdown("""
-            1. Welcome participants, explain session purpose, and ensure all participants sign the informed consent form.
-            2. Emphasize confidentiality: *'There are no right or wrong answers. What is shared here stays in this room.'*
-            3. Encourage equal participation; ensure vocal participants do not dominate and quiet members are gently invited to speak.
-            4. Maintain a neutral, non-judgmental tone throughout.
-            """)
 
         with st.form("fgd_community_form"):
-            st.markdown("#### 📋 Session Administrative & Group Composition Metadata")
             c1, c2 = st.columns(2)
-            brgy_loc = c1.text_input("Barangay / Location")
+            brgy_loc = c1.selectbox("Barangay / Location (Palo, Leyte)", PALO_BARANGAYS)
             grp_comp = c2.multiselect("Group Composition", ["Mothers", "Seniors", "PWDs", "Mixed"], default=["Mothers"])
 
             c1, c2, c3, c4 = st.columns(4)
@@ -1482,42 +1477,20 @@ elif menu == "🗣️ Phase 3: Qualitative Field Tools":
             female_cnt = c4.number_input("Female Count", 0, 20, 6)
 
             c1, c2 = st.columns(2)
-            moderator = c1.text_input("Moderator / Facilitator Name")
+            moderator = c1.selectbox("Moderator / Facilitator Name", ENUMERATORS)
             note_taker = c2.text_input("Note-Taker / Observer Name")
 
-            c1, c2 = st.columns(2)
-            consent = c1.radio("Informed Consent Granted by All?", ["Yes", "No"], horizontal=True)
-            audio_rec = c2.radio("Audio Recorded?", ["Yes", "No"], horizontal=True)
-
-            st.markdown("---")
-            st.markdown("#### 🗣️ FGD Discussion Domains & Probing Prompts")
-
-            st.markdown("**1. Health Seeking Decision Dynamics**")
-            st.info("When someone in your family falls sick, how do you decide whether to go to the BHS, RHU, private clinic, or traditional healer (albularyo)?")
-            st.caption("• What are the main deciding factors (e.g., travel cost, distance, waiting time, availability of doctor, trust, emergency severity)?\n• Who in the household makes the final decision regarding medical treatment?\n• Under what circumstances do residents bypass the BHS and go straight to hospital or private clinics?")
-            q1_notes = st.text_area("Qualitative Notes / Key Quotations (Domain 1)", key="fgd_q1")
-
-            st.markdown("**2. Catastrophic Healthcare Expenses & Coping**")
-            st.info("Have you ever been forced to choose between buying prescribed medicines/paying transport fare and purchasing food for your family? How did you manage?")
-            st.caption("• How do families cope with sudden medical expenses (e.g., selling livestock/possessions, taking high-interest loans, seeking political favors)?\n• Are PhilHealth, MAIP, or local medical assistance programs accessible to informal settlers and poor residents?\n• Have medical expenses ever forced a child out of school or led to severe debt?")
-            q2_notes = st.text_area("Qualitative Notes / Key Quotations (Domain 2)", key="fgd_q2")
-
-            st.markdown("**3. Provider-Patient Interaction & Quality Perception**")
-            st.info("How do you feel treated when visiting public health facilities (BHS vs RHU)? Do you feel respected, listened to, and fully informed about your treatment plan?")
-            st.caption("• Have you experienced long waiting times, harsh treatment, or lack of privacy during medical consultations?\n• Do facility operating hours accommodate working residents and agricultural laborers?\n• Do health workers explain medication instructions clearly in the local dialect?")
-            q3_notes = st.text_area("Qualitative Notes / Key Quotations (Domain 3)", key="fgd_q3")
-
-            st.markdown("**4. Community Priorities & Grassroots Solutions**")
-            st.info("If your community could fix ONE major health problem in this barangay today, what should it be and how should local leaders solve it?")
-            st.caption("• What essential health service is most urgently missing in your barangay?\n• What concrete message or request do you want to convey directly to the Mayor and Barangay Captain regarding health services?")
-            q4_notes = st.text_area("Qualitative Notes / Key Quotations (Domain 4)", key="fgd_q4")
+            q1_notes = st.text_area("1. Health Seeking Decision Dynamics Notes:", key="fgd_q1")
+            q2_notes = st.text_area("2. Catastrophic Healthcare Expenses & Coping Notes:", key="fgd_q2")
+            q3_notes = st.text_area("3. Provider-Patient Interaction & Quality Perception Notes:", key="fgd_q3")
+            q4_notes = st.text_area("4. Community Priorities & Grassroots Solutions Notes:", key="fgd_q4")
 
             if st.form_submit_button("💾 Save TOOL 3.3 FGD Record"):
                 st.session_state.qual_records.append({
                     "Tool": "TOOL 3.3: FGD — Community Members",
                     "Barangay": brgy_loc, "Group_Composition": grp_comp, "Date_Time": date_time,
                     "Total_Participants": tot_parts, "Male": male_cnt, "Female": female_cnt,
-                    "Moderator": moderator, "Note_Taker": note_taker, "Consent": consent, "Audio": audio_rec,
+                    "Moderator": moderator, "Note_Taker": note_taker,
                     "D1_DecisionDynamics": q1_notes, "D2_CatastrophicExpenses": q2_notes, "D3_ProviderInteraction": q3_notes, "D4_CommunityPriorities": q4_notes
                 })
                 save_session_to_disk()
@@ -1528,7 +1501,7 @@ elif menu == "🗣️ Phase 3: Qualitative Field Tools":
     if len(st.session_state.qual_records) == 0:
         st.info("No qualitative records logged yet.")
     else:
-        q_options = [f"[{i+1}] {r.get('Tool', 'Qual Note')} - {r.get('Barangay', r.get('BHS', 'Location N/A'))}" for i, r in enumerate(st.session_state.qual_records)]
+        q_options = [f"[{i+1}] {r.get('Tool', 'Qual Note')} - Barangay {r.get('Barangay', r.get('BHS', 'Location N/A'))}" for i, r in enumerate(st.session_state.qual_records)]
         sel_q_idx = st.selectbox("Select Record to Inspect / Delete", range(len(q_options)), format_func=lambda x: q_options[x])
         q_rec = st.session_state.qual_records[sel_q_idx]
 
@@ -1552,10 +1525,11 @@ elif menu == "🔍 Phase 4: Expanded PERI Windshield Tool":
     with p4_tab1:
         with st.form("phase4_expanded_observation_form"):
             st.markdown("### 📌 Field Survey Metadata")
-            c1, c2, c3 = st.columns(3)
-            purok_eval = c1.selectbox("Target Purok Evaluated", [f"Purok {i}" for i in range(1, 8)])
-            eval_date = c2.date_input("Evaluation Date")
-            evaluator_name = c3.text_input("Lead Evaluator", "Field Inspector")
+            c1, c2, c3, c4 = st.columns(4)
+            brgy_eval = c1.selectbox("Target Barangay (Palo, Leyte)", PALO_BARANGAYS)
+            purok_eval = c2.selectbox("Target Purok Evaluated", [f"Purok {i}" for i in range(1, 8)])
+            eval_date = c3.date_input("Evaluation Date")
+            evaluator_name = c4.selectbox("Lead Evaluator", ENUMERATORS)
 
             def render_rating(col1, col2, col3, label, choices, default_idx=0):
                 rating = col2.radio(label, choices, index=default_idx, key=f"r_{label}")
@@ -1569,15 +1543,15 @@ elif menu == "🔍 Phase 4: Expanded PERI Windshield Tool":
             d1_data = {}
             
             d1_params = [
-                ("1.1 Uncollected Household Solid Waste", "Presence of uncollected trash piles, scattered plastic, household waste heaps on road shoulders or vacant lots.", ["Clean (1)", "Moderate (2)", "Severe Risk (3)"]),
-                ("1.2 Open Drainage & Canal Integrity", "Condition of roadside canals: clogged with refuse, unpaved ditching, dark stagnant greywater, or uncovered open channels.", ["Adequate (1)", "Substandard (2)", "Hazardous (3)"]),
-                ("1.3 Stagnant Water & Pooling", "Pools of standing water in road depressions, unpaved alleys, or tires/containers holding water >48 hrs (mosquito risk).", ["Low Risk (1)", "Moderate (2)", "Severe Risk (3)"]),
-                ("1.4 Stray & Unattended Animals", "Free-roaming dogs, cats, or livestock (pigs/goats) scavenging around uncontained waste or public pathways.", ["Controlled (1)", "Moderate (2)", "Uncontrolled (3)"]),
-                ("1.5 Material Recovery & Garbage Hubs", "Condition of Purok MRF or communal collection points: overflowing bins, lack of waste segregation, lack of covers.", ["Clean / Segregated (1)", "Overflowing (2)", "Dilapidated / None (3)"]),
-                ("1.6 Open Waste Burning (Siga)", "Visual evidence or smell of open garbage/plastic/leaf burning in backyards, vacant plots, or road edges.", ["Absent (1)", "Occasional (2)", "Frequent/Severe (3)"]),
-                ("1.7 Odor & Airborne Emissions", "Pungent or offensive odor emanating from decomposed waste, open sewage, or livestock pens near residential homes.", ["Odor-Free (1)", "Moderate Odor (2)", "Severe / Noxious (3)"]),
-                ("1.8 Fecal Contamination Exposure", "Visible animal feces or human defecation marks along walkways, drainage channels, or play areas.", ["None Visible (1)", "Isolated (2)", "Widespread Risk (3)"]),
-                ("1.9 Commercial / Market Waste", "Accumulation of rotting produce, fish water, or commercial trash around sari-sari stores, bakeries, or talipapa.", ["Sanitary (1)", "Substandard (2)", "Severe Risk (3)"])
+                ("1.1 Uncollected Household Solid Waste", "Presence of uncollected trash piles, scattered plastic, household waste heaps.", ["Clean (1)", "Moderate (2)", "Severe Risk (3)"]),
+                ("1.2 Open Drainage & Canal Integrity", "Condition of roadside canals: clogged with refuse, unpaved ditching, stagnant greywater.", ["Adequate (1)", "Substandard (2)", "Hazardous (3)"]),
+                ("1.3 Stagnant Water & Pooling", "Pools of standing water in road depressions or unpaved alleys.", ["Low Risk (1)", "Moderate (2)", "Severe Risk (3)"]),
+                ("1.4 Stray & Unattended Animals", "Free-roaming dogs, cats, or livestock scavenging around waste.", ["Controlled (1)", "Moderate (2)", "Uncontrolled (3)"]),
+                ("1.5 Material Recovery & Garbage Hubs", "Condition of Purok MRF or communal collection points.", ["Clean / Segregated (1)", "Overflowing (2)", "Dilapidated / None (3)"]),
+                ("1.6 Open Waste Burning (Siga)", "Visual evidence or smell of open garbage/plastic burning.", ["Absent (1)", "Occasional (2)", "Frequent/Severe (3)"]),
+                ("1.7 Odor & Airborne Emissions", "Offensive odor emanating from decomposed waste or open sewage.", ["Odor-Free (1)", "Moderate Odor (2)", "Severe / Noxious (3)"]),
+                ("1.8 Fecal Contamination Exposure", "Visible animal or human fecal contamination along walkways.", ["None Visible (1)", "Isolated (2)", "Widespread Risk (3)"]),
+                ("1.9 Commercial / Market Waste", "Accumulation of rotting produce or commercial trash.", ["Sanitary (1)", "Substandard (2)", "Severe Risk (3)"])
             ]
 
             for param, indicator, options in d1_params:
@@ -1592,13 +1566,12 @@ elif menu == "🔍 Phase 4: Expanded PERI Windshield Tool":
             d2_scores = []
             d2_data = {}
             d2_params = [
-                ("2.1 Fresh Produce Access (Talipapa / Markets)", "Presence of permanent or satellite fresh fruit, vegetable, and fresh protein (fish/meat) markets within 300m walking distance.", ["High Access (1)", "Limited Access (2)", "Food Desert (3)"]),
-                ("2.2 Sari-Sari Store Food Profile", "Dominance of ultra-processed salty snacks, sugary carbonated beverages, and instant noodles displayed prominently at eye level.", ["Balanced / Healthy (1)", "Junk-Dominant (2)", "Unhealthy Swamp (3)"]),
-                ("2.3 Produce Quality & Freshness", "Physical condition of available fruits/vegetables at local outlets: fresh, crisp vs. wilted, decaying, or insect-damaged.", ["High Quality (1)", "Mixed Quality (2)", "Poor / Spoiled (3)"]),
-                ("2.4 Street Food Vending Hygiene", "Prepared street food stalls: use of food covers, glass displays, clean water for utensil washing, hairnets/gloves, fly presence.", ["Sanitary (1)", "Substandard (2)", "Unsanitary / High Risk (3)"]),
-                ("2.5 Child-Targeted Marketing", "Prominent advertising banners or eye-level store displays targeting school children with sugary drinks, candies, and sodium snacks.", ["Low Exposure (1)", "Moderate (2)", "High / Aggressive (3)"]),
-                ("2.6 Tobacco & Alcohol Visibility", "Prominent display and sale of cigarettes/e-cigarettes and alcoholic beverages near youth gathering points or school zones.", ["Restricted / Far (1)", "Moderate (2)", "Highly Visible (3)"]),
-                ("2.7 Safe Drinking Water Refilling Outlets", "Availability and physical sanitary condition of commercial water refilling stations or public potable water taps in the Purok.", ["Accessible & Clean (1)", "Scarcely Available (2)", "Unsightly / Risky (3)"])
+                ("2.1 Fresh Produce Access", "Presence of satellite fresh fruit/vegetable markets within 300m walking distance.", ["High Access (1)", "Limited Access (2)", "Food Desert (3)"]),
+                ("2.2 Sari-Sari Store Food Profile", "Dominance of ultra-processed salty snacks and sugary beverages.", ["Balanced / Healthy (1)", "Junk-Dominant (2)", "Unhealthy Swamp (3)"]),
+                ("2.3 Produce Quality & Freshness", "Physical condition of available fruits/vegetables at local outlets.", ["High Quality (1)", "Mixed Quality (2)", "Poor / Spoiled (3)"]),
+                ("2.4 Street Food Vending Hygiene", "Prepared street food stalls cleanliness and fly protection.", ["Sanitary (1)", "Substandard (2)", "Unsanitary / High Risk (3)"]),
+                ("2.5 Tobacco & Alcohol Visibility", "Prominent display and sale of cigarettes and alcohol near youth areas.", ["Restricted / Far (1)", "Moderate (2)", "Highly Visible (3)"]),
+                ("2.6 Safe Drinking Water Refilling Outlets", "Availability of commercial water refilling stations in the Purok.", ["Accessible & Clean (1)", "Scarcely Available (2)", "Unsightly / Risky (3)"])
             ]
 
             for param, indicator, options in d2_params:
@@ -1613,13 +1586,10 @@ elif menu == "🔍 Phase 4: Expanded PERI Windshield Tool":
             d3_scores = []
             d3_data = {}
             d3_params = [
-                ("3.1 Housing Structural Integrity", "Proportion of concrete/permanent housing vs. makeshift, tarpaulin, light bamboo, or deteriorated wood structures.", ["Mostly Concrete (1)", "Mixed Structural (2)", "Predominantly Makeshift (3)"]),
-                ("3.2 Pedestrian Walkways & Sidewalks", "Availability of paved, unblocked sidewalks or footpaths separated from vehicle traffic vs. pedestrians walking on main road shoulders.", ["Safe / Paved (1)", "Partial / Blocked (2)", "Absent / Dangerous (3)"]),
-                ("3.3 Street Lighting & Night Safety", "Operational street lights every 30-50m along primary pathways to ensure safe pedestrian travel at night.", ["Well Lit (1)", "Partially Lit (2)", "Dark / Hazardous (3)"]),
-                ("3.4 Green Spaces & Recreational Areas", "Access to maintained parks, open community spaces, trees, or sports grounds for physical activity.", ["Abundant (1)", "Limited (2)", "None / Concrete Desert (3)"]),
-                ("3.5 Electrical Wiring & Fire Hazard", "Condition of overhead power lines: organized wiring vs. tangled 'spiderweb' illegal connections near residential roofs.", ["Organized / Safe (1)", "Moderate Risk (2)", "Hazardous Spiderwebs (3)"]),
-                ("3.6 Road Conditions & Transit Access", "Paved concrete roads allowing smooth ambulance and vehicle access vs. unpaved, rutted, unpassable dirt pathways.", ["Fully Paved (1)", "Partially Paved (2)", "Unpaved / Impassable (3)"]),
-                ("3.7 Noise & Industrial Pollution", "Proximity to high-decibel noise (highways, heavy machinery) or industrial smokestacks/workshops emitting particulates.", ["Quiet / Clean (1)", "Moderate Noise/Dust (2)", "Severe Industrial Nuisance (3)"])
+                ("3.1 Housing Structural Integrity", "Proportion of concrete housing vs. makeshift tarpaulin/bamboo structures.", ["Mostly Concrete (1)", "Mixed Structural (2)", "Predominantly Makeshift (3)"]),
+                ("3.2 Pedestrian Walkways & Sidewalks", "Availability of paved sidewalks separated from vehicle traffic.", ["Safe / Paved (1)", "Partial / Blocked (2)", "Absent / Dangerous (3)"]),
+                ("3.3 Street Lighting & Night Safety", "Operational street lights every 30-50m along primary pathways.", ["Well Lit (1)", "Partially Lit (2)", "Dark / Hazardous (3)"]),
+                ("3.4 Electrical Wiring & Fire Hazard", "Condition of overhead power lines and tangled wiring.", ["Organized / Safe (1)", "Messy Lines (2)", "Severe Spiderweb / Hazard (3)"])
             ]
 
             for param, indicator, options in d3_params:
@@ -1629,221 +1599,132 @@ elif menu == "🔍 Phase 4: Expanded PERI Windshield Tool":
                 d3_scores.append(s_val)
                 d3_data[param] = {"Rating": r_txt, "Notes": n_txt}
 
-            # DOMAIN 4
-            st.markdown("<div class='peri-domain-header'>Domain 4: Healthcare Infrastructure & Emergency Referral Connectivity</div>", unsafe_allow_html=True)
-            d4_scores = []
-            d4_data = {}
-            d4_params = [
-                ("4.1 Proximity to BHS / RHU Facility", "Physical distance from Purok center to nearest functional Barangay Health Station or Rural Health Unit.", ["< 500 meters (1)", "500m - 1.5km (2)", "> 1.5km / Isolated (3)"]),
-                ("4.2 Emergency Ambulance Access", "Ability of standard 4-wheel emergency ambulance to enter Purok alleys directly to patient doorstep.", ["Direct Access (1)", "Main Road Only (2)", "Inaccessible / Stretcher Only (3)"]),
-                ("4.3 Cellular & Communication Signal", "Reliability of mobile phone coverage (Globe/Smart) for calling emergency services or BHWs.", ["Strong 4G/5G (1)", "Spotty Signal (2)", "Dead Zone / No Signal (3)"]),
-                ("4.4 Local Health Information Postings", "Visibility of updated health bulletin boards, emergency hotlines, or clinic schedule posters in public areas.", ["Visible & Updated (1)", "Outdated / Faded (2)", "None Visible (3)"]),
-                ("4.5 Pharmacy & Medicine Access", "Availability of accredited botika / pharmacy stocked with basic over-the-counter and maintenance meds within walking distance.", ["Accessible (1)", "Limited OTC Stock (2)", "No Pharmacy Access (3)"])
-            ]
+            # DOMAIN 4, 5, 6 Summaries
+            st.markdown("<div class='peri-domain-header'>Domain 4, 5 & 6: Health Infrastructure, Disaster Risk & Vector breeding</div>", unsafe_allow_html=True)
+            c1, c2, c3 = st.columns(3)
+            d4_score = c1.slider("Domain 4 Health Infrastructure Risk (1.0-3.0)", 1.0, 3.0, 1.5)
+            d5_score = c2.slider("Domain 5 Disaster & Climate Risk (1.0-3.0)", 1.0, 3.0, 2.0)
+            d6_score = c3.slider("Domain 6 Vector Breeding Risk (1.0-3.0)", 1.0, 3.0, 1.8)
 
-            for param, indicator, options in d4_params:
-                c1, c2, c3 = st.columns([2, 1.2, 1.8])
-                c1.markdown(f"**{param}**\n\n*{indicator}*")
-                s_val, r_txt, n_txt = render_rating(c1, c2, c3, param, options)
-                d4_scores.append(s_val)
-                d4_data[param] = {"Rating": r_txt, "Notes": n_txt}
-
-            # DOMAIN 5
-            st.markdown("<div class='peri-domain-header'>Domain 5: Disaster Preparedness & Climate Hazard Vulnerability</div>", unsafe_allow_html=True)
-            d5_scores = []
-            d5_data = {}
-            d5_params = [
-                ("5.1 Flood Inundation Susceptibility", "Topographic vulnerability to waterlogging during heavy rain: low-lying riverbanks, coastal tidal surge, or poor run-off.", ["High Ground / Dry (1)", "Seasonal Puddling (2)", "Chronic Deep Flooding (3)"]),
-                ("5.2 Evacuation Center Accessibility", "Distance and safe route accessibility to designated typhoon/disaster evacuation centers.", ["Safe & Nearby (1)", "Moderate Route (2)", "Dangerous / Far (3)"]),
-                ("5.3 Landslide & Slope Hazard", "Proximity of residential houses to steep, unreinforced soil cliffs or riverbanks prone to erosion/landslides.", ["Stable Ground (1)", "Moderate Incline (2)", "High Landslide Hazard (3)"]),
-                ("5.4 Evacuation Signage & Routes", "Presence of clear, weather-resistant evacuation route markers and hazard map boards in the Purok.", ["Clear Signage (1)", "Faded / Few (2)", "No Evacuation Signs (3)"]),
-                ("5.5 Early Warning System Integrity", "Functional community sirens, megaphones, or public address speakers for emergency disaster alerts.", ["Functional Siren (1)", "Manual Megaphone Only (2)", "No Alert System (3)"])
-            ]
-
-            for param, indicator, options in d5_params:
-                c1, c2, c3 = st.columns([2, 1.2, 1.8])
-                c1.markdown(f"**{param}**\n\n*{indicator}*")
-                s_val, r_txt, n_txt = render_rating(c1, c2, c3, param, options)
-                d5_scores.append(s_val)
-                d5_data[param] = {"Rating": r_txt, "Notes": n_txt}
-
-            # DOMAIN 6
-            st.markdown("<div class='peri-domain-header'>Domain 6: Vector Breeding & Environmental Nuisance Risk</div>", unsafe_allow_html=True)
-            d6_scores = []
-            d6_data = {}
-            d6_params = [
-                ("6.1 Mosquito Breeding Sites (Aedes / Anopheles)", "Uncovered water drums, discarded tires, flower pots, or plastic clutter holding clear stagnant water.", ["Minimal Sites (1)", "Moderate Breeding (2)", "Abundant Hotspots (3)"]),
-                ("6.2 Fly & Rodent Proliferation", "Visible swarms of houseflies around food/trash stalls or signs of rodent burrows near residential areas.", ["Low Vector Count (1)", "Moderate Presence (2)", "Infestation Level (3)"]),
-                ("6.3 Overgrown Vegetation & Brush", "Untrimmed wild grass, abandoned bushy lots providing shelter for snakes, mosquitoes, and rodents.", ["Maintained / Clean (1)", "Overgrown Plots (2)", "Dense Jungle Brush (3)"]),
-                ("6.4 Livestock & Poultry Proximity", "Piggeries, poultry coops, or goat pens located within 10 meters of sleeping quarters emitting odor and breeding flies.", ["Properly Zoned (1)", "Adjacent to Homes (2)", "Inside Residential Yard (3)"]),
-                ("6.5 E-Waste & Chemical Hazard Exposure", "Open dumping of lead batteries, discarded electronic appliances, oil drums, or agricultural pesticide containers.", ["Safe / None (1)", "Isolated Discards (2)", "Hazardous Discards (3)"])
-            ]
-
-            for param, indicator, options in d6_params:
-                c1, c2, c3 = st.columns([2, 1.2, 1.8])
-                c1.markdown(f"**{param}**\n\n*{indicator}*")
-                s_val, r_txt, n_txt = render_rating(c1, c2, c3, param, options)
-                d6_scores.append(s_val)
-                d6_data[param] = {"Rating": r_txt, "Notes": n_txt}
-
-            st.markdown("---")
-            if st.form_submit_button("⚡ Compute & Save Expanded PERI Index"):
-                s1 = np.mean(d1_scores)
-                s2 = np.mean(d2_scores)
-                s3 = np.mean(d3_scores)
-                s4 = np.mean(d4_scores)
-                s5 = np.mean(d5_scores)
-                s6 = np.mean(d6_scores)
-
-                peri_final = np.mean([s1, s2, s3, s4, s5, s6])
-                cat = "CATEGORY C (CRITICAL ENVIRONMENTAL RISK)" if peri_final >= 2.3 else ("CATEGORY B (MODERATE CONCERN)" if peri_final >= 1.5 else "CATEGORY A (LOW RISK)")
+            if st.form_submit_button("Submit & Save PERI Windshield Evaluation"):
+                ds1 = float(np.mean(d1_scores))
+                ds2 = float(np.mean(d2_scores))
+                ds3 = float(np.mean(d3_scores))
+                peri_idx = float(np.mean([ds1, ds2, ds3, d4_score, d5_score, d6_score]))
 
                 st.session_state.windshield_records.append({
-                    "Purok": purok_eval, "Date": str(eval_date), "Evaluator": evaluator_name,
-                    "DS1_Sanitation": s1, "DS2_Food": s2, "DS3_BuiltEnv": s3, "DS4_HealthInfra": s4, "DS5_DRR": s5, "DS6_Vector": s6,
-                    "PERI_Index": peri_final, "Category": cat,
-                    "D1_Data": d1_data, "D2_Data": d2_data, "D3_Data": d3_data, "D4_Data": d4_data, "D5_Data": d5_data, "D6_Data": d6_data
+                    "Barangay": brgy_eval,
+                    "Purok": purok_eval,
+                    "Date": str(eval_date),
+                    "Evaluator": evaluator_name,
+                    "DS1_Sanitation": round(ds1, 2),
+                    "DS2_Food": round(ds2, 2),
+                    "DS3_BuiltEnv": round(ds3, 2),
+                    "DS4_HealthInfra": round(d4_score, 2),
+                    "DS5_DRR": round(d5_score, 2),
+                    "DS6_Vector": round(d6_score, 2),
+                    "PERI_Index": round(peri_idx, 2),
+                    "D1_Details": d1_data, "D2_Details": d2_data, "D3_Details": d3_data
                 })
                 save_session_to_disk()
-                st.success(f"PERI Field Survey Saved for {purok_eval}! Final PERI Index: {peri_final:.2f} — Category: {cat}")
+                st.success(f"PERI Evaluation Saved for {purok_eval}, Barangay {brgy_eval}! Overall Index: {peri_idx:.2f}")
 
     with p4_tab2:
-        st.markdown("### 📖 Comprehensive Result Interpretation & Manual")
+        st.markdown("### 📖 PERI Result Interpretation Manual")
         st.markdown("""
-        **Purok Environmental Risk Index (PERI) Composite Calculation Formula:**
-        $$PERI_{Index} = \\frac{\\bar{S}_1 + \\bar{S}_2 + \\bar{S}_3 + \\bar{S}_4 + \\bar{S}_5 + \\bar{S}_6}{6}$$
-
-        * **Category A (1.00 – 1.49):** **Low Risk** — Standard quarterly surveillance; community maintenance.
-        * **Category B (1.50 – 2.29):** **Moderate Concern** — Targeted environmental interventions (vector control, canal declogging).
-        * **Category C (2.30 – 3.00):** **Critical Environmental Risk** — Immediate multi-sectoral emergency action required.
+        * **1.00 – 1.49 Category A (Low Risk / Healthy Environment):** Favorable physical conditions.
+        * **1.50 – 2.29 Category B (Moderate Risk / Environmental Concern):** Intermittent gaps in sanitation/built environment.
+        * **2.30 – 3.00 Category C (Critical Risk / High Vulnerability):** Severe hazard exposure needing immediate intervention.
         """)
 
     with p4_tab3:
-        st.markdown("### 📂 Saved Windshield PERI Evaluations")
         if len(st.session_state.windshield_records) == 0:
-            st.info("No windshield evaluation records saved.")
+            st.info("No windshield assessments saved.")
         else:
-            p4_options = [f"[{i+1}] {r.get('Purok', 'N/A')} - PERI Index: {r.get('PERI_Index', 0):.2f}" for i, r in enumerate(st.session_state.windshield_records)]
-            sel_p4_idx = st.selectbox("Select Record to Inspect / Delete", range(len(p4_options)), format_func=lambda x: p4_options[x])
-            p4_rec = st.session_state.windshield_records[sel_p4_idx]
-
-            st.write(f"**Purok:** {p4_rec.get('Purok')} | **Evaluator:** {p4_rec.get('Evaluator')} | **Date:** {p4_rec.get('Date')}")
-            st.write(f"**PERI Index Score:** {p4_rec.get('PERI_Index', 0):.2f} — **{p4_rec.get('Category')}**")
-
-            if st.button("🗑️ Delete This Evaluation Record", key="del_p4"):
-                st.session_state.windshield_records.pop(sel_p4_idx)
+            w_df = pd.DataFrame(st.session_state.windshield_records)
+            st.dataframe(w_df, use_container_width=True)
+            if st.button("🗑️ Clear All Windshield Assessments"):
+                st.session_state.windshield_records = []
                 save_session_to_disk()
-                st.success("Record deleted!")
                 st.rerun()
 
-# MODULE 6: PHASE 5 STATISTICAL ANALYTICS
+# MODULE 6: PHASE 5 SPATIAL & STATISTICAL ANALYTICS
 elif menu == "📈 Phase 5: Spatial & Statistical Analytics":
-    st.subheader("Phase 5: Advanced Statistical Cross-Tabulation & Environmental Analytics")
+    st.subheader("Phase 5: Spatial & Statistical Cross-Analytics (Palo, Leyte)")
 
     if len(st.session_state.hh_records) == 0:
-        st.info("No household survey records stored yet in Phase 2 to run analytical models.")
+        st.info("No survey records available for cross-tabulation.")
     else:
         df_hh = pd.DataFrame(st.session_state.hh_records)
-
-        st.markdown("### 📊 Cross-Tabulation: Flood Risk vs Adult Hypertension Prevalence")
         
-        all_adults_analytics = []
-        for hh in st.session_state.hh_records:
-            fl_zone = hh.get("Flood_Prone", "No")
-            purok_val = hh.get("Purok", "Purok 1")
-            for a in hh.get("Adults", []):
-                all_adults_analytics.append({
-                    "Purok": purok_val,
-                    "Flood_Prone": fl_zone,
-                    "Sys": a.get("Sys", 120),
-                    "Dia": a.get("Dia", 80),
-                    "Is_Hypertensive": "High BP (≥140/90)" if (a.get("Sys", 120) >= 140 or a.get("Dia", 80) >= 90) else "Normal BP"
-                })
+        st.markdown("#### 📊 Cross-Tabulation: Income Level vs. Health Risk")
+        ct_income_risk = pd.crosstab(df_hh["Income"], df_hh["Risk"], margins=True)
+        st.dataframe(ct_income_risk, use_container_width=True)
 
-        if len(all_adults_analytics) > 0:
-            df_adults = pd.DataFrame(all_adults_analytics)
-            ct = pd.crosstab(df_adults["Flood_Prone"], df_adults["Is_Hypertensive"], margins=True)
-            st.dataframe(ct, use_container_width=True)
-            st.bar_chart(pd.crosstab(df_adults["Flood_Prone"], df_adults["Is_Hypertensive"]))
-        else:
-            st.info("No adult vitals available for cross-tabulation.")
+        st.markdown("#### 🌊 Cross-Tabulation: Flood Vulnerability vs. Water Source")
+        ct_flood_water = pd.crosstab(df_hh["Flood_Prone"], df_hh["Water"], margins=True)
+        st.dataframe(ct_flood_water, use_container_width=True)
 
-# MODULE 7: PHASE 6 ACTION PLAN
+# MODULE 7: PHASE 6 COMMUNITY DIAGNOSIS & ACTION PLAN
 elif menu == "📋 Phase 6: Community Diagnosis & Action Plan":
-    st.subheader("Phase 6: Community Diagnosis Prioritization & Multi-Sectoral Action Plan")
+    st.subheader("Phase 6: Community Diagnosis & Prioritized Action Plan")
 
-    with st.form("phase6_action_form"):
-        st.markdown("### 🎯 Priority Problem Matrix & Action Blueprint")
-        diag_title = st.text_input("Priority Community Health Diagnosis / Problem Statement", "High Prevalence of Adult Hypertension & Cardiovascular Risk in Flood-Prone Puroks")
-        target_purok = st.selectbox("Target Priority Zone", [f"Purok {i}" for i in range(1, 8)])
-
+    with st.form("phase6_form"):
         c1, c2 = st.columns(2)
-        objective = c1.text_area("Primary Objective (SMART Goal)")
-        target_pop = c2.text_area("Target Beneficiary Population")
+        target_brgy = c1.selectbox("Target Barangay (Palo, Leyte)", PALO_BARANGAYS)
+        lead_author = c2.selectbox("Lead Author / Clerk", ENUMERATORS)
 
-        c1, c2, c3 = st.columns(3)
-        activities = c1.text_area("Key Strategic Interventions")
-        budget_req = c2.text_input("Estimated Budget Requirement (PHP)", "₱50,000")
-        responsible = c3.text_input("Lead Responsible Entity / Office", "RHU Physician & BHW Team")
+        diag_statement = st.text_area("Community Health Diagnosis Statement:", "High prevalence of adult hypertension and child stunting aggravated by flood exposure in low-lying puroks.")
+        p1_action = st.text_area("Phase 1 Governance Action Points:", "Pass Barangay Sanitation Ordinance & increase AIP Health Budget to 15%.")
+        p2_action = st.text_area("Phase 2 Clinical & Public Health Actions:", "Deploy BHWs for weekly BP monitoring and RHU Palo referral.")
+        p3_action = st.text_area("Phase 3 Qualitative & Policy Actions:", "Address out-of-pocket medication expenses through PhilHealth YAKAP enrollment.")
 
-        if st.form_submit_button("💾 Save Action Plan"):
+        if st.form_submit_button("💾 Save Action Plan & Diagnosis"):
             st.session_state.diag_records.append({
-                "Diagnosis": diag_title, "Purok": target_purok, "Objective": objective,
-                "Target_Pop": target_pop, "Activities": activities, "Budget": budget_req, "Responsible": responsible
+                "Barangay": target_brgy,
+                "Author": lead_author,
+                "Diagnosis": diag_statement,
+                "Governance_Action": p1_action,
+                "Clinical_Action": p2_action,
+                "Policy_Action": p3_action
             })
             save_session_to_disk()
-            st.success("Community Action Plan Saved Successfully!")
+            st.success("Action Plan saved successfully!")
 
     st.markdown("---")
-    st.markdown("### 📂 Saved Community Action Plans")
-    if len(st.session_state.diag_records) == 0:
-        st.info("No action plans saved yet.")
-    else:
+    st.markdown("### 📂 Saved Action Plans")
+    if len(st.session_state.diag_records) > 0:
         st.dataframe(pd.DataFrame(st.session_state.diag_records), use_container_width=True)
 
 # MODULE 8: DATA MANAGEMENT & EXPORT
 elif menu == "💾 Data Management & Export":
-    st.subheader("💾 Multi-Phase Master Data Persistence & CSV Export Hub")
+    st.subheader("💾 Master Data Export & System Administration")
 
-    st.markdown("Export all collected multi-phase survey records to CSV for statistical packages (SPSS/Stata/R).")
+    st.markdown("### 📤 Export All System Records to JSON / CSV")
 
-    col1, col2, col3, col4 = st.columns(4)
+    c1, c2, c3 = st.columns(3)
+    
+    with c1:
+        hh_json = json.dumps(st.session_state.hh_records, indent=4)
+        st.download_button("📥 Download Household Records (JSON)", data=hh_json, file_name="palo_hh_records.json", mime="application/json")
 
-    with col1:
+    with c2:
+        gov_json = json.dumps(st.session_state.gov_records, indent=4)
+        st.download_button("📥 Download Governance Records (JSON)", data=gov_json, file_name="palo_gov_records.json", mime="application/json")
+
+    with c3:
         if len(st.session_state.hh_records) > 0:
-            df_export_hh = pd.DataFrame(st.session_state.hh_records)
-            st.download_button("📥 Download Phase 2 HH Survey (CSV)", df_export_hh.to_csv(index=False), "phase2_household_data.csv", "text/csv", use_container_width=True)
-        else:
-            st.caption("No Household Data")
-
-    with col2:
-        if len(st.session_state.gov_records) > 0:
-            df_export_gov = pd.DataFrame(st.session_state.gov_records)
-            st.download_button("📥 Download Phase 1 Governance (CSV)", df_export_gov.to_csv(index=False), "phase1_governance_data.csv", "text/csv", use_container_width=True)
-        else:
-            st.caption("No Governance Data")
-
-    with col3:
-        if len(st.session_state.qual_records) > 0:
-            df_export_qual = pd.DataFrame(st.session_state.qual_records)
-            st.download_button("📥 Download Phase 3 Qualitative (CSV)", df_export_qual.to_csv(index=False), "phase3_qualitative_data.csv", "text/csv", use_container_width=True)
-        else:
-            st.caption("No Qualitative Data")
-
-    with col4:
-        if len(st.session_state.windshield_records) > 0:
-            df_export_peri = pd.DataFrame(st.session_state.windshield_records)
-            st.download_button("📥 Download Phase 4 PERI (CSV)", df_export_peri.to_csv(index=False), "phase4_peri_data.csv", "text/csv", use_container_width=True)
-        else:
-            st.caption("No PERI Data")
+            df_export = pd.DataFrame(st.session_state.hh_records)
+            st.download_button("📥 Download Household Records (CSV)", data=df_export.to_csv(index=False), file_name="palo_hh_records.csv", mime="text/csv")
 
     st.markdown("---")
-    if st.button("⚠️ CLEAR ALL SHARED DATA PERMANENTLY", type="primary"):
+    st.markdown("### ⚠️ Reset System Storage")
+    if st.button("🚨 Wipe All Stored Field Data (Irreversible)"):
         st.session_state.hh_records = []
         st.session_state.gov_records = []
         st.session_state.qual_records = []
         st.session_state.windshield_records = []
         st.session_state.diag_records = []
         save_session_to_disk()
-        st.success("All multi-phase persistent data cleared.")
+        st.success("All shared data has been reset.")
         st.rerun()
