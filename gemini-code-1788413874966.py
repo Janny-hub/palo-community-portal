@@ -641,7 +641,7 @@ elif menu == "🔍 Phase 4: Expanded PERI Windshield Tool":
             save_session_to_disk()
             st.success(f"PERI Evaluation Saved! Computed Index: {peri_idx:.2f}")
 
-# ================= MODULE 6: PHASE 5 SPATIAL & STATISTICAL ANALYTICS =================
+# ================= MODULE 6: PHASE 5 SPATIAL & STATISTICAL ANALYTICS (FIXED & REFINED) =================
 elif menu == "📈 Phase 5: Spatial & Statistical Analytics":
     st.subheader("Phase 5: Spatial Mapping, Geocoding, & Statistical Analytics")
     st.caption("Automated Public Health Intelligence: Multi-Layer GIS Visualization, Descriptive Odds Ratios, PCA Indexing, and Latent Class Analysis (LCA)")
@@ -657,7 +657,7 @@ elif menu == "📈 Phase 5: Spatial & Statistical Analytics":
 
     # --- TAB 1: MULTI-LAYER GIS VISUALIZATION ---
     with p5_tab1:
-        st.markdown("### 6.1 & 6.2 Multi-Layer GIS Visualization Framework")
+        st.markdown("### Multi-Layer GIS Visualization Framework")
         st.caption("Simultaneous Layering: Kernel Density Hotspots, Environmental SDOH, Food Deserts, & Catchment Isochrones")
 
         gis_layer_sel = st.multiselect(
@@ -684,7 +684,7 @@ elif menu == "📈 Phase 5: Spatial & Statistical Analytics":
                 has_htn = 1 if "Diagnosed" in h.get("Hypertension_Status", "") or h.get("Risk") == "Hypertensive Risk" else 0
                 has_unsafe_w = 1 if "Unsafe" in h.get("Water", "") else 0
                 flat_gis.append({
-                    "HH_ID": h.get("HH_ID"), "Barangay": h.get("Barangay"),
+                    "HH_ID": h.get("HH_ID", "HH-000"), "Barangay": h.get("Barangay", "Campetic"),
                     "Lat": float(h.get("Lat", 11.1580)), "Lon": float(h.get("Lon", 124.9910)),
                     "HTN": has_htn, "Unsafe_Water": has_unsafe_w,
                     "Malnutrition": 1 if len(h.get("Children", [])) > 0 and "Stunted" in str(h.get("Children")) else 0,
@@ -732,9 +732,12 @@ elif menu == "📈 Phase 5: Spatial & Statistical Analytics":
         )
         layers_to_render.append(base_layer)
 
+        avg_lat = float(demo_df["Lat"].mean()) if len(demo_df) > 0 and not np.isnan(demo_df["Lat"].mean()) else 11.1580
+        avg_lon = float(demo_df["Lon"].mean()) if len(demo_df) > 0 and not np.isnan(demo_df["Lon"].mean()) else 124.9910
+
         view_state = pdk.ViewState(
-            latitude=demo_df["Lat"].mean(),
-            longitude=demo_df["Lon"].mean(),
+            latitude=avg_lat,
+            longitude=avg_lon,
             zoom=14,
             pitch=20
         )
@@ -743,19 +746,18 @@ elif menu == "📈 Phase 5: Spatial & Statistical Analytics":
 
         c1, c2, c3 = st.columns(3)
         c1.metric("Mapped Spot Points", len(demo_df))
-        c2.metric("Hotspot HTN Cluster Density", f"{demo_df['HTN'].sum()} HHs")
-        c3.metric("SDOH Water Risk Clusters", f"{demo_df['Unsafe_Water'].sum()} HHs")
+        c2.metric("Hotspot HTN Cluster Density", f"{int(demo_df['HTN'].sum())} HHs")
+        c3.metric("SDOH Water Risk Clusters", f"{int(demo_df['Unsafe_Water'].sum())} HHs")
 
     # --- TAB 2: DESCRIPTIVE ANALYSIS & ODDS RATIOS ---
     with p5_tab2:
-        st.markdown("### 6.3.A Descriptive Cross-Tabulation & Social Gradient Metrics")
+        st.markdown("### Descriptive Cross-Tabulation & Social Gradient Metrics")
         st.caption("Automatic calculation of Odds Ratios (OR) and Relative Risks (RR) across socio-economic tiers in Palo, Leyte.")
 
         if len(hh_records) < 5:
-            st.warning("⚠️ Small dataset detected. Displaying automated statistical simulation matrix based on local Palo parameters.")
+            st.info("💡 Displaying baseline statistical matrix (Simulated baseline parameters for Palo, Leyte). Add real household records to update live.")
             a, b, c, d = 28, 12, 14, 26  # Contingency table counts
         else:
-            # Low Income vs HTN
             low_inc_htn = sum(1 for h in hh_records if "Q1" in h.get("Income", "") and ("Diagnosed" in h.get("Hypertension_Status", "") or h.get("Risk") == "Hypertensive Risk"))
             low_inc_no_htn = sum(1 for h in hh_records if "Q1" in h.get("Income", "") and not ("Diagnosed" in h.get("Hypertension_Status", "") or h.get("Risk") == "Hypertensive Risk"))
             high_inc_htn = sum(1 for h in hh_records if "Q1" not in h.get("Income", "") and ("Diagnosed" in h.get("Hypertension_Status", "") or h.get("Risk") == "Hypertensive Risk"))
@@ -764,18 +766,26 @@ elif menu == "📈 Phase 5: Spatial & Statistical Analytics":
             a, b = low_inc_htn, low_inc_no_htn
             c, d = high_inc_htn, high_inc_no_htn
 
-        # Calculate Odds Ratio & Relative Risk
-        or_val = (a * d) / (b * c) if (b * c) > 0 else 1.0
-        rr_val = (a / (a + b)) / (c / (c + d)) if (c * (a + b)) > 0 else 1.0
+        # Safe Computation for OR & RR
+        n_exposed = a + b
+        n_unexposed = c + d
 
-        se_ln_or = np.sqrt((1/max(a,1)) + (1/max(b,1)) + (1/max(c,1)) + (1/max(d,1)))
+        or_denominator = b * c
+        or_val = (a * d) / or_denominator if or_denominator > 0 else 1.0
+
+        p_exposed = (a / n_exposed) if n_exposed > 0 else 0.0
+        p_unexposed = (c / n_unexposed) if n_unexposed > 0 else 0.0
+        rr_val = (p_exposed / p_unexposed) if p_unexposed > 0 else 1.0
+
+        a_safe, b_safe, c_safe, d_safe = max(a, 1), max(b, 1), max(c, 1), max(d, 1)
+        se_ln_or = np.sqrt((1 / a_safe) + (1 / b_safe) + (1 / c_safe) + (1 / d_safe))
         ci_lower = np.exp(np.log(max(or_val, 0.01)) - 1.96 * se_ln_or)
         ci_upper = np.exp(np.log(max(or_val, 0.01)) + 1.96 * se_ln_or)
 
         st.markdown("#### 2x2 Contingency Matrix: Low-Income Quintile (Exposed) vs Hypertension Outcome")
         ct_df = pd.DataFrame([
-            {"Socio-Economic Risk Tier": "Low Income (Q1 - Exposed)", "Hypertension Present (+": a, "Hypertension Absent (-)": b, "Total": a + b},
-            {"Socio-Economic Risk Tier": "Higher Income (Q2-Q5 - Control)", "Hypertension Present (+": c, "Hypertension Absent (-)": d, "Total": c + d}
+            {"Socio-Economic Risk Tier": "Low Income (Q1 - Exposed)", "Hypertension Present (+)": a, "Hypertension Absent (-)": b, "Total": n_exposed},
+            {"Socio-Economic Risk Tier": "Higher Income (Q2-Q5 - Control)", "Hypertension Present (+)": c, "Hypertension Absent (-)": d, "Total": n_unexposed}
         ]).set_index("Socio-Economic Risk Tier")
         st.table(ct_df)
 
@@ -788,14 +798,14 @@ elif menu == "📈 Phase 5: Spatial & Statistical Analytics":
 
     # --- TAB 3: PRINCIPAL COMPONENT ANALYSIS (PCA) ---
     with p5_tab3:
-        st.markdown("### 6.3.B Factor Analysis & Principal Component Analysis (PCA)")
+        st.markdown("### Factor Analysis & Principal Component Analysis (PCA)")
         st.caption("Automated Latent Factor Extraction: Generating the 'Barangay Socio-Economic Vulnerability Index'")
 
         if len(hh_records) > 0:
             pca_data = []
             for h in hh_records:
                 pca_data.append({
-                    "HH_ID": h.get("HH_ID"),
+                    "HH_ID": h.get("HH_ID", "HH-000"),
                     "Income_Score": 1 if "Q1" in h.get("Income", "") else (2 if "Q2" in h.get("Income", "") else 3),
                     "WASH_Score": 3 if "Unsafe" in h.get("Water", "") else 1,
                     "Flood_Exposure": 3 if h.get("Flood_Prone") == "Yes" else 1,
@@ -810,12 +820,28 @@ elif menu == "📈 Phase 5: Spatial & Statistical Analytics":
 
         # Standardize & compute composite score
         feats = df_pca_input[["Income_Score", "WASH_Score", "Flood_Exposure"]]
-        norm_feats = (feats - feats.mean()) / feats.std()
+        std_devs = feats.std()
+        std_devs = std_devs.replace(0, 1.0)
+        norm_feats = (feats - feats.mean()) / std_devs
         norm_feats = norm_feats.fillna(0)
 
-        # Simple factor score approximation (PC1 weights)
+        # Composite score calculation
         df_pca_input["Vulnerability_Index_Score"] = (norm_feats["Income_Score"] * 0.45 + norm_feats["WASH_Score"] * 0.35 + norm_feats["Flood_Exposure"] * 0.20)
-        df_pca_input["Vulnerability_Tier"] = pd.qcut(df_pca_input["Vulnerability_Index_Score"], q=3, labels=["Low Vulnerability", "Moderate Vulnerability", "Severe Vulnerability"])
+
+        # Robust binning for Vulnerability Tier
+        try:
+            df_pca_input["Vulnerability_Tier"] = pd.qcut(
+                df_pca_input["Vulnerability_Index_Score"],
+                q=3,
+                labels=["Low Vulnerability", "Moderate Vulnerability", "Severe Vulnerability"],
+                duplicates="drop"
+            )
+        except Exception:
+            df_pca_input["Vulnerability_Tier"] = pd.cut(
+                df_pca_input["Vulnerability_Index_Score"],
+                bins=3,
+                labels=["Low Vulnerability", "Moderate Vulnerability", "Severe Vulnerability"]
+            )
 
         st.markdown("#### Automated Household Deprivation & Vulnerability Index Roster")
         st.dataframe(df_pca_input[["HH_ID", "Income_Score", "WASH_Score", "Flood_Exposure", "Vulnerability_Index_Score", "Vulnerability_Tier"]], use_container_width=True)
@@ -824,7 +850,7 @@ elif menu == "📈 Phase 5: Spatial & Statistical Analytics":
 
     # --- TAB 4: LATENT CLASS ANALYSIS (LCA) ---
     with p5_tab4:
-        st.markdown("### 6.3.C Latent Class Analysis (LCA) — Multi-Risk Household Profiling")
+        st.markdown("### Latent Class Analysis (LCA) — Multi-Risk Household Profiling")
         st.caption("Discrete Mixture Modeling: Grouping households into multi-risk clusters for targeted LGU social protection")
 
         st.markdown("""
