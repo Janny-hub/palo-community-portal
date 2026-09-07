@@ -8,17 +8,17 @@ import streamlit as st
 
 # Page Configuration (Must be first Streamlit command)
 st.set_page_config(
-    page_title="UP Manila - Community Clerks Portal (Dev: Jan Art Serna, RMT)",
+    page_title="UP Manila - Community Clerks Portal",
     page_icon="🩺",
     layout="wide",
 )
 
-# ================= SHARED MULTI-ENUMERATOR DATA PERSISTENCE =================
+# ================= PERMANENT MULTI-ENUMERATOR DATA PERSISTENCE =================
 DATA_FILE = "shared_survey_data.json"
 
 
 def load_shared_data():
-    """Reads shared survey records from disk for multi-enumerator sync."""
+    """Reads shared survey records from persistent disk storage."""
     if os.path.exists(DATA_FILE):
         try:
             with open(DATA_FILE, "r", encoding="utf-8") as f:
@@ -35,7 +35,7 @@ def load_shared_data():
 
 
 def save_shared_data(data):
-    """Saves shared survey records to disk."""
+    """Saves survey records permanently to disk storage."""
     try:
         with open(DATA_FILE, "w", encoding="utf-8") as f:
             json.dump(data, f, indent=4)
@@ -44,7 +44,7 @@ def save_shared_data(data):
 
 
 def sync_session_from_disk():
-    """Syncs local Streamlit session state with the shared data file."""
+    """Syncs local Streamlit session state with persistent disk storage."""
     shared = load_shared_data()
     st.session_state.hh_records = shared.get("hh_records", [])
     st.session_state.gov_records = shared.get("gov_records", [])
@@ -54,7 +54,7 @@ def sync_session_from_disk():
 
 
 def save_session_to_disk():
-    """Writes session state records into the shared data file."""
+    """Writes session state records permanently into disk storage."""
     shared = {
         "hh_records": st.session_state.get("hh_records", []),
         "gov_records": st.session_state.get("gov_records", []),
@@ -65,7 +65,7 @@ def save_session_to_disk():
     save_shared_data(shared)
 
 
-# Always sync latest data on rerun
+# Always sync latest data on rerun to guarantee permanent file storage
 sync_session_from_disk()
 
 if "authenticated" not in st.session_state:
@@ -79,34 +79,24 @@ def show_login_screen():
         .login-box {
             max-width: 420px;
             margin: 60px auto;
-            padding: 30px;
+            padding: 35px;
             background-color: #FFFFFF;
             border-radius: 12px;
-            border: 1px solid #CBD5E1;
-            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+            border: 2px solid #7B1113;
+            box-shadow: 0 10px 25px rgba(123, 17, 19, 0.15);
             text-align: center;
         }
         .login-title {
             color: #7B1113;
             font-weight: 800;
-            font-size: 22px;
-            margin-bottom: 4px;
+            font-size: 24px;
+            margin-bottom: 6px;
         }
         .login-sub {
-            color: #475569;
-            font-size: 13px;
-            margin-bottom: 15px;
-        }
-        .dev-badge-login {
-            background-color: #FEF3C7;
-            border: 1px solid #F59E0B;
-            color: #92400E;
-            font-size: 12px;
-            font-weight: 700;
-            padding: 6px 12px;
-            border-radius: 20px;
-            display: inline-block;
-            margin-bottom: 20px;
+            color: #334155;
+            font-size: 14px;
+            margin-bottom: 25px;
+            font-weight: 600;
         }
         </style>
     """,
@@ -120,10 +110,6 @@ def show_login_screen():
     )
     st.markdown(
         '<div class="login-sub">Comprehensive Community Health Field Portal</div>',
-        unsafe_allow_html=True,
-    )
-    st.markdown(
-        '<div class="dev-badge-login">⭐ Lead developer Jan Art A. Serna, RMT</div>',
         unsafe_allow_html=True,
     )
 
@@ -146,157 +132,190 @@ if not st.session_state["authenticated"]:
     show_login_screen()
     st.stop()
 
-# ================= MAIN APPLICATION LOGIC =================
+# ================= MODERN MAROON STYLING & CUSTOM CSS =================
 
 CSS_STYLE = """<style>
+:root {
+    --maroon-primary: #7B1113;
+    --maroon-dark: #4A0A0C;
+    --maroon-accent: #9B1C1E;
+    --text-dark: #0F172A;
+    --text-muted: #334155;
+    --bg-light: #F8FAFC;
+}
+
+body, .stApp {
+    background-color: var(--bg-light);
+    color: var(--text-dark);
+}
+
 .sticky-progress-container {
     position: sticky;
     top: 0;
     z-index: 99999;
-    background-color: #F1F5F9;
-    padding: 14px 10px;
+    background-color: #FFFFFF;
+    padding: 14px 12px;
     margin-bottom: 15px;
-    border-bottom: 2px solid #CBD5E1;
-    border-radius: 0 0 8px 8px;
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.08);
+    border: 1px solid #E2E8F0;
+    border-top: 4px solid #7B1113;
+    border-radius: 8px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
 }
+
 .up-navbar {
-    background-color: #7B1113;
-    border-bottom: 4px solid #1E4D2B;
-    padding: 20px 24px;
+    background: linear-gradient(135deg, #7B1113 0%, #4A0A0C 100%);
+    border-bottom: 4px solid #D97706;
+    padding: 22px 24px;
     border-radius: 10px;
     text-align: center;
-    margin-bottom: 16px;
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.15);
+    margin-bottom: 20px;
+    box-shadow: 0 10px 15px -3px rgba(123, 17, 19, 0.25);
 }
 .up-navbar-title {
     color: #FFFFFF !important;
-    font-size: 24px !important;
+    font-size: 26px !important;
     font-weight: 800 !important;
     margin: 0 !important;
     line-height: 1.2;
     letter-spacing: 0.5px;
 }
 .up-navbar-sub {
-    color: #FACC15 !important;
+    color: #FCD34D !important;
     font-size: 15px !important;
     font-weight: 600 !important;
-    margin: 4px 0 0 0 !important;
+    margin: 5px 0 0 0 !important;
 }
 .up-navbar-detail {
-    color: #E2E8F0 !important;
-    font-size: 12px !important;
-    margin-top: 4px !important;
+    color: #F1F5F9 !important;
+    font-size: 13px !important;
+    margin-top: 5px !important;
+    font-weight: 500;
 }
-.dev-honor-banner {
-    background: linear-gradient(90deg, #1E4D2B 0%, #064E3B 100%);
-    border: 1px solid #10B981;
-    color: #ECFDF5;
-    padding: 8px 16px;
-    border-radius: 8px;
-    text-align: center;
-    font-size: 13px;
-    font-weight: 700;
-    margin-top: 10px;
-    letter-spacing: 0.4px;
-}
+
 div[data-testid="stForm"] {
     border: 1px solid #CBD5E1;
     border-radius: 10px;
     background-color: #FFFFFF;
     padding: 24px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.03);
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
 }
+
 section[data-testid="stSidebar"] {
     background-color: #F1F5F9;
-    border-right: 1px solid #E2E8F0;
+    border-right: 2px solid #E2E8F0;
 }
+
 .adult-card {
-    background-color: #F8FAFC;
-    border: 1px solid #E2E8F0;
-    border-left: 4px solid #7B1113;
-    padding: 12px 15px;
-    border-radius: 6px;
+    background-color: #FFF5F5;
+    border: 1px solid #FECDD3;
+    border-left: 5px solid #7B1113;
+    padding: 14px 16px;
+    border-radius: 8px;
     margin-bottom: 12px;
+    color: #0F172A;
 }
+
 .child-card {
     background-color: #F0FDF4;
-    border: 1px solid #DCFCE7;
-    border-left: 4px solid #16A34A;
-    padding: 12px 15px;
-    border-radius: 6px;
+    border: 1px solid #BBF7D0;
+    border-left: 5px solid #16A34A;
+    padding: 14px 16px;
+    border-radius: 8px;
     margin-bottom: 12px;
+    color: #0F172A;
 }
+
 .peri-domain-header {
-    background-color: #7B1113;
-    color: #FFFFFF;
-    padding: 8px 14px;
-    border-radius: 6px;
+    background: linear-gradient(90deg, #7B1113 0%, #9B1C1E 100%);
+    color: #FFFFFF !important;
+    padding: 10px 16px;
+    border-radius: 8px;
     font-weight: 700;
+    margin-top: 15px;
     margin-bottom: 12px;
+    box-shadow: 0 2px 4px rgba(123, 17, 19, 0.15);
 }
+
 .dash-card {
     background-color: #FFFFFF;
     border: 1px solid #E2E8F0;
+    border-top: 4px solid #7B1113;
     border-radius: 10px;
     padding: 16px;
     box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
     margin-bottom: 15px;
 }
+
 .dash-metric-val {
     font-size: 28px;
     font-weight: 800;
     color: #7B1113;
 }
+
 .dash-metric-lbl {
     font-size: 12px;
     font-weight: 700;
-    color: #64748B;
+    color: #475569;
     text-transform: uppercase;
 }
+
 .insight-alert-high {
     background-color: #FEF2F2;
-    border-left: 5px solid #EF4444;
-    padding: 12px 16px;
+    border-left: 5px solid #DC2626;
+    border: 1px solid #FCA5A5;
+    border-left-width: 5px;
+    padding: 14px 16px;
     border-radius: 6px;
-    margin-bottom: 10px;
-    color: #991B1B;
+    margin-bottom: 12px;
+    color: #7F1D1D;
 }
+
 .insight-alert-warn {
     background-color: #FFFBEB;
-    border-left: 5px solid #F59E0B;
-    padding: 12px 16px;
+    border-left: 5px solid #D97706;
+    border: 1px solid #FCD34D;
+    border-left-width: 5px;
+    padding: 14px 16px;
     border-radius: 6px;
-    margin-bottom: 10px;
-    color: #92400E;
+    margin-bottom: 12px;
+    color: #78350F;
 }
+
 .insight-alert-good {
     background-color: #F0FDF4;
-    border-left: 5px solid #22C55E;
-    padding: 12px 16px;
+    border-left: 5px solid #16A34A;
+    border: 1px solid #86EFAC;
+    border-left-width: 5px;
+    padding: 14px 16px;
     border-radius: 6px;
-    margin-bottom: 10px;
-    color: #166534;
+    margin-bottom: 12px;
+    color: #14532D;
 }
+
+/* High-contrast text labels */
+label, .stMarkdown p {
+    color: #0F172A !important;
+    font-weight: 500;
+}
+
 </style>"""
 
 st.markdown(CSS_STYLE, unsafe_allow_html=True)
 
-col_header, col_logout = st.columns([8, 2])
+col_header, col_logout = st.columns([8.5, 1.5])
 
 with col_header:
     HEADER_HTML = """<div class="up-navbar">
     <div class="up-navbar-title">UNIVERSITY OF THE PHILIPPINES MANILA</div>
     <div class="up-navbar-sub">School of Health Sciences — Comprehensive Community Health Field Portal</div>
     <div class="up-navbar-detail">Integrated System: Spatial Mapping, Geocoding, Analytics & Action Planning (Phases 1–6)</div>
-    <div class="dev-honor-banner">Lead developer Jan Art A. Serna, RMT</div>
     </div>"""
     st.markdown(HEADER_HTML, unsafe_allow_html=True)
 
 with col_logout:
     st.write("")
     st.write("")
-    if st.button("🚪 Log Out System", use_container_width=True, type="secondary"):
+    if st.button("🚪 Log Out", use_container_width=True, type="secondary"):
         st.session_state["authenticated"] = False
         st.rerun()
 
@@ -362,8 +381,8 @@ overall_progress_pct = int((completed_phases / 6) * 100)
 st.sidebar.markdown(
     f"""
 <div class="sticky-progress-container">
-    <div style="font-weight: 700; color: #1E293B; font-size: 14px; margin-bottom: 4px;">📊 Phase Completion Tracker</div>
-    <div style="font-weight: 800; color: #7B1113; font-size: 18px; margin-bottom: 4px;">{overall_progress_pct}% Completed</div>
+    <div style="font-weight: 700; color: #0F172A; font-size: 14px; margin-bottom: 4px;">📊 Phase Completion Tracker</div>
+    <div style="font-weight: 800; color: #7B1113; font-size: 20px; margin-bottom: 4px;">{overall_progress_pct}% Completed</div>
 </div>
 """,
     unsafe_allow_html=True,
@@ -374,10 +393,10 @@ st.sidebar.progress(overall_progress_pct / 100)
 if st.sidebar.button(
     "🔄 Sync / Refresh Shared Data",
     use_container_width=True,
-    help="Fetch live submissions from all active enumerators",
+    help="Fetch live submissions from persistent storage",
 ):
     sync_session_from_disk()
-    st.sidebar.success("Data synced with shared storage!")
+    st.sidebar.success("Data synced with persistent storage!")
     st.rerun()
 
 with st.sidebar.expander("🔍 View Detailed Phase Status", expanded=False):
@@ -389,7 +408,7 @@ with st.sidebar.expander("🔍 View Detailed Phase Status", expanded=False):
     st.write(f"{'✅' if p6_status else '🔴'} **Phase 6 (Action Plan):** {'100%' if p6_status else '0%'}")
 
 st.sidebar.markdown("---")
-st.sidebar.markdown("### 🌐 Portal Navigation")
+st.sidebar.markdown("### 🌐 Navigation Menu")
 menu = st.sidebar.radio(
     "Select Field Module",
     [
@@ -410,12 +429,10 @@ if st.sidebar.button("🔒 Logout Account", use_container_width=True):
     st.session_state["authenticated"] = False
     st.rerun()
 
-st.sidebar.caption("👨‍💻 **Lead Developer:** Jan Art Serna, RMT")
-
-# ================= MODULE 0: EXECUTIVE DASHBOARD & SMART RISK ENGINE (NEW MODERN FEATURE) =================
+# ================= MODULE 0: EXECUTIVE DASHBOARD & SMART RISK ENGINE =================
 if menu == "📊 Executive Health Dashboard & Smart Risk Engine":
     st.subheader("📊 Executive Field Intelligence Dashboard & Automated Risk Engine")
-    st.caption("Real-Time Multi-Phase Field Analytics, Epidemiological Insights & Automated Public Health Risk Prediction | Lead Dev: Jan Art A. Serna, RMT")
+    st.caption("Real-Time Multi-Phase Field Analytics, Epidemiological Insights & Automated Public Health Risk Prediction")
 
     # Metrics aggregation
     hh_data = st.session_state.hh_records
@@ -439,16 +456,16 @@ if menu == "📊 Executive Health Dashboard & Smart Risk Engine":
     # Modern KPI Row
     m1, m2, m3, m4, m5 = st.columns(5)
     m1.metric("Total Surveyed HHs", f"{tot_hh}", delta=f"{tot_pop} People Profiled" if tot_pop > 0 else None)
-    m2.metric("Adult Hypertensive Risk", f"{htn_rate:.1f}%", delta=f"{htn_count} Adults High BP", delta_color="inverse")
+    m2.metric("Adult Hypertensive Risk", f"{htn_rate:.1f}%", delta=f"{htn_count} High BP Adults", delta_color="inverse")
     m3.metric("Avg PERI Risk Index", f"{avg_peri:.2f}", delta="Cat C Critical" if avg_peri >= 2.3 else ("Cat B Concern" if avg_peri >= 1.5 else "Cat A Low Risk"), delta_color="inverse")
     m4.metric("BHB Governance Score", f"{latest_gov}/100", delta="High Functioning" if latest_gov >= 80 else "Needs Action", delta_color="normal")
     m5.metric("Action Plans Saved", f"{len(diag_data)} Plans", delta=f"{len(qual_data)} Qualitative Notes")
 
     st.markdown("---")
 
-    # modern Feature: Automated AI/Rule-based Community Risk & Vulnerability Predictor
+    # Automated AI/Rule-based Community Risk & Vulnerability Predictor
     st.markdown("### 🤖 Automated Community Health Risk & Vulnerability Predictor")
-    st.caption("Engineered by Jan Art A. Serna, RMT to dynamically evaluate multi-phase field vectors and generate priority interventions.")
+    st.caption("Dynamically evaluates multi-phase field vectors and generates priority public health interventions.")
 
     # Risk evaluation logic
     risk_triggers = []
@@ -573,7 +590,7 @@ if menu == "📊 Executive Health Dashboard & Smart Risk Engine":
             st.info("No household data logged.")
 
 # MODULE 1: INTERACTIVE SPOT MAP
-elif menu == "🗺️ Interactive Spot Map":
+elif menu == "MAP Spot Map":
     st.subheader("📍 Interactive Barangay Health & Environmental Hazard Spot Map")
 
     if len(st.session_state.hh_records) == 0:
@@ -758,7 +775,7 @@ elif menu == "🏠 Phase 2: Master Household Survey":
     )
 
     if mode_p2 == "➕ New Household Survey Entry":
-        st.markdown("#### ⚙️ Profile Roster Count Configuration & Non-Submitting Add Controls")
+        st.markdown("#### ⚙️ Profile Roster Count Configuration & Controls")
         st.info("💡 Adjust the counters or click the buttons below to dynamically add profiling forms without submitting the overall survey record.")
         
         if "adult_count" not in st.session_state:
@@ -811,7 +828,7 @@ elif menu == "🏠 Phase 2: Master Household Survey":
                 c1, c2, c3, c4 = st.columns(4)
                 lat = c1.number_input("Latitude", value=11.1560, format="%.4f")
                 lon = c2.number_input("Longitude", value=124.9920, format="%.4f")
-                enum_name = c3.selectbox("Enumerator Name", ["Jan Art Serna, RMT", "Aubrey Maye Arrieta", "Leila Projimo, PTRP"])
+                enum_name = c3.text_input("Enumerator Name", "Field Officer 1")
                 resp_role = c4.selectbox("Respondent Role", ["Head", "Spouse", "Adult Member", "Other"])
 
                 c1, c2, c3 = st.columns(3)
@@ -1323,7 +1340,7 @@ elif menu == "🔍 Phase 4: Expanded PERI Windshield Tool":
             c1, c2, c3 = st.columns(3)
             purok_eval = c1.selectbox("Target Purok Evaluated", [f"Purok {i}" for i in range(1, 8)])
             eval_date = c2.date_input("Evaluation Date")
-            evaluator_name = c3.selectbox("Lead Evaluator", ["Jan Art Serna, RMT", "Aubrey Maye Arrieta", "Leila Projimo, PTRP"])
+            evaluator_name = c3.text_input("Lead Evaluator", "Field Inspector")
 
             def render_rating(col1, col2, col3, label, choices, default_idx=0):
                 rating = col2.radio(label, choices, index=default_idx, key=f"r_{label}")
@@ -1619,7 +1636,6 @@ elif menu == "📈 Phase 5: Spatial & Statistical Analytics":
         * **Layer 4: Catchment Isochrone Modeling:** Generate 15-minute and 30-minute travel time contours around the BHS/RHU to identify geographically isolated and disadvantaged areas (GIDAs).
         """)
 
-        # Interactive Spatial Visualizer for Layer Overlays
         st.markdown("---")
         st.markdown("#### 🗺️ Multi-Layer Overlay Engine")
         selected_layer = st.selectbox("Select GIS Overlay Simulation Layer", [
@@ -1665,6 +1681,7 @@ elif menu == "📈 Phase 5: Spatial & Statistical Analytics":
         st.markdown("""
         * **1. Principal Component & Factor Analysis:** Collapse correlated environmental and economic variables (e.g., wall material, toilet type, income, water level) into latent factor scores (e.g., Household Deprivation Index) to measure overall structural vulnerability.
         * **2. Latent Class Analysis (LCA):** Group households into discrete vulnerability classes based on overlapping social risks (e.g., Class 1: High Income/High Access; Class 2: Severe Food Insecurity + Housing Instability + No Piped Water). Model the direct probability of chronic disease prevalence per class.
+        * **3. Spatial Autocorrelation (Moran's I):** Evaluate spatial clustering of hypertension and waterborne infections to verify if disease vectors are geographically contagious across contiguous Purok borders.
         """)
 
         st.markdown("---")
@@ -1682,47 +1699,136 @@ elif menu == "📈 Phase 5: Spatial & Statistical Analytics":
             },
             {
                 "Statistical Method": "Latent Class Analysis (LCA)",
-                "Input Variables (Survey/GIS)": "Co-occurring food insecurity, housing instability, distance barrier",
-                "Target Public Health Output": "Identifies multi-risk household clusters requiring integrated LGU social protection."
+                "Input Variables (Survey/GIS)": "Food security, Water access, Income, Insurance status",
+                "Target Public Health Output": "Identifies distinct household vulnerability profiles for targeted interventions."
+            },
+            {
+                "Statistical Method": "Spatial Autocorrelation (Moran's I)",
+                "Input Variables (Survey/GIS)": "Geocoded HH Coordinates × Diarrhea/Dengue Cases",
+                "Target Public Health Output": "Detects statistically significant geographic hotspots and spatial clusters."
             }
         ])
         st.table(stat_plan_df)
 
 # MODULE 7: PHASE 6 COMMUNITY DIAGNOSIS & ACTION PLAN
 elif menu == "📋 Phase 6: Community Diagnosis & Action Plan":
-    st.subheader("Phase 6: Community Diagnosis Prioritization & Action Planning Matrix")
+    st.subheader("Phase 6: Comprehensive Community Diagnosis & Comprehensive Action Plan")
 
-    with st.form("phase6_diag_form"):
-        diag_title = st.text_input("Community Health Diagnosis Title", "High Hypertension Risk Burden Compounded by Seasonal Flooding")
-        priority_puroks = st.multiselect("Priority Target Puroks", [f"Purok {i}" for i in range(1, 8)], default=["Purok 1", "Purok 3"])
-        target_obj = st.text_area("Target Strategic Objectives & Outcomes")
-        activities = st.text_area("Recommended Community Health Action Plans & BHS Interventions")
+    mode_p6 = st.radio("Select Operation", ["➕ Formulate New Diagnosis & Action Plan", "📂 Review Saved Action Plans"], horizontal=True)
 
-        if st.form_submit_button("Save Diagnosis & Action Plan"):
-            st.session_state.diag_records.append({
-                "Title": diag_title, "Puroks": priority_puroks, "Objectives": target_obj, "Activities": activities
-            })
-            save_session_to_disk()
-            st.success("Action Plan saved successfully!")
+    if mode_p6 == "➕ Formulate New Diagnosis & Action Plan":
+        with st.form("phase6_action_form"):
+            st.markdown("### 🎯 Problem Identification & Prioritization Matrix (Hanlon Method / BARS)")
+            c1, c2, c3 = st.columns(3)
+            diag_title = c1.text_input("Community Health Diagnosis / Priority Problem", "High Prevalence of Adult Hypertension & NCD Non-Compliance")
+            purok_target = c2.selectbox("Target Purok / Community", [f"Purok {i}" for i in range(1, 8)] + ["Whole Barangay"])
+            target_pop = c3.text_input("Target Population / Beneficiaries", "Adults aged 30+ with BP >= 140/90")
 
-# MODULE 8: DATA MANAGEMENT & EXPORT
+            st.markdown("---")
+            st.markdown("### 📋 Multi-Phase Action Plan Matrix")
+            
+            c1, c2 = st.columns(2)
+            obj_text = c1.text_area("1. Program Objectives (SMART)", "Reduce uncontrolled adult hypertension by 25% within 6 months through weekly BHW home monitoring and medication compliance checks.")
+            strategy_text = c2.text_area("2. Key Strategies & Interventions", "Deploy BHW hypertension tracking cards, establish monthly RHU physician outreach clinics, and initiate Barangay YAKAP enrolment.")
+
+            c1, c2, c3 = st.columns(3)
+            res_needed = c1.text_area("3. Resource Requirements & Budget", "₱15,000 for digital BP apparatuses, logbooks, and transportation allowance.")
+            lead_person = c2.text_input("4. Lead Person / Responsible Committee", "Committee on Health Chair & BHS Midwife")
+            timeline = c3.text_input("5. Timeline / Duration", "Months 1 - 6 (Quarter 1-2)")
+
+            m_e_plan = st.text_area("6. Monitoring & Evaluation (M&E) Indicators", "Number of adults screened weekly; % of hypertensive adults maintaining BP < 140/90 mmHg; PhilHealth YAKAP registration rate.")
+
+            if st.form_submit_button("Submit & Save Action Plan"):
+                st.session_state.diag_records.append({
+                    "Diagnosis": diag_title,
+                    "Purok": purok_target,
+                    "Target_Pop": target_pop,
+                    "Objectives": obj_text,
+                    "Strategies": strategy_text,
+                    "Resources": res_needed,
+                    "Lead": lead_person,
+                    "Timeline": timeline,
+                    "ME_Plan": m_e_plan
+                })
+                save_session_to_disk()
+                st.success("Action Plan successfully formulated and saved!")
+
+    else:
+        st.markdown("### 📂 Submitted Action Plans")
+        if len(st.session_state.diag_records) == 0:
+            st.info("No action plans recorded yet.")
+        else:
+            diag_options = [f"[{i+1}] {r.get('Diagnosis', 'N/A')} ({r.get('Purok', 'N/A')})" for i, r in enumerate(st.session_state.diag_records)]
+            selected_idx = st.selectbox("Select Action Plan", range(len(diag_options)), format_func=lambda x: diag_options[x])
+            plan = st.session_state.diag_records[selected_idx]
+
+            st.markdown(f"#### 🎯 {plan.get('Diagnosis')}")
+            st.write(f"**Target Area:** {plan.get('Purok')} | **Target Population:** {plan.get('Target_Pop')}")
+            st.write(f"**Objectives:** {plan.get('Objectives')}")
+            st.write(f"**Strategies:** {plan.get('Strategies')}")
+            st.write(f"**Resources & Budget:** {plan.get('Resources')}")
+            st.write(f"**Lead:** {plan.get('Lead')} | **Timeline:** {plan.get('Timeline')}")
+            st.write(f"**M&E Indicators:** {plan.get('ME_Plan')}")
+
+            if st.button("🗑️ Delete Selected Action Plan"):
+                st.session_state.diag_records.pop(selected_idx)
+                save_session_to_disk()
+                st.success("Action plan deleted!")
+                st.rerun()
+
+# MODULE 8: DATA MANAGEMENT & PERMANENT FILE EXPORT
 elif menu == "💾 Data Management & Export":
-    st.subheader("💾 Shared Master Data Management, Backup & JSON Export")
+    st.subheader("💾 Data Management, Permanent Storage & File Export")
+    st.caption("All survey records are saved continuously to persistent disk storage (`shared_survey_data.json`) and persist indefinitely until manually deleted.")
 
-    st.json({
-        "Total_HH_Records": len(st.session_state.hh_records),
-        "Total_Governance_Records": len(st.session_state.gov_records),
-        "Total_Qualitative_Records": len(st.session_state.qual_records),
-        "Total_PERI_Records": len(st.session_state.windshield_records),
-        "Total_Diagnosis_Records": len(st.session_state.diag_records),
-    })
+    st.markdown("---")
+    st.markdown("### 📂 Export Shared Field Survey Records")
 
-    full_data_str = json.dumps({
-        "hh_records": st.session_state.hh_records,
-        "gov_records": st.session_state.gov_records,
-        "qual_records": st.session_state.qual_records,
-        "windshield_records": st.session_state.windshield_records,
-        "diag_records": st.session_state.diag_records,
-    }, indent=4)
+    c1, c2, c3 = st.columns(3)
 
-    st.download_button("📥 Download All Compiled Survey Data (JSON)", data=full_data_str, file_name="shared_survey_data.json", mime="application/json")
+    # Export Household Data
+    with c1:
+        st.markdown("#### 🏠 Household Records")
+        st.write(f"Total Entries: **{len(st.session_state.hh_records)}**")
+        if len(st.session_state.hh_records) > 0:
+            hh_json = json.dumps(st.session_state.hh_records, indent=4)
+            st.download_button("📥 Download HH Data (JSON)", hh_json, file_name="household_survey_data.json", mime="application/json", use_container_width=True)
+            df_hh_exp = pd.DataFrame(st.session_state.hh_records)
+            st.download_button("📥 Download HH Data (CSV)", df_hh_exp.to_csv(index=False), file_name="household_survey_data.csv", mime="text/csv", use_container_width=True)
+
+    # Export PERI Windshield Data
+    with c2:
+        st.markdown("#### 🔍 PERI Windshield Data")
+        st.write(f"Total Entries: **{len(st.session_state.windshield_records)}**")
+        if len(st.session_state.windshield_records) > 0:
+            peri_json = json.dumps(st.session_state.windshield_records, indent=4)
+            st.download_button("📥 Download PERI Data (JSON)", peri_json, file_name="peri_windshield_data.json", mime="application/json", use_container_width=True)
+            df_peri_exp = pd.DataFrame(st.session_state.windshield_records)
+            st.download_button("📥 Download PERI Data (CSV)", df_peri_exp.to_csv(index=False), file_name="peri_windshield_data.csv", mime="text/csv", use_container_width=True)
+
+    # Export Governance & Action Plans
+    with c3:
+        st.markdown("#### 📋 Governance & Action Plans")
+        st.write(f"Governance Records: **{len(st.session_state.gov_records)}**")
+        st.write(f"Action Plans: **{len(st.session_state.diag_records)}**")
+        all_shared = load_shared_data()
+        full_json = json.dumps(all_shared, indent=4)
+        st.download_button("📥 Download Entire Database (JSON)", full_json, file_name="full_community_database.json", mime="application/json", use_container_width=True)
+
+    st.markdown("---")
+    st.markdown("### ⚠️ Data Maintenance & Reset Options")
+    st.warning("Data in `shared_survey_data.json` is stored permanently. The clear operation below will permanently delete disk records.")
+
+    if st.checkbox("Confirm database reset action"):
+        if st.button("🗑️ Permanently Clear Entire Disk Database", type="primary"):
+            empty_data = {
+                "hh_records": [],
+                "gov_records": [],
+                "qual_records": [],
+                "windshield_records": [],
+                "diag_records": [],
+            }
+            save_shared_data(empty_data)
+            sync_session_from_disk()
+            st.success("All survey records permanently cleared from disk storage!")
+            st.rerun()
