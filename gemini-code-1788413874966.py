@@ -15,37 +15,158 @@ st.set_page_config(
 )
 
 # ================= PERMANENT MULTI-ENUMERATOR DATA PERSISTENCE =================
-DATA_FILE = "shared_survey_data.json"
+# IMPORTANT:
+# Streamlit-hosted app files are NOT permanent storage. The old implementation
+# wrote shared_survey_data.json to the app's local filesystem, which can be
+# reset/rebuilt by the hosting platform. This version stores the complete
+# portal database in Supabase PostgreSQL (JSONB), which persists independently
+# of the Streamlit app instance.
+#
+# Required Streamlit secrets:
+#   SUPABASE_URL = "https://YOUR-PROJECT.supabase.co"
+#   SUPABASE_SERVICE_ROLE_KEY = "YOUR-SUPABASE-SERVICE-ROLE-KEY"
+#
+# Create the Supabase table once using the SQL supplied with this updated code.
+
+SUPABASE_URL = st.secrets.get("SUPABASE_URL", "").strip().rstrip("/")
+SUPABASE_SERVICE_ROLE_KEY = st.secrets.get(
+    "SUPABASE_SERVICE_ROLE_KEY", ""
+).strip()
+SUPABASE_STATE_ID = "up_manila_clerks_portal_main"
+
+DEFAULT_SHARED_DATA = {
+    "hh_records": [],
+    "gov_records": [],
+    "qual_records": [],
+    "windshield_records": [],
+    "diag_records": [],
+}
 
 
-def load_shared_data():
-    """Reads shared survey records from persistent disk storage."""
-    if os.path.exists(DATA_FILE):
-        try:
-            with open(DATA_FILE, "r", encoding="utf-8") as f:
-                return json.load(f)
-        except Exception:
-            pass
+def _supabase_headers():
+    """Headers used for server-side Supabase REST requests."""
     return {
-        "hh_records": [],
-        "gov_records": [],
-        "qual_records": [],
-        "windshield_records": [],
-        "diag_records": [],
+        "apikey": SUPABASE_SERVICE_ROLE_KEY,
+        "Authorization": f"Bearer {SUPABASE_SERVICE_ROLE_KEY}",
+        "Content-Type": "application/json",
+        "Accept": "application/json",
     }
 
 
-def save_shared_data(data):
-    """Saves survey records permanently to disk storage."""
+def _supabase_is_configured():
+    """Returns True only when the required Supabase secrets are available."""
+    return bool(SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY)
+
+
+def _supabase_state_url():
+    """REST endpoint for the single persistent portal-state row."""
+    return (
+        f"{SUPABASE_URL}/rest/v1/portal_state"
+        f"?id=eq.{SUPABASE_STATE_ID}&select=state"
+    )
+
+
+def load_shared_data():
+    """
+    Reads the complete shared portal database from Supabase PostgreSQL.
+
+    Supabase is the source of truth. No dependence is placed on the
+    Streamlit app's local filesystem, so app restarts/redeployments do not
+    erase the survey database.
+    """
+    if not _supabase_is_configured():
+        st.error(
+            "Permanent database storage is not configured. Add "
+            "SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY to Streamlit Secrets."
+        )
+        return DEFAULT_SHARED_DATA.copy()
+
     try:
-        with open(DATA_FILE, "w", encoding="utf-8") as f:
-            json.dump(data, f, indent=4)
+        import urllib.request
+
+        req = urllib.request.Request(
+            _supabase_state_url(),
+            headers=_supabase_headers(),
+            method="GET",
+        )
+
+        with urllib.request.urlopen(req, timeout=20) as response:
+            payload = json.loads(response.read().decode("utf-8"))
+
+        if payload and isinstance(payload, list):
+            state = payload[0].get("state")
+            if isinstance(state, dict):
+                # Preserve the expected five top-level record collections.
+                return {
+                    "hh_records": state.get("hh_records", []),
+                    "gov_records": state.get("gov_records", []),
+                    "qual_records": state.get("qual_records", []),
+                    "windshield_records": state.get("windshield_records", []),
+                    "diag_records": state.get("diag_records", []),
+                }
+
+        return DEFAULT_SHARED_DATA.copy()
+
     except Exception as e:
-        st.error(f"Error persisting shared data: {e}")
+        st.error(f"Could not read permanent Supabase storage: {e}")
+        return DEFAULT_SHARED_DATA.copy()
+
+
+def save_shared_data(data):
+    """
+    Writes the complete portal database to Supabase PostgreSQL.
+
+    The data is stored in a JSONB column so ALL existing fields in the
+    household, governance, qualitative, PERI, and action-plan records are
+    retained without changing the rest of the application.
+    """
+    if not _supabase_is_configured():
+        st.error(
+            "Permanent database storage is not configured. Add "
+            "SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY to Streamlit Secrets."
+        )
+        return False
+
+    try:
+        import urllib.request
+        from datetime import datetime, timezone
+
+        body = json.dumps(
+            {
+                "id": SUPABASE_STATE_ID,
+                "state": data,
+                "updated_at": datetime.now(timezone.utc).isoformat(),
+            },
+            ensure_ascii=False,
+        ).encode("utf-8")
+
+        headers = _supabase_headers()
+        headers["Prefer"] = "resolution=merge-duplicates,return=minimal"
+
+        req = urllib.request.Request(
+            f"{SUPABASE_URL}/rest/v1/portal_state",
+            data=body,
+            headers=headers,
+            method="POST",
+        )
+
+        with urllib.request.urlopen(req, timeout=20) as response:
+            response.read()
+
+        return True
+
+    except Exception as e:
+        st.error(f"Error persisting data to Supabase: {e}")
+        return False
 
 
 def sync_session_from_disk():
-    """Syncs local Streamlit session state with persistent disk storage."""
+    """
+    Syncs Streamlit session state from the permanent Supabase database.
+
+    Function name is intentionally retained so the rest of the application
+    does not need to be changed.
+    """
     shared = load_shared_data()
     st.session_state.hh_records = shared.get("hh_records", [])
     st.session_state.gov_records = shared.get("gov_records", [])
@@ -55,7 +176,13 @@ def sync_session_from_disk():
 
 
 def save_session_to_disk():
-    """Writes session state records permanently into disk storage."""
+    """
+    Writes Streamlit session records to permanent Supabase storage.
+
+    Function name is intentionally retained so every existing
+    save_session_to_disk() call throughout the 5,000+ line application
+    automatically uses the permanent database.
+    """
     shared = {
         "hh_records": st.session_state.get("hh_records", []),
         "gov_records": st.session_state.get("gov_records", []),
@@ -63,363 +190,14 @@ def save_session_to_disk():
         "windshield_records": st.session_state.get("windshield_records", []),
         "diag_records": st.session_state.get("diag_records", []),
     }
-    save_shared_data(shared)
+    return save_shared_data(shared)
 
 
-# Always sync latest data on rerun to guarantee permanent file storage
+# Always sync the latest permanent database state on rerun.
 sync_session_from_disk()
 
 if "authenticated" not in st.session_state:
     st.session_state["authenticated"] = False
-
-
-def show_login_screen():
-    st.markdown(
-        """
-        <style>
-        .login-box {
-            width: 4in !important;
-            max-width: 4in !important;
-            margin: 60px auto;
-            padding: 25px;
-            background-color: #FFFFFF;
-            border-radius: 12px;
-            border: 3px solid #7B1113;
-            box-shadow: 0 10px 25px rgba(123, 17, 19, 0.25);
-            text-align: center;
-        }
-        .login-title {
-            color: #7B1113;
-            font-weight: 800;
-            font-size: 22px;
-            margin-bottom: 4px;
-        }
-        .login-sub {
-            color: #D97706;
-            font-size: 13px;
-            margin-bottom: 20px;
-            font-weight: 700;
-        }
-        .login-box div[data-testid="stForm"] {
-            border: none !important;
-            padding: 0 !important;
-            box-shadow: none !important;
-        }
-        </style>
-    """,
-        unsafe_allow_html=True,
-    )
-
-    st.markdown('<div class="login-box">', unsafe_allow_html=True)
-    st.markdown(
-        '<div class="login-title">🩺 UP Manila Clerks Portal</div>',
-        unsafe_allow_html=True,
-    )
-    st.markdown(
-        '<div class="login-sub">Lead Developer: Jan Art A. Serna, RMT</div>',
-        unsafe_allow_html=True,
-    )
-
-    with st.form("login_form"):
-        username_input = st.text_input("Username")
-        password_input = st.text_input("Password", type="password")
-        submit_button = st.form_submit_button("Log In", use_container_width=True)
-
-        if submit_button:
-            if username_input == "palo" and password_input == "1719":
-                st.session_state["authenticated"] = True
-                st.success("Access Granted!")
-                st.rerun()
-            else:
-                st.error("Invalid Username or Password.")
-    st.markdown("</div>", unsafe_allow_html=True)
-
-
-if not st.session_state["authenticated"]:
-    show_login_screen()
-    st.stop()
-
-# ================= MAROON & YELLOW STYLING =================
-
-CSS_STYLE = """<style>
-:root {
-    --maroon-primary: #7B1113;
-    --maroon-dark: #4A0A0C;
-    --yellow-gold: #FFD700;
-    --yellow-accent: #FCD34D;
-    --text-dark: #0F172A;
-    --text-muted: #334155;
-    --bg-light: #FFFDF0;
-}
-
-body, .stApp {
-    background-color: var(--bg-light);
-    color: var(--text-dark);
-}
-
-.sticky-progress-container {
-    position: sticky;
-    top: 0;
-    z-index: 99999;
-    background-color: #FFFFFF;
-    padding: 14px 12px;
-    margin-bottom: 15px;
-    border: 1px solid #FDE68A;
-    border-top: 4px solid #7B1113;
-    border-radius: 8px;
-    box-shadow: 0 4px 6px -1px rgba(123, 17, 19, 0.1);
-}
-
-.up-navbar {
-    background: linear-gradient(135deg, #7B1113 0%, #4A0A0C 100%);
-    border-bottom: 5px solid #FFD700;
-    padding: 22px 24px;
-    border-radius: 10px;
-    text-align: center;
-    margin-bottom: 20px;
-    box-shadow: 0 10px 15px -3px rgba(123, 17, 19, 0.3);
-}
-.up-navbar-title {
-    color: #FFFFFF !important;
-    font-size: 26px !important;
-    font-weight: 800 !important;
-    margin: 0 !important;
-    line-height: 1.2;
-    letter-spacing: 0.5px;
-}
-.up-navbar-sub {
-    color: #FCD34D !important;
-    font-size: 14px !important;
-    font-weight: 600 !important;
-    margin: 4px 0 0 0 !important;
-}
-.up-navbar-detail {
-    color: #FFFFFF !important;
-    font-size: 13px !important;
-    margin-top: 4px !important;
-    font-weight: 500;
-}
-.up-navbar-lead {
-    color: #FFD700 !important;
-    font-size: 15px !important;
-    font-weight: 700 !important;
-    margin-top: 6px !important;
-}
-
-div[data-testid="stForm"] {
-    border: 2px solid #7B1113;
-    border-radius: 10px;
-    background-color: #FFFFFF;
-    padding: 24px;
-    box-shadow: 0 4px 6px -1px rgba(123, 17, 19, 0.08);
-}
-
-section[data-testid="stSidebar"] {
-    background-color: #FEF3C7;
-    border-right: 2px solid #FDE68A;
-}
-
-.adult-card {
-    background-color: #FFF5F5;
-    border: 1px solid #FECDD3;
-    border-left: 5px solid #7B1113;
-    padding: 14px 16px;
-    border-radius: 8px;
-    margin-bottom: 12px;
-    color: #0F172A;
-}
-
-.child-card {
-    background-color: #FEFCE8;
-    border: 1px solid #FEF08A;
-    border-left: 5px solid #CA8A04;
-    padding: 14px 16px;
-    border-radius: 8px;
-    margin-bottom: 12px;
-    color: #0F172A;
-}
-
-.peri-domain-header {
-    background: linear-gradient(90deg, #7B1113 0%, #9B1C1E 100%);
-    color: #FFD700 !important;
-    padding: 10px 16px;
-    border-radius: 8px;
-    font-weight: 700;
-    margin-top: 15px;
-    margin-bottom: 12px;
-    box-shadow: 0 2px 4px rgba(123, 17, 19, 0.15);
-}
-
-.dash-card {
-    background-color: #FFFFFF;
-    border: 1px solid #FDE68A;
-    border-top: 4px solid #7B1113;
-    border-radius: 10px;
-    padding: 16px;
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
-    margin-bottom: 15px;
-}
-
-.dash-metric-val {
-    font-size: 28px;
-    font-weight: 800;
-    color: #7B1113;
-}
-
-.dash-metric-lbl {
-    font-size: 12px;
-    font-weight: 700;
-    color: #B45309;
-    text-transform: uppercase;
-}
-
-.insight-alert-high {
-    background-color: #FEF2F2;
-    border-left: 5px solid #7B1113;
-    border: 1px solid #FCA5A5;
-    padding: 14px 16px;
-    border-radius: 6px;
-    margin-bottom: 12px;
-    color: #7F1D1D;
-}
-
-.insight-alert-warn {
-    background-color: #FFFBEB;
-    border-left: 5px solid #D97706;
-    border: 1px solid #FCD34D;
-    padding: 14px 16px;
-    border-radius: 6px;
-    margin-bottom: 12px;
-    color: #78350F;
-}
-
-.insight-alert-good {
-    background-color: #FEFCE8;
-    border-left: 5px solid #CA8A04;
-    border: 1px solid #FEF08A;
-    padding: 14px 16px;
-    border-radius: 6px;
-    margin-bottom: 12px;
-    color: #713F12;
-}
-
-.stButton>button {
-    background-color: #7B1113 !important;
-    color: #FFD700 !important;
-    font-weight: 700 !important;
-    border: 1px solid #FFD700 !important;
-    border-radius: 6px !important;
-}
-
-.stButton>button:hover {
-    background-color: #4A0A0C !important;
-    color: #FFFFFF !important;
-}
-
-label, .stMarkdown p {
-    color: #0F172A !important;
-    font-weight: 500;
-}
-</style>"""
-
-st.markdown(CSS_STYLE, unsafe_allow_html=True)
-
-col_header, col_logout = st.columns([8.5, 1.5])
-
-with col_header:
-    HEADER_HTML = """<div class="up-navbar">
-    <div class="up-navbar-title">UNIVERSITY OF THE PHILIPPINES MANILA</div>
-    <div class="up-navbar-sub">School of Health Sciences — Comprehensive Community Health Field Portal</div>
-    <div class="up-navbar-detail">Integrated System: Spatial Mapping, Geocoding, Analytics & Action Planning (Phases 1–6)</div>
-    <div class="up-navbar-lead">Lead Developer: Jan Art A. Serna, RMT</div>
-    </div>"""
-    st.markdown(HEADER_HTML, unsafe_allow_html=True)
-
-with col_logout:
-    st.write("")
-    st.write("")
-    if st.button("🚪 Log Out", use_container_width=True, type="secondary"):
-        st.session_state["authenticated"] = False
-        st.rerun()
-
-
-def compute_child_nutrition(age_months, weight_kg, height_cm):
-    if height_cm <= 0 or weight_kg <= 0:
-        return {
-            "BMI": "N/A",
-            "Wasting": "Invalid Input",
-            "Stunting": "Invalid Input",
-            "Underweight": "Invalid Input",
-        }
-
-    height_m = height_cm / 100.0
-    bmi = weight_kg / (height_m**2)
-
-    if bmi < 13.5:
-        wasting = "Severely Wasted / SAM"
-    elif bmi < 14.5:
-        wasting = "Wasted / MAM"
-    elif bmi > 18.0:
-        wasting = "Overweight / Obese Risk"
-    else:
-        wasting = "Normal Weight-for-Height"
-
-    exp_height = 50.0 + (age_months * 1.15)
-    if height_cm < (exp_height * 0.85):
-        stunting = "Severely Stunted"
-    elif height_cm < (exp_height * 0.92):
-        stunting = "Stunted"
-    else:
-        stunting = "Normal Height-for-Age"
-
-    exp_weight = 3.3 + (age_months * 0.5)
-    if weight_kg < (exp_weight * 0.70):
-        underweight = "Severely Underweight"
-    elif weight_kg < (exp_weight * 0.80):
-        underweight = "Underweight"
-    else:
-        underweight = "Normal Weight-for-Age"
-
-    return {
-        "BMI": f"{bmi:.1f} kg/m²",
-        "Wasting": wasting,
-        "Stunting": stunting,
-        "Underweight": underweight,
-    }
-
-
-def generate_research_table(
-    data_list, denominator, var_title, label_col="Response Category"
-):
-    """Generates a research-grade frequency and percentage distribution table."""
-    if not data_list or denominator == 0:
-        return pd.DataFrame(
-            columns=[
-                "Variable Category",
-                label_col,
-                "Frequency (n)",
-                "Percentage (%)",
-            ]
-        )
-
-    flat_items = []
-    for item in data_list:
-        if isinstance(item, list):
-            flat_items.extend([str(x) for x in item if str(x).strip() != ""])
-        elif item is not None and str(item).strip() != "":
-            flat_items.append(str(item))
-
-    counts = Counter(flat_items)
-    rows = []
-    for category, count in counts.most_common():
-        pct = (count / denominator) * 100.0
-        rows.append({
-            "Variable Category": var_title,
-            label_col: category,
-            "Frequency (n)": count,
-            "Percentage (%)": f"{pct:.2f}%",
-        })
-    return pd.DataFrame(rows)
 
 
 # Dynamic Progress Tracker
