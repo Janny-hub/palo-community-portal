@@ -1,0 +1,5 @@
+supabase
+streamlit
+pandas
+numpy
+pydeck
