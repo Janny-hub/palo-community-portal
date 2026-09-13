@@ -1,8 +1,7 @@
 import json
 import os
+import sqlite3
 import re
-import urllib.request
-import urllib.parse
 from collections import Counter
 import numpy as np
 import pandas as pd
@@ -17,179 +16,66 @@ st.set_page_config(
 )
 
 # ================= PERMANENT MULTI-ENUMERATOR DATA PERSISTENCE =================
-# IMPORTANT:
-# Streamlit Cloud/local app disks are not guaranteed to be permanent.
-# The survey database is therefore stored in Supabase PostgreSQL.
-# A local JSON fallback is retained only for migration/recovery.
-DATA_FILE = "shared_survey_data.json"
-SUPABASE_TABLE = "community_portal_data"
-
-_DEFAULT_SHARED_DATA = {
-    "hh_records": [],
-    "gov_records": [],
-    "qual_records": [],
-    "windshield_records": [],
-    "diag_records": [],
-}
+# SQLite permanent storage. This prevents submitted records from disappearing
+# when the hosting server restarts or temporary files are cleared.
+DB_FILE = "community_portal.db"
 
 
-def _get_supabase_config():
-    """Reads Supabase credentials from Streamlit Secrets."""
-    try:
-        url = st.secrets.get("SUPABASE_URL", "")
-        secret_key = (
-            st.secrets.get("SUPABASE_SECRET_KEY", "")
-            or st.secrets.get("SUPABASE_SERVICE_ROLE_KEY", "")
+def init_database():
+    conn = sqlite3.connect(DB_FILE)
+    cursor = conn.cursor()
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS portal_storage (
+            id INTEGER PRIMARY KEY,
+            data_json TEXT NOT NULL
         )
-    except Exception:
-        url = ""
-        secret_key = ""
-
-    return str(url).rstrip("/"), str(secret_key)
-
-
-def _supabase_request(method, endpoint, payload=None, query=None):
-    """Makes a server-side request to Supabase REST API."""
-    url, secret_key = _get_supabase_config()
-
-    if not url or not secret_key:
-        raise RuntimeError(
-            "Supabase is not configured. Add SUPABASE_URL and "
-            "SUPABASE_SECRET_KEY to Streamlit Secrets."
-        )
-
-    request_url = f"{url}/rest/v1/{SUPABASE_TABLE}"
-    if query:
-        request_url += "?" + urllib.parse.urlencode(query)
-
-    headers = {
-        "apikey": secret_key,
-        "Authorization": f"Bearer {secret_key}",
-        "Content-Type": "application/json",
-        "Accept": "application/json",
-    }
-
-    if method.upper() in {"POST", "PATCH", "PUT"}:
-        headers["Prefer"] = "resolution=merge-duplicates,return=minimal"
-
-    request = urllib.request.Request(
-        request_url,
-        data=(
-            json.dumps(payload).encode("utf-8")
-            if payload is not None
-            else None
-        ),
-        headers=headers,
-        method=method.upper(),
-    )
-
-    with urllib.request.urlopen(request, timeout=20) as response:
-        raw = response.read().decode("utf-8")
-        return json.loads(raw) if raw else None
-
-
-def _load_local_backup():
-    """Loads the old local JSON database when available."""
-    if os.path.exists(DATA_FILE):
-        try:
-            with open(DATA_FILE, "r", encoding="utf-8") as f:
-                data = json.load(f)
-                if isinstance(data, dict):
-                    return {
-                        key: data.get(key, [])
-                        for key in _DEFAULT_SHARED_DATA
-                    }
-        except Exception:
-            pass
-
-    return dict(_DEFAULT_SHARED_DATA)
-
-
-def _write_local_backup(data):
-    """Writes a local emergency copy without making it the primary database."""
-    try:
-        with open(DATA_FILE, "w", encoding="utf-8") as f:
-            json.dump(data, f, indent=4)
-    except Exception:
-        pass
+    """)
+    conn.commit()
+    conn.close()
 
 
 def load_shared_data():
-    """Reads the shared survey records permanently from Supabase."""
+    """Reads survey records from permanent SQLite storage."""
     try:
-        rows = _supabase_request(
-            "GET",
-            None,
-            query={"id": "eq.1", "select": "data"},
-        )
+        conn = sqlite3.connect(DB_FILE)
+        cursor = conn.cursor()
+        cursor.execute("SELECT data_json FROM portal_storage WHERE id = 1")
+        row = cursor.fetchone()
+        conn.close()
 
-        if rows:
-            data = rows[0].get("data", {})
-            if isinstance(data, dict):
-                normalized = {
-                    key: data.get(key, [])
-                    for key in _DEFAULT_SHARED_DATA
-                }
-                _write_local_backup(normalized)
-                return normalized
+        if row:
+            return json.loads(row[0])
 
-        # First deployment / empty Supabase table:
-        # migrate the existing JSON database once.
-        local_data = _load_local_backup()
-        if any(local_data.get(key) for key in _DEFAULT_SHARED_DATA):
-            save_shared_data(local_data)
-            return local_data
+    except Exception:
+        pass
 
-        return dict(_DEFAULT_SHARED_DATA)
-
-    except Exception as e:
-        # If Supabase is temporarily unreachable, retain the old local
-        # database behavior instead of destroying or hiding existing data.
-        local_data = _load_local_backup()
-        if not _get_supabase_config()[0]:
-            st.warning(
-                "Permanent Supabase storage is not configured yet. "
-                "The app is currently using the local fallback database. "
-                "Add SUPABASE_URL and SUPABASE_SECRET_KEY to Streamlit Secrets."
-            )
-        else:
-            st.warning(
-                f"Supabase could not be reached; using the local fallback "
-                f"database for this session. Error: {e}"
-            )
-        return local_data
+    return {
+        "hh_records": [],
+        "gov_records": [],
+        "qual_records": [],
+        "windshield_records": [],
+        "diag_records": [],
+    }
 
 
 def save_shared_data(data):
-    """Saves survey records permanently to Supabase PostgreSQL."""
-    normalized = {
-        key: data.get(key, [])
-        for key in _DEFAULT_SHARED_DATA
-    }
-
+    """Saves survey records permanently into SQLite database."""
     try:
-        _supabase_request(
-            "POST",
-            None,
-            payload={
-                "id": 1,
-                "data": normalized,
-                "updated_at": pd.Timestamp.utcnow().isoformat(),
-            },
-        )
-        # Keep a local emergency copy too.
-        _write_local_backup(normalized)
+        conn = sqlite3.connect(DB_FILE)
+        cursor = conn.cursor()
+        cursor.execute("""
+            INSERT INTO portal_storage (id, data_json)
+            VALUES (1, ?)
+            ON CONFLICT(id) DO UPDATE SET data_json = excluded.data_json
+        """, (json.dumps(data),))
+        conn.commit()
+        conn.close()
     except Exception as e:
-        # Do not silently lose the user's submission if Supabase is down.
-        _write_local_backup(normalized)
-        st.error(
-            f"Error persisting shared data to Supabase: {e}. "
-            "A local fallback copy was retained."
-        )
+        st.error(f"Error persisting shared data: {e}")
 
 
 def sync_session_from_disk():
-    """Syncs local Streamlit session state with the permanent shared database."""
+    """Syncs local Streamlit session state with permanent database storage."""
     shared = load_shared_data()
     st.session_state.hh_records = shared.get("hh_records", [])
     st.session_state.gov_records = shared.get("gov_records", [])
@@ -199,7 +85,7 @@ def sync_session_from_disk():
 
 
 def save_session_to_disk():
-    """Writes session state records permanently into the shared database."""
+    """Writes session state records permanently into database storage."""
     shared = {
         "hh_records": st.session_state.get("hh_records", []),
         "gov_records": st.session_state.get("gov_records", []),
@@ -210,9 +96,10 @@ def save_session_to_disk():
     save_shared_data(shared)
 
 
-# Always sync latest data on rerun to guarantee permanent shared storage
-sync_session_from_disk()
+init_database()
 
+# Always sync latest data on rerun to guarantee permanent file storage
+sync_session_from_disk()
 
 if "authenticated" not in st.session_state:
     st.session_state["authenticated"] = False
