@@ -1,12 +1,12 @@
 import json
 import os
-import sqlite3
 import re
 from collections import Counter
 import numpy as np
 import pandas as pd
 import pydeck as pdk
 import streamlit as st
+from supabase import create_client, Client
 
 # Page Configuration (Must be first Streamlit command)
 st.set_page_config(
@@ -16,66 +16,60 @@ st.set_page_config(
 )
 
 # ================= PERMANENT MULTI-ENUMERATOR DATA PERSISTENCE =================
-# SQLite permanent storage. This prevents submitted records from disappearing
-# when the hosting server restarts or temporary files are cleared.
-DB_FILE = "community_portal.db"
+# Supabase cloud database storage. Data remains available even when the app server restarts.
 
+try:
+    SUPABASE_URL = st.secrets["SUPABASE_URL"]
+    SUPABASE_KEY = st.secrets["SUPABASE_KEY"]
+except Exception:
+    SUPABASE_URL = os.getenv("SUPABASE_URL", "")
+    SUPABASE_KEY = os.getenv("SUPABASE_KEY", "")
 
-def init_database():
-    conn = sqlite3.connect(DB_FILE)
-    cursor = conn.cursor()
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS portal_storage (
-            id INTEGER PRIMARY KEY,
-            data_json TEXT NOT NULL
-        )
-    """)
-    conn.commit()
-    conn.close()
+supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY) if SUPABASE_URL and SUPABASE_KEY else None
+
+DEFAULT_DATA = {
+    "hh_records": [],
+    "gov_records": [],
+    "qual_records": [],
+    "windshield_records": [],
+    "diag_records": [],
+}
 
 
 def load_shared_data():
-    """Reads survey records from permanent SQLite storage."""
+    """Reads survey records from Supabase permanent cloud storage."""
     try:
-        conn = sqlite3.connect(DB_FILE)
-        cursor = conn.cursor()
-        cursor.execute("SELECT data_json FROM portal_storage WHERE id = 1")
-        row = cursor.fetchone()
-        conn.close()
-
-        if row:
-            return json.loads(row[0])
-
+        if supabase:
+            response = (
+                supabase.table("portal_storage")
+                .select("data_json")
+                .eq("id", 1)
+                .execute()
+            )
+            if response.data:
+                return json.loads(response.data[0]["data_json"])
     except Exception:
         pass
 
-    return {
-        "hh_records": [],
-        "gov_records": [],
-        "qual_records": [],
-        "windshield_records": [],
-        "diag_records": [],
-    }
+    return DEFAULT_DATA.copy()
 
 
 def save_shared_data(data):
-    """Saves survey records permanently into SQLite database."""
+    """Saves survey records permanently into Supabase."""
     try:
-        conn = sqlite3.connect(DB_FILE)
-        cursor = conn.cursor()
-        cursor.execute("""
-            INSERT INTO portal_storage (id, data_json)
-            VALUES (1, ?)
-            ON CONFLICT(id) DO UPDATE SET data_json = excluded.data_json
-        """, (json.dumps(data),))
-        conn.commit()
-        conn.close()
+        if supabase:
+            supabase.table("portal_storage").upsert({
+                "id": 1,
+                "data_json": json.dumps(data)
+            }).execute()
+        else:
+            st.error("Supabase connection missing. Add SUPABASE_URL and SUPABASE_KEY.")
     except Exception as e:
         st.error(f"Error persisting shared data: {e}")
 
 
 def sync_session_from_disk():
-    """Syncs local Streamlit session state with permanent database storage."""
+    """Syncs Streamlit session state with Supabase storage."""
     shared = load_shared_data()
     st.session_state.hh_records = shared.get("hh_records", [])
     st.session_state.gov_records = shared.get("gov_records", [])
@@ -85,7 +79,7 @@ def sync_session_from_disk():
 
 
 def save_session_to_disk():
-    """Writes session state records permanently into database storage."""
+    """Writes session state records permanently into Supabase."""
     shared = {
         "hh_records": st.session_state.get("hh_records", []),
         "gov_records": st.session_state.get("gov_records", []),
@@ -95,8 +89,6 @@ def save_session_to_disk():
     }
     save_shared_data(shared)
 
-
-init_database()
 
 # Always sync latest data on rerun to guarantee permanent file storage
 sync_session_from_disk()
