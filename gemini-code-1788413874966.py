@@ -14,273 +14,38 @@ st.set_page_config(
     layout="wide",
 )
 
-# ================= MAROON & YELLOW THEME (FILE 20 HEADER & STYLING) =================
-st.markdown(
-    """
-    <style>
-    /* Main Background & Accent Styling */
-    .stApp {
-        background-color: #FAFAFA;
-    }
-    
-    /* Maroon & Yellow Header Banner */
-    .main-header-banner {
-        background-color: #7B1113;
-        border-bottom: 5px solid #F1C40F;
-        border-radius: 8px;
-        padding: 24px;
-        color: #FFFFFF;
-        text-align: center;
-        margin-bottom: 25px;
-        box-shadow: 0 4px 10px rgba(0,0,0,0.15);
-    }
-    .main-header-banner h1 {
-        color: #F1C40F !important;
-        font-weight: 800 !important;
-        margin: 0 0 8px 0 !important;
-        font-size: 2.2rem !important;
-        letter-spacing: 0.5px;
-    }
-    .main-header-banner p {
-        color: #FFFFFF !important;
-        font-size: 1.05rem !important;
-        margin: 0 !important;
-        font-weight: 400;
-    }
-
-    /* Sidebar Custom Styling */
-    section[data-testid="stSidebar"] {
-        background-color: #7B1113 !important;
-    }
-    section[data-testid="stSidebar"] * {
-        color: #FFFFFF !important;
-    }
-    section[data-testid="stSidebar"] .stRadio label span {
-        color: #FFFFFF !important;
-    }
-    
-    /* Progress Container & Metrics */
-    .sticky-progress-container {
-        background-color: #FFFFFF;
-        padding: 12px;
-        border-radius: 8px;
-        border-left: 5px solid #F1C40F;
-        margin-bottom: 12px;
-    }
-    
-    /* Alerts & Cards Styling */
-    .insight-alert-high {
-        background-color: #FDF2F2;
-        border-left: 5px solid #7B1113;
-        padding: 12px 16px;
-        border-radius: 6px;
-        margin-bottom: 10px;
-        color: #7B1113;
-    }
-    .insight-alert-warn {
-        background-color: #FEFCE8;
-        border-left: 5px solid #F1C40F;
-        padding: 12px 16px;
-        border-radius: 6px;
-        margin-bottom: 10px;
-        color: #854D0E;
-    }
-    .insight-alert-good {
-        background-color: #F0FDF4;
-        border-left: 5px solid #16A34A;
-        padding: 12px 16px;
-        border-radius: 6px;
-        margin-bottom: 10px;
-        color: #166534;
-    }
-    .adult-card {
-        background-color: #F8FAFC;
-        border-left: 4px solid #7B1113;
-        padding: 10px 14px;
-        margin-top: 10px;
-        margin-bottom: 10px;
-        border-radius: 4px;
-    }
-    .child-card {
-        background-color: #FEFCE8;
-        border-left: 4px solid #F1C40F;
-        padding: 10px 14px;
-        margin-top: 10px;
-        margin-bottom: 10px;
-        border-radius: 4px;
-    }
-    </style>
-""",
-    unsafe_allow_html=True,
-)
-
-# Header Display
-st.markdown(
-    """
-<div class="main-header-banner">
-    <h1>🩺 UP MANILA - COMMUNITY CLERKS PORTAL</h1>
-    <p>Comprehensive Multi-Phase Health Assessment, Governance Scorecard & Epidemiological Decision Support System</p>
-</div>
-""",
-    unsafe_allow_html=True,
-)
-
-# Helper Functions
-def compute_child_nutrition(age_months, weight_kg, height_cm):
-    """Computes basic child anthropometric indices."""
-    if height_cm > 0:
-        bmi = weight_kg / ((height_cm / 100) ** 2)
-    else:
-        bmi = 0.0
-    wasting = "Normal" if bmi >= 13.5 else "Wasted / Malnourished"
-    stunting = "Normal" if height_cm >= 65.0 else "Stunted"
-    underweight = "Normal" if weight_kg >= 7.5 else "Underweight"
-    return {
-        "BMI": round(bmi, 1),
-        "Wasting": wasting,
-        "Stunting": stunting,
-        "Underweight": underweight,
-    }
-
-
-def generate_research_table(data_list, total_n, label):
-    """Generates a research frequency and percentage breakdown dataframe."""
-    counts = Counter([d for d in data_list if d is not None])
-    rows = []
-    for val, cnt in counts.items():
-        pct = (cnt / total_n * 100) if total_n > 0 else 0.0
-        rows.append({
-            "Domain / Variable": label,
-            "Category / Response": str(val),
-            "Frequency (n)": cnt,
-            "Percentage (%)": f"{pct:.1f}%",
-        })
-    if not rows:
-        rows.append({
-            "Domain / Variable": label,
-            "Category / Response": "No Data Recorded",
-            "Frequency (n)": 0,
-            "Percentage (%)": "0.0%",
-        })
-    return pd.DataFrame(rows)
-
-
 # ================= PERMANENT MULTI-ENUMERATOR DATA PERSISTENCE =================
-SUPABASE_URL = st.secrets.get("SUPABASE_URL", "").strip().rstrip("/")
-SUPABASE_SERVICE_ROLE_KEY = st.secrets.get(
-    "SUPABASE_SERVICE_ROLE_KEY", ""
-).strip()
-SUPABASE_STATE_ID = "up_manila_clerks_portal_main"
-
-DEFAULT_SHARED_DATA = {
-    "hh_records": [],
-    "gov_records": [],
-    "qual_records": [],
-    "windshield_records": [],
-    "diag_records": [],
-}
-
-
-def _supabase_headers():
-    return {
-        "apikey": SUPABASE_SERVICE_ROLE_KEY,
-        "Authorization": f"Bearer {SUPABASE_SERVICE_ROLE_KEY}",
-        "Content-Type": "application/json",
-        "Accept": "application/json",
-    }
-
-
-def _supabase_is_configured():
-    return bool(SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY)
-
-
-def _supabase_state_url():
-    return (
-        f"{SUPABASE_URL}/rest/v1/portal_state"
-        f"?id=eq.{SUPABASE_STATE_ID}&select=state"
-    )
+DATA_FILE = "shared_survey_data.json"
 
 
 def load_shared_data():
-    if not _supabase_is_configured():
-        st.error(
-            "Permanent database storage is not configured. Add "
-            "SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY to Streamlit Secrets."
-        )
-        return DEFAULT_SHARED_DATA.copy()
-
-    try:
-        import urllib.request
-
-        req = urllib.request.Request(
-            _supabase_state_url(),
-            headers=_supabase_headers(),
-            method="GET",
-        )
-
-        with urllib.request.urlopen(req, timeout=20) as response:
-            payload = json.loads(response.read().decode("utf-8"))
-
-        if payload and isinstance(payload, list):
-            state = payload[0].get("state")
-            if isinstance(state, dict):
-                return {
-                    "hh_records": state.get("hh_records", []),
-                    "gov_records": state.get("gov_records", []),
-                    "qual_records": state.get("qual_records", []),
-                    "windshield_records": state.get("windshield_records", []),
-                    "diag_records": state.get("diag_records", []),
-                }
-
-        return DEFAULT_SHARED_DATA.copy()
-
-    except Exception as e:
-        st.error(f"Could not read permanent Supabase storage: {e}")
-        return DEFAULT_SHARED_DATA.copy()
+    """Reads shared survey records from persistent disk storage."""
+    if os.path.exists(DATA_FILE):
+        try:
+            with open(DATA_FILE, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except Exception:
+            pass
+    return {
+        "hh_records": [],
+        "gov_records": [],
+        "qual_records": [],
+        "windshield_records": [],
+        "diag_records": [],
+    }
 
 
 def save_shared_data(data):
-    if not _supabase_is_configured():
-        st.error(
-            "Permanent database storage is not configured. Add "
-            "SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY to Streamlit Secrets."
-        )
-        return False
-
+    """Saves survey records permanently to disk storage."""
     try:
-        import urllib.request
-        from datetime import datetime, timezone
-
-        body = json.dumps(
-            {
-                "id": SUPABASE_STATE_ID,
-                "state": data,
-                "updated_at": datetime.now(timezone.utc).isoformat(),
-            },
-            ensure_ascii=False,
-        ).encode("utf-8")
-
-        headers = _supabase_headers()
-        headers["Prefer"] = "resolution=merge-duplicates,return=minimal"
-
-        req = urllib.request.Request(
-            f"{SUPABASE_URL}/rest/v1/portal_state",
-            data=body,
-            headers=headers,
-            method="POST",
-        )
-
-        with urllib.request.urlopen(req, timeout=20) as response:
-            response.read()
-
-        return True
-
+        with open(DATA_FILE, "w", encoding="utf-8") as f:
+            json.dump(data, f, indent=4)
     except Exception as e:
-        st.error(f"Error persisting data to Supabase: {e}")
-        return False
+        st.error(f"Error persisting shared data: {e}")
 
 
 def sync_session_from_disk():
+    """Syncs local Streamlit session state with persistent disk storage."""
     shared = load_shared_data()
     st.session_state.hh_records = shared.get("hh_records", [])
     st.session_state.gov_records = shared.get("gov_records", [])
@@ -290,6 +55,7 @@ def sync_session_from_disk():
 
 
 def save_session_to_disk():
+    """Writes session state records permanently into disk storage."""
     shared = {
         "hh_records": st.session_state.get("hh_records", []),
         "gov_records": st.session_state.get("gov_records", []),
@@ -297,14 +63,364 @@ def save_session_to_disk():
         "windshield_records": st.session_state.get("windshield_records", []),
         "diag_records": st.session_state.get("diag_records", []),
     }
-    return save_shared_data(shared)
+    save_shared_data(shared)
 
 
-# Always sync the latest permanent database state on rerun.
+# Always sync latest data on rerun to guarantee permanent file storage
 sync_session_from_disk()
 
 if "authenticated" not in st.session_state:
     st.session_state["authenticated"] = False
+
+
+def show_login_screen():
+    st.markdown(
+        """
+        <style>
+        .login-box {
+            width: 4in !important;
+            max-width: 4in !important;
+            margin: 60px auto;
+            padding: 25px;
+            background-color: #FFFFFF;
+            border-radius: 12px;
+            border: 3px solid #7B1113;
+            box-shadow: 0 10px 25px rgba(123, 17, 19, 0.25);
+            text-align: center;
+        }
+        .login-title {
+            color: #7B1113;
+            font-weight: 800;
+            font-size: 22px;
+            margin-bottom: 4px;
+        }
+        .login-sub {
+            color: #D97706;
+            font-size: 13px;
+            margin-bottom: 20px;
+            font-weight: 700;
+        }
+        .login-box div[data-testid="stForm"] {
+            border: none !important;
+            padding: 0 !important;
+            box-shadow: none !important;
+        }
+        </style>
+    """,
+        unsafe_allow_html=True,
+    )
+
+    st.markdown('<div class="login-box">', unsafe_allow_html=True)
+    st.markdown(
+        '<div class="login-title">🩺 UP Manila Clerks Portal</div>',
+        unsafe_allow_html=True,
+    )
+    st.markdown(
+        '<div class="login-sub">Lead Developer: Jan Art A. Serna, RMT</div>',
+        unsafe_allow_html=True,
+    )
+
+    with st.form("login_form"):
+        username_input = st.text_input("Username")
+        password_input = st.text_input("Password", type="password")
+        submit_button = st.form_submit_button("Log In", use_container_width=True)
+
+        if submit_button:
+            if username_input == "palo" and password_input == "1719":
+                st.session_state["authenticated"] = True
+                st.success("Access Granted!")
+                st.rerun()
+            else:
+                st.error("Invalid Username or Password.")
+    st.markdown("</div>", unsafe_allow_html=True)
+
+
+if not st.session_state["authenticated"]:
+    show_login_screen()
+    st.stop()
+
+# ================= MAROON & YELLOW STYLING =================
+
+CSS_STYLE = """<style>
+:root {
+    --maroon-primary: #7B1113;
+    --maroon-dark: #4A0A0C;
+    --yellow-gold: #FFD700;
+    --yellow-accent: #FCD34D;
+    --text-dark: #0F172A;
+    --text-muted: #334155;
+    --bg-light: #FFFDF0;
+}
+
+body, .stApp {
+    background-color: var(--bg-light);
+    color: var(--text-dark);
+}
+
+.sticky-progress-container {
+    position: sticky;
+    top: 0;
+    z-index: 99999;
+    background-color: #FFFFFF;
+    padding: 14px 12px;
+    margin-bottom: 15px;
+    border: 1px solid #FDE68A;
+    border-top: 4px solid #7B1113;
+    border-radius: 8px;
+    box-shadow: 0 4px 6px -1px rgba(123, 17, 19, 0.1);
+}
+
+.up-navbar {
+    background: linear-gradient(135deg, #7B1113 0%, #4A0A0C 100%);
+    border-bottom: 5px solid #FFD700;
+    padding: 22px 24px;
+    border-radius: 10px;
+    text-align: center;
+    margin-bottom: 20px;
+    box-shadow: 0 10px 15px -3px rgba(123, 17, 19, 0.3);
+}
+.up-navbar-title {
+    color: #FFFFFF !important;
+    font-size: 26px !important;
+    font-weight: 800 !important;
+    margin: 0 !important;
+    line-height: 1.2;
+    letter-spacing: 0.5px;
+}
+.up-navbar-sub {
+    color: #FCD34D !important;
+    font-size: 14px !important;
+    font-weight: 600 !important;
+    margin: 4px 0 0 0 !important;
+}
+.up-navbar-detail {
+    color: #FFFFFF !important;
+    font-size: 13px !important;
+    margin-top: 4px !important;
+    font-weight: 500;
+}
+.up-navbar-lead {
+    color: #FFD700 !important;
+    font-size: 15px !important;
+    font-weight: 700 !important;
+    margin-top: 6px !important;
+}
+
+div[data-testid="stForm"] {
+    border: 2px solid #7B1113;
+    border-radius: 10px;
+    background-color: #FFFFFF;
+    padding: 24px;
+    box-shadow: 0 4px 6px -1px rgba(123, 17, 19, 0.08);
+}
+
+section[data-testid="stSidebar"] {
+    background-color: #FEF3C7;
+    border-right: 2px solid #FDE68A;
+}
+
+.adult-card {
+    background-color: #FFF5F5;
+    border: 1px solid #FECDD3;
+    border-left: 5px solid #7B1113;
+    padding: 14px 16px;
+    border-radius: 8px;
+    margin-bottom: 12px;
+    color: #0F172A;
+}
+
+.child-card {
+    background-color: #FEFCE8;
+    border: 1px solid #FEF08A;
+    border-left: 5px solid #CA8A04;
+    padding: 14px 16px;
+    border-radius: 8px;
+    margin-bottom: 12px;
+    color: #0F172A;
+}
+
+.peri-domain-header {
+    background: linear-gradient(90deg, #7B1113 0%, #9B1C1E 100%);
+    color: #FFD700 !important;
+    padding: 10px 16px;
+    border-radius: 8px;
+    font-weight: 700;
+    margin-top: 15px;
+    margin-bottom: 12px;
+    box-shadow: 0 2px 4px rgba(123, 17, 19, 0.15);
+}
+
+.dash-card {
+    background-color: #FFFFFF;
+    border: 1px solid #FDE68A;
+    border-top: 4px solid #7B1113;
+    border-radius: 10px;
+    padding: 16px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+    margin-bottom: 15px;
+}
+
+.dash-metric-val {
+    font-size: 28px;
+    font-weight: 800;
+    color: #7B1113;
+}
+
+.dash-metric-lbl {
+    font-size: 12px;
+    font-weight: 700;
+    color: #B45309;
+    text-transform: uppercase;
+}
+
+.insight-alert-high {
+    background-color: #FEF2F2;
+    border-left: 5px solid #7B1113;
+    border: 1px solid #FCA5A5;
+    padding: 14px 16px;
+    border-radius: 6px;
+    margin-bottom: 12px;
+    color: #7F1D1D;
+}
+
+.insight-alert-warn {
+    background-color: #FFFBEB;
+    border-left: 5px solid #D97706;
+    border: 1px solid #FCD34D;
+    padding: 14px 16px;
+    border-radius: 6px;
+    margin-bottom: 12px;
+    color: #78350F;
+}
+
+.insight-alert-good {
+    background-color: #FEFCE8;
+    border-left: 5px solid #CA8A04;
+    border: 1px solid #FEF08A;
+    padding: 14px 16px;
+    border-radius: 6px;
+    margin-bottom: 12px;
+    color: #713F12;
+}
+
+.stButton>button {
+    background-color: #7B1113 !important;
+    color: #FFD700 !important;
+    font-weight: 700 !important;
+    border: 1px solid #FFD700 !important;
+    border-radius: 6px !important;
+}
+
+.stButton>button:hover {
+    background-color: #4A0A0C !important;
+    color: #FFFFFF !important;
+}
+
+label, .stMarkdown p {
+    color: #0F172A !important;
+    font-weight: 500;
+}
+</style>"""
+
+st.markdown(CSS_STYLE, unsafe_allow_html=True)
+
+col_header, col_logout = st.columns([8.5, 1.5])
+
+with col_header:
+    HEADER_HTML = """<div class="up-navbar">
+    <div class="up-navbar-title">UNIVERSITY OF THE PHILIPPINES MANILA</div>
+    <div class="up-navbar-sub">School of Health Sciences — Comprehensive Community Health Field Portal</div>
+    <div class="up-navbar-detail">Integrated System: Spatial Mapping, Geocoding, Analytics & Action Planning (Phases 1–6)</div>
+    <div class="up-navbar-lead">Lead Developer: Jan Art A. Serna, RMT</div>
+    </div>"""
+    st.markdown(HEADER_HTML, unsafe_allow_html=True)
+
+with col_logout:
+    st.write("")
+    st.write("")
+    if st.button("🚪 Log Out", use_container_width=True, type="secondary"):
+        st.session_state["authenticated"] = False
+        st.rerun()
+
+
+def compute_child_nutrition(age_months, weight_kg, height_cm):
+    if height_cm <= 0 or weight_kg <= 0:
+        return {
+            "BMI": "N/A",
+            "Wasting": "Invalid Input",
+            "Stunting": "Invalid Input",
+            "Underweight": "Invalid Input",
+        }
+
+    height_m = height_cm / 100.0
+    bmi = weight_kg / (height_m**2)
+
+    if bmi < 13.5:
+        wasting = "Severely Wasted / SAM"
+    elif bmi < 14.5:
+        wasting = "Wasted / MAM"
+    elif bmi > 18.0:
+        wasting = "Overweight / Obese Risk"
+    else:
+        wasting = "Normal Weight-for-Height"
+
+    exp_height = 50.0 + (age_months * 1.15)
+    if height_cm < (exp_height * 0.85):
+        stunting = "Severely Stunted"
+    elif height_cm < (exp_height * 0.92):
+        stunting = "Stunted"
+    else:
+        stunting = "Normal Height-for-Age"
+
+    exp_weight = 3.3 + (age_months * 0.5)
+    if weight_kg < (exp_weight * 0.70):
+        underweight = "Severely Underweight"
+    elif weight_kg < (exp_weight * 0.80):
+        underweight = "Underweight"
+    else:
+        underweight = "Normal Weight-for-Age"
+
+    return {
+        "BMI": f"{bmi:.1f} kg/m²",
+        "Wasting": wasting,
+        "Stunting": stunting,
+        "Underweight": underweight,
+    }
+
+
+def generate_research_table(
+    data_list, denominator, var_title, label_col="Response Category"
+):
+    """Generates a research-grade frequency and percentage distribution table."""
+    if not data_list or denominator == 0:
+        return pd.DataFrame(
+            columns=[
+                "Variable Category",
+                label_col,
+                "Frequency (n)",
+                "Percentage (%)",
+            ]
+        )
+
+    flat_items = []
+    for item in data_list:
+        if isinstance(item, list):
+            flat_items.extend([str(x) for x in item if str(x).strip() != ""])
+        elif item is not None and str(item).strip() != "":
+            flat_items.append(str(item))
+
+    counts = Counter(flat_items)
+    rows = []
+    for category, count in counts.most_common():
+        pct = (count / denominator) * 100.0
+        rows.append({
+            "Variable Category": var_title,
+            label_col: category,
+            "Frequency (n)": count,
+            "Percentage (%)": f"{pct:.2f}%",
+        })
+    return pd.DataFrame(rows)
+
 
 # Dynamic Progress Tracker
 p1_status = len(st.session_state.gov_records) > 0
@@ -1252,6 +1368,7 @@ elif menu == "🏠 Phase 2: Master Household Survey":
         num_adults = st.session_state.adult_count
         num_children = st.session_state.child_count
 
+        # Enumerator selection outside form to calculate dynamic prefix
         c_e1, c_e2 = st.columns(2)
         enum_select = c_e1.selectbox(
             "👤 Enumerator Identifier",
@@ -2254,6 +2371,7 @@ elif menu == "🏠 Phase 2: Master Household Survey":
                 tot_adults = len(all_adults)
                 tot_kids = len(all_children)
 
+                # Research Table Construction for All Master Survey Questions
                 tables_data = []
 
                 # Module 1: Survey Metadata & Demographics
@@ -3130,27 +3248,46 @@ elif menu == "🗣️ Phase 3: Qualitative Field Tools":
                 "**3. Provider-Patient Interaction & Quality Perception**"
             )
             st.info(
-                "How do community members feel they are treated by BHS and RHU"
-                " healthcare staff (e.g., respect, confidentiality, responsiveness)?"
+                "How do you feel treated when visiting public health facilities"
+                " (BHS vs RHU)? Do you feel respected, listened to, and fully"
+                " informed about your treatment plan?"
             )
             st.caption(
-                "• Have you or anyone in your group experienced stigma, long waits,"
-                " or refusal of care?\n• What suggestions does the community have"
-                " for improving health service delivery?"
+                "• Have you experienced long waiting times, harsh treatment,"
+                " or lack of privacy during medical consultations?\n• Do"
+                " facility operating hours accommodate working residents and"
+                " agricultural laborers?\n• Do health workers explain"
+                " medication instructions clearly in the local dialect?"
             )
             q3_notes = st.text_area(
                 "Qualitative Notes / Key Quotations (Domain 3)", key="fgd_q3"
             )
 
-            if st.form_submit_button("💾 Save TOOL 3.3 Discussion Record"):
+            st.markdown("**4. Community Priorities & Grassroots Solutions**")
+            st.info(
+                "If your community could fix ONE major health problem in this"
+                " barangay today, what should it be and how should local"
+                " leaders solve it?"
+            )
+            st.caption(
+                "• What essential health service is most urgently missing in"
+                " your barangay?\n• What concrete message or request do you"
+                " want to convey directly to the Mayor and Barangay Captain"
+                " regarding health services?"
+            )
+            q4_notes = st.text_area(
+                "Qualitative Notes / Key Quotations (Domain 4)", key="fgd_q4"
+            )
+
+            if st.form_submit_button("💾 Save TOOL 3.3 FGD Record"):
                 st.session_state.qual_records.append({
                     "Tool": "TOOL 3.3: FGD — Community Members",
-                    "Location": brgy_loc,
+                    "Barangay": brgy_loc,
                     "Group_Composition": grp_comp,
                     "Date_Time": date_time,
                     "Total_Participants": tot_parts,
-                    "Male_Count": male_cnt,
-                    "Female_Count": female_cnt,
+                    "Male": male_cnt,
+                    "Female": female_cnt,
                     "Moderator": moderator,
                     "Note_Taker": note_taker,
                     "Consent": consent,
@@ -3158,19 +3295,1776 @@ elif menu == "🗣️ Phase 3: Qualitative Field Tools":
                     "D1_DecisionDynamics": q1_notes,
                     "D2_CatastrophicExpenses": q2_notes,
                     "D3_ProviderInteraction": q3_notes,
+                    "D4_CommunityPriorities": q4_notes,
                 })
                 save_session_to_disk()
                 st.success("TOOL 3.3 FGD Record Saved Successfully!")
 
-# Placeholder handling for non-selected sub-modules
-elif menu in [
-    "🔍 Phase 4: Expanded PERI Windshield Tool",
-    "📈 Phase 5: Spatial & Statistical Analytics",
-    "📋 Phase 6: Community Diagnosis & Action Plan",
-    "💾 Data Management & Export",
-]:
-    st.subheader(menu)
-    st.info(
-        f"{menu} is active in persistent storage. Add entries or access data"
-        " via storage sync."
+    st.markdown("---")
+    st.markdown("### 📂 Review Submitted Qualitative Records")
+    if len(st.session_state.qual_records) == 0:
+        st.info("No qualitative records logged yet.")
+    else:
+        q_options = [
+            f"[{i+1}] {r.get('Tool', 'Qual Note')} -"
+            f" {r.get('Barangay', r.get('BHS', 'Location N/A'))}"
+            for i, r in enumerate(st.session_state.qual_records)
+        ]
+        sel_q_idx = st.selectbox(
+            "Select Record to Inspect / Delete",
+            range(len(q_options)),
+            format_func=lambda x: q_options[x],
+        )
+        q_rec = st.session_state.qual_records[sel_q_idx]
+
+        st.json(q_rec)
+        if st.button("🗑️ Delete This Qualitative Record", key="del_qual"):
+            st.session_state.qual_records.pop(sel_q_idx)
+            save_session_to_disk()
+            st.success("Qualitative record deleted!")
+            st.rerun()
+
+# MODULE 5: PHASE 4 EXPANDED PERI WINDSHIELD TOOL
+elif menu == "🔍 Phase 4: Expanded PERI Windshield Tool":
+    st.subheader(
+        "Phase 4: Separated & Expanded Environmental Observation Matrices &"
+        " PERI Index Manual"
     )
+
+    p4_tab1, p4_tab2, p4_tab3 = st.tabs([
+        "📋 Field Survey Assessment Matrix",
+        "📖 Comprehensive Result Interpretation & Manual",
+        "📂 Review & Delete Saved Field Assessments",
+    ])
+
+    with p4_tab1:
+        with st.form("phase4_expanded_observation_form"):
+            st.markdown("### 📌 Field Survey Metadata")
+            c1, c2, c3 = st.columns(3)
+            purok_eval = c1.selectbox(
+                "Target Purok Evaluated", [f"Purok {i}" for i in range(1, 8)]
+            )
+            eval_date = c2.date_input("Evaluation Date")
+            evaluator_name = c3.text_input("Lead Evaluator", "Field Inspector")
+
+            def render_rating(
+                col1, col2, col3, label, choices, default_idx=0
+            ):
+                rating = col2.radio(
+                    label, choices, index=default_idx, key=f"r_{label}"
+                )
+                notes = col3.text_input(
+                    "Hotspot / Landmark Notes", key=f"n_{label}"
+                )
+                score_val = (
+                    1.0 if "1" in rating else (2.0 if "2" in rating else 3.0)
+                )
+                return score_val, rating, notes
+
+            # DOMAIN 1
+            st.markdown(
+                "<div class='peri-domain-header'>Domain 1: Sanitation & Waste"
+                " Management Assessment</div>",
+                unsafe_allow_html=True,
+            )
+            d1_scores = []
+            d1_data = {}
+
+            d1_params = [
+                (
+                    "1.1 Uncollected Household Solid Waste",
+                    (
+                        "Presence of uncollected trash piles, scattered"
+                        " plastic, household waste heaps on road shoulders or"
+                        " vacant lots."
+                    ),
+                    ["Clean (1)", "Moderate (2)", "Severe Risk (3)"],
+                ),
+                (
+                    "1.2 Open Drainage & Canal Integrity",
+                    (
+                        "Condition of roadside canals: clogged with refuse,"
+                        " unpaved ditching, dark stagnant greywater, or"
+                        " uncovered open channels."
+                    ),
+                    ["Adequate (1)", "Substandard (2)", "Hazardous (3)"],
+                ),
+                (
+                    "1.3 Stagnant Water & Pooling",
+                    (
+                        "Pools of standing water in road depressions, unpaved"
+                        " alleys, or tires/containers holding water >48 hrs"
+                        " (mosquito risk)."
+                    ),
+                    ["Low Risk (1)", "Moderate (2)", "Severe Risk (3)"],
+                ),
+                (
+                    "1.4 Stray & Unattended Animals",
+                    (
+                        "Free-roaming dogs, cats, or livestock (pigs/goats)"
+                        " scavenging around uncontained waste or public"
+                        " pathways."
+                    ),
+                    ["Controlled (1)", "Moderate (2)", "Uncontrolled (3)"],
+                ),
+                (
+                    "1.5 Material Recovery & Garbage Hubs",
+                    (
+                        "Condition of Purok MRF or communal collection points:"
+                        " overflowing bins, lack of waste segregation, lack of"
+                        " covers."
+                    ),
+                    [
+                        "Clean / Segregated (1)",
+                        "Overflowing (2)",
+                        "Dilapidated / None (3)",
+                    ],
+                ),
+                (
+                    "1.6 Open Waste Burning (Siga)",
+                    (
+                        "Visual evidence or smell of open garbage/plastic/leaf"
+                        " burning in backyards, vacant plots, or road edges."
+                    ),
+                    ["Absent (1)", "Occasional (2)", "Frequent/Severe (3)"],
+                ),
+                (
+                    "1.7 Odor & Airborne Emissions",
+                    (
+                        "Pungent or offensive odor emanating from decomposed"
+                        " waste, open sewage, or livestock pens near"
+                        " residential homes."
+                    ),
+                    [
+                        "Odor-Free (1)",
+                        "Moderate Odor (2)",
+                        "Severe / Noxious (3)",
+                    ],
+                ),
+                (
+                    "1.8 Fecal Contamination Exposure",
+                    (
+                        "Visible animal feces or human defecation marks along"
+                        " walkways, drainage channels, or play areas."
+                    ),
+                    ["None Visible (1)", "Isolated (2)", "Widespread Risk (3)"],
+                ),
+                (
+                    "1.9 Commercial / Market Waste",
+                    (
+                        "Accumulation of rotting produce, fish water, or"
+                        " commercial trash around sari-sari stores, bakeries,"
+                        " or talipapa."
+                    ),
+                    ["Sanitary (1)", "Substandard (2)", "Severe Risk (3)"],
+                ),
+            ]
+
+            for param, indicator, options in d1_params:
+                c1, c2, c3 = st.columns([2, 1.2, 1.8])
+                c1.markdown(f"**{param}**\n\n*{indicator}*")
+                s_val, r_txt, n_txt = render_rating(
+                    c1, c2, c3, param, options
+                )
+                d1_scores.append(s_val)
+                d1_data[param] = {"Rating": r_txt, "Notes": n_txt}
+
+            # DOMAIN 2
+            st.markdown(
+                "<div class='peri-domain-header'>Domain 2: Food Environment &"
+                " Nutritional Accessibility Assessment</div>",
+                unsafe_allow_html=True,
+            )
+            d2_scores = []
+            d2_data = {}
+            d2_params = [
+                (
+                    "2.1 Fresh Produce Access (Talipapa / Markets)",
+                    (
+                        "Presence of permanent or satellite fresh fruit,"
+                        " vegetable, and fresh protein (fish/meat) markets"
+                        " within 300m walking distance."
+                    ),
+                    ["High Access (1)", "Limited Access (2)", "Food Desert (3)"],
+                ),
+                (
+                    "2.2 Sari-Sari Store Food Profile",
+                    (
+                        "Dominance of ultra-processed salty snacks, sugary"
+                        " carbonated beverages, and instant noodles displayed"
+                        " prominently at eye level."
+                    ),
+                    [
+                        "Balanced / Healthy (1)",
+                        "Junk-Dominant (2)",
+                        "Unhealthy Swamp (3)",
+                    ],
+                ),
+                (
+                    "2.3 Produce Quality & Freshness",
+                    (
+                        "Physical condition of available fruits/vegetables at"
+                        " local outlets: fresh, crisp vs. wilted, decaying, or"
+                        " insect-damaged."
+                    ),
+                    [
+                        "High Quality (1)",
+                        "Mixed Quality (2)",
+                        "Poor / Spoiled (3)",
+                    ],
+                ),
+                (
+                    "2.4 Street Food Vending Hygiene",
+                    (
+                        "Prepared street food stalls: use of food covers, glass"
+                        " displays, clean water for utensil washing,"
+                        " hairnets/gloves, fly presence."
+                    ),
+                    [
+                        "Sanitary (1)",
+                        "Substandard (2)",
+                        "Unsanitary / High Risk (3)",
+                    ],
+                ),
+                (
+                    "2.5 Child-Targeted Marketing",
+                    (
+                        "Prominent advertising banners or eye-level store"
+                        " displays targeting school children with sugary drinks,"
+                        " candies, and sodium snacks."
+                    ),
+                    [
+                        "Low Exposure (1)",
+                        "Moderate (2)",
+                        "High / Aggressive (3)",
+                    ],
+                ),
+                (
+                    "2.6 Tobacco & Alcohol Visibility",
+                    (
+                        "Prominent display and sale of cigarettes/e-cigarettes"
+                        " and alcoholic beverages near youth gathering points"
+                        " or school zones."
+                    ),
+                    [
+                        "Restricted / Far (1)",
+                        "Moderate (2)",
+                        "Highly Visible (3)",
+                    ],
+                ),
+                (
+                    "2.7 Safe Drinking Water Refilling Outlets",
+                    (
+                        "Availability and physical sanitary condition of"
+                        " commercial water refilling stations or public potable"
+                        " water taps in the Purok."
+                    ),
+                    [
+                        "Accessible & Clean (1)",
+                        "Scarcely Available (2)",
+                        "Unsightly / Risky (3)",
+                    ],
+                ),
+            ]
+
+            for param, indicator, options in d2_params:
+                c1, c2, c3 = st.columns([2, 1.2, 1.8])
+                c1.markdown(f"**{param}**\n\n*{indicator}*")
+                s_val, r_txt, n_txt = render_rating(
+                    c1, c2, c3, param, options
+                )
+                d2_scores.append(s_val)
+                d2_data[param] = {"Rating": r_txt, "Notes": n_txt}
+
+            # DOMAIN 3
+            st.markdown(
+                "<div class='peri-domain-header'>Domain 3: Built Environment,"
+                " Housing Quality & Infrastructure</div>",
+                unsafe_allow_html=True,
+            )
+            d3_scores = []
+            d3_data = {}
+            d3_params = [
+                (
+                    "3.1 Housing Structural Integrity",
+                    (
+                        "Proportion of concrete/permanent housing vs."
+                        " makeshift, tarpaulin, light bamboo, or deteriorated"
+                        " wood structures."
+                    ),
+                    [
+                        "Mostly Concrete (1)",
+                        "Mixed Structural (2)",
+                        "Predominantly Makeshift (3)",
+                    ],
+                ),
+                (
+                    "3.2 Pedestrian Walkways & Sidewalks",
+                    (
+                        "Availability of paved, unblocked sidewalks or"
+                        " footpaths separated from vehicle traffic vs."
+                        " pedestrians walking on main road shoulders."
+                    ),
+                    [
+                        "Safe / Paved (1)",
+                        "Partial / Blocked (2)",
+                        "Absent / Dangerous (3)",
+                    ],
+                ),
+                (
+                    "3.3 Street Lighting & Night Safety",
+                    (
+                        "Operational street lights every 30-50m along primary"
+                        " pathways to ensure safe pedestrian travel at night."
+                    ),
+                    [
+                        "Well Lit (1)",
+                        "Partially Lit (2)",
+                        "Dark / Hazardous (3)",
+                    ],
+                ),
+                (
+                    "3.4 Green Spaces & Recreational Areas",
+                    (
+                        "Access to maintained parks, open community spaces,"
+                        " trees, or sports grounds for physical activity."
+                    ),
+                    [
+                        "Abundant (1)",
+                        "Limited (2)",
+                        "None / Concrete Desert (3)",
+                    ],
+                ),
+                (
+                    "3.5 Electrical Wiring & Fire Hazard",
+                    (
+                        "Condition of overhead power lines: organized wiring vs."
+                        " tangled 'spider webs', illegal connections, or fire"
+                        " hazard exposures."
+                    ),
+                    [
+                        "Safe / Neat (1)",
+                        "Moderate Tangle (2)",
+                        "Hazardous 'Spiderweb' (3)",
+                    ],
+                ),
+            ]
+
+            for param, indicator, options in d3_params:
+                c1, c2, c3 = st.columns([2, 1.2, 1.8])
+                c1.markdown(f"**{param}**\n\n*{indicator}*")
+                s_val, r_txt, n_txt = render_rating(
+                    c1, c2, c3, param, options
+                )
+                d3_scores.append(s_val)
+                d3_data[param] = {"Rating": r_txt, "Notes": n_txt}
+
+            # DOMAIN 4
+            st.markdown(
+                "<div class='peri-domain-header'>Domain 4: Health"
+                " Infrastructure Access & Service Physical Accessibility</div>",
+                unsafe_allow_html=True,
+            )
+            d4_scores = []
+            d4_data = {}
+            d4_params = [
+                (
+                    "4.1 Physical Proximity to BHS / Barangay Health Center",
+                    (
+                        "Distance and walking time from Purok center to the"
+                        " nearest functional Barangay Health Station."
+                    ),
+                    ["<10 mins (1)", "10-25 mins (2)", ">25 mins / Far (3)"],
+                ),
+                (
+                    "4.2 Public Transport Availability to Health Facilities",
+                    (
+                        "Frequency and cost of public transport (tricycles,"
+                        " jeepneys) connecting Purok residents to RHU or"
+                        " Hospital."
+                    ),
+                    [
+                        "Frequent & Low Cost (1)",
+                        "Moderate Cost/Wait (2)",
+                        "Rare / Expensive (3)",
+                    ],
+                ),
+                (
+                    "4.3 Facility Signage & Health Information Boards",
+                    (
+                        "Visibility of health advisories, BHS operating hours,"
+                        " and emergency referral phone numbers posted in"
+                        " public areas."
+                    ),
+                    [
+                        "Clear & Updated (1)",
+                        "Faded / Partial (2)",
+                        "Absent (3)",
+                    ],
+                ),
+            ]
+
+            for param, indicator, options in d4_params:
+                c1, c2, c3 = st.columns([2, 1.2, 1.8])
+                c1.markdown(f"**{param}**\n\n*{indicator}*")
+                s_val, r_txt, n_txt = render_rating(
+                    c1, c2, c3, param, options
+                )
+                d4_scores.append(s_val)
+                d4_data[param] = {"Rating": r_txt, "Notes": n_txt}
+
+            # DOMAIN 5
+            st.markdown(
+                "<div class='peri-domain-header'>Domain 5: Disaster Preparedness"
+                " & Climate Resilience Vector</div>",
+                unsafe_allow_html=True,
+            )
+            d5_scores = []
+            d5_data = {}
+            d5_params = [
+                (
+                    "5.1 Flood & Landslide Vulnerability Exposure",
+                    (
+                        "Proximity of residential clusters to riverbanks,"
+                        " low-lying flood basins, or steep erosion-prone slopes."
+                    ),
+                    ["Low Exposure (1)", "Moderate (2)", "High Hazard (3)"],
+                ),
+                (
+                    "5.2 Evacuation Center Accessibility & Route Signage",
+                    (
+                        "Clear directional markers pointing to safe designated"
+                        " evacuation assembly points."
+                    ),
+                    [
+                        "Marked & Clear (1)",
+                        "Unmarked / Far (2)",
+                        "No Signage / Inaccessible (3)",
+                    ],
+                ),
+            ]
+
+            for param, indicator, options in d5_params:
+                c1, c2, c3 = st.columns([2, 1.2, 1.8])
+                c1.markdown(f"**{param}**\n\n*{indicator}*")
+                s_val, r_txt, n_txt = render_rating(
+                    c1, c2, c3, param, options
+                )
+                d5_scores.append(s_val)
+                d5_data[param] = {"Rating": r_txt, "Notes": n_txt}
+
+            # DOMAIN 6
+            st.markdown(
+                "<div class='peri-domain-header'>Domain 6: Vector & Zoonotic"
+                " Disease Exposure Risks</div>",
+                unsafe_allow_html=True,
+            )
+            d6_scores = []
+            d6_data = {}
+            d6_params = [
+                (
+                    "6.1 Mosquito Breeding Site Proliferation",
+                    (
+                        "Density of uncontained water drums, discarded tires,"
+                        " coconut shells, or clogged gutters holding stagnant"
+                        " water."
+                    ),
+                    ["Minimal (1)", "Moderate (2)", "Severe Density (3)"],
+                ),
+                (
+                    "6.2 Rodent & Pest Harbage Areas",
+                    (
+                        "Presence of dense overgrown vegetation, uncollected"
+                        " timber/scrap piles, or open grain storage harboring"
+                        " rodents."
+                    ),
+                    ["Low (1)", "Moderate (2)", "High Infestation (3)"],
+                ),
+            ]
+
+            for param, indicator, options in d6_params:
+                c1, c2, c3 = st.columns([2, 1.2, 1.8])
+                c1.markdown(f"**{param}**\n\n*{indicator}*")
+                s_val, r_txt, n_txt = render_rating(
+                    c1, c2, c3, param, options
+                )
+                d6_scores.append(s_val)
+                d6_data[param] = {"Rating": r_txt, "Notes": n_txt}
+
+            if st.form_submit_button(
+                "Submit & Save Phase 4 Expanded PERI Assessment"
+            ):
+                avg_d1 = float(np.mean(d1_scores))
+                avg_d2 = float(np.mean(d2_scores))
+                avg_d3 = float(np.mean(d3_scores))
+                avg_d4 = float(np.mean(d4_scores))
+                avg_d5 = float(np.mean(d5_scores))
+                avg_d6 = float(np.mean(d6_scores))
+
+                overall_peri = float(
+                    np.mean([avg_d1, avg_d2, avg_d3, avg_d4, avg_d5, avg_d6])
+                )
+                risk_cat = (
+                    "CATEGORY C: CRITICAL HIGH RISK (>= 2.30)"
+                    if overall_peri >= 2.3
+                    else (
+                        "CATEGORY B: MODERATE RISK CONCERN (1.50 - 2.29)"
+                        if overall_peri >= 1.5
+                        else "CATEGORY A: LOW RISK / SANITARY (1.00 - 1.49)"
+                    )
+                )
+
+                st.session_state.windshield_records.append({
+                    "Purok": purok_eval,
+                    "Date": str(eval_date),
+                    "Evaluator": evaluator_name,
+                    "DS1_Sanitation": avg_d1,
+                    "DS2_Food": avg_d2,
+                    "DS3_BuiltEnv": avg_d3,
+                    "DS4_HealthInfra": avg_d4,
+                    "DS5_DRR": avg_d5,
+                    "DS6_Vector": avg_d6,
+                    "PERI_Index": overall_peri,
+                    "Category": risk_cat,
+                    "D1_Details": d1_data,
+                    "D2_Details": d2_data,
+                    "D3_Details": d3_data,
+                    "D4_Details": d4_data,
+                    "D5_Details": d5_data,
+                    "D6_Details": d6_data,
+                })
+                save_session_to_disk()
+                st.success(
+                    f"Assessment Saved for {purok_eval}! Overall PERI Index:"
+                    f" {overall_peri:.2f} — {risk_cat}"
+                )
+
+    with p4_tab2:
+        st.markdown("### 📖 PERI Score Interpretation Manual & Action Thresholds")
+        st.markdown("""
+        #### 📊 Rating Scale & Mathematical Index Construction
+        * **1.00 – 1.49 (Category A: Low Environmental Risk / Sanitary):** Environment is generally well-maintained. Standard preventive monitoring recommended.
+        * **1.50 – 2.29 (Category B: Moderate Environmental Risk / Concern):** Noticeable environmental degradation or infrastructure bottlenecks. Targeted sanitation and WASH interventions required.
+        * **2.30 – 3.00 (Category C: Critical High Environmental Risk):** Severe environmental hazards, uncontrolled vector breeding, or flood vulnerability. Immediate inter-agency remediation mandated.
+        """)
+
+    with p4_tab3:
+        st.markdown("### 📂 Saved Field Observations")
+        if len(st.session_state.windshield_records) == 0:
+            st.info("No windshield assessment records stored.")
+        else:
+            for i, p_rec in enumerate(st.session_state.windshield_records):
+                with st.expander(
+                    f"📌 [{p_rec.get('Purok')}] - Evaluation Date:"
+                    f" {p_rec.get('Date')} (PERI Index:"
+                    f" {p_rec.get('PERI_Index', 0):.2f})"
+                ):
+                    st.write(f"**Evaluator:** {p_rec.get('Evaluator')}")
+                    st.write(
+                        f"**Category Status:** `{p_rec.get('Category')}`"
+                    )
+                    st.json({
+                        "Sanitation (D1)": p_rec.get("DS1_Sanitation"),
+                        "Food Environment (D2)": p_rec.get("DS2_Food"),
+                        "Built Environment (D3)": p_rec.get("DS3_BuiltEnv"),
+                        "Health Infra (D4)": p_rec.get("DS4_HealthInfra"),
+                        "DRR & Climate (D5)": p_rec.get("DS5_DRR"),
+                        "Vector Exposure (D6)": p_rec.get("DS6_Vector"),
+                    })
+                    if st.button("🗑️ Delete Assessment", key=f"del_peri_{i}"):
+                        st.session_state.windshield_records.pop(i)
+                        save_session_to_disk()
+                        st.success("Assessment deleted!")
+                        st.rerun()
+
+# MODULE 6: PHASE 5 SPATIAL & STATISTICAL ANALYTICS
+elif menu == "📈 Phase 5: Spatial & Statistical Analytics":
+    st.subheader(
+        "Phase 5: Integrated Spatial, Epidemiological & Research Analytics"
+        " Engine"
+    )
+
+    hh_data = st.session_state.hh_records
+    peri_data = st.session_state.windshield_records
+
+    # ------------------------------------------------------------------
+    # PHASE 5 ANALYTICAL HELPERS
+    # All calculations are derived from the existing Phase 2 household/
+    # adult/child records and Phase 4 PERI records. No other phase is changed.
+    # ------------------------------------------------------------------
+    def _yes(value):
+        return str(value).strip().lower() in {"yes", "y", "true", "1"}
+
+    def _disease_household(hh, field):
+        value = str(hh.get(field, ""))
+        return "diagnosed" in value.lower() or value.lower() in {"yes", "active"}
+
+    def _adult_disease(hh, field):
+        # Household morbidity fields are the primary source.
+        if _disease_household(hh, field):
+            return True
+        # Also recognize elevated measured BP for hypertension.
+        if field == "Hypertension_Status":
+            for a in hh.get("Adults", []):
+                try:
+                    if float(a.get("Sys", 0)) >= 140 or float(a.get("Dia", 0)) >= 90:
+                        return True
+                except (TypeError, ValueError):
+                    pass
+        return False
+
+    def _education_score(value):
+        order = {
+            "No Formal Education": 0,
+            "Elementary Unfinished": 1,
+            "Elementary Graduate": 2,
+            "High School Unfinished": 3,
+            "High School Graduate": 4,
+            "Vocational / College Unfinished": 5,
+            "College Graduate": 6,
+            "Post-Graduate": 7,
+        }
+        return order.get(str(value), np.nan)
+
+    def _household_education(hh):
+        vals = [
+            _education_score(a.get("Edu"))
+            for a in hh.get("Adults", [])
+            if not pd.isna(_education_score(a.get("Edu")))
+        ]
+        return max(vals) if vals else np.nan
+
+    def _binary_indicators(hh):
+        food = (
+            _yes(hh.get("Food_Skip"))
+            or _yes(hh.get("Food_Worry"))
+            or _yes(hh.get("Food_FullDay"))
+        )
+        unsafe_water = "unsafe" in str(hh.get("Water", "")).lower()
+        poor_sanitation = any(
+            x in str(hh.get("Sanitation", "")).lower()
+            for x in ["open defecation", "none"]
+        )
+        open_dump = any(
+            x in str(hh.get("Solid_Disposal", "")).lower()
+            for x in ["open dumping", "river disposal", "burning"]
+        )
+        housing_risk = any(
+            x in str(hh.get("House_Type", "")).lower()
+            for x in ["light", "medium"]
+        )
+        cooking_risk = any(
+            x in str(hh.get("Cook_Fuel", "")).lower()
+            for x in ["charcoal", "wood", "kerosene"]
+        )
+        flood = _yes(hh.get("Flood_Prone"))
+        no_piped = "piped water connection" not in [
+            str(x).lower() for x in (hh.get("Utilities") or [])
+        ]
+        emergency_barrier = str(hh.get("Emergency_5k", "")).lower() == "no"
+        return {
+            "Food insecurity": int(food),
+            "Unsafe water": int(unsafe_water),
+            "Poor sanitation": int(poor_sanitation),
+            "Open/unsafe waste disposal": int(open_dump),
+            "Housing vulnerability": int(housing_risk),
+            "Indoor cooking-fuel risk": int(cooking_risk),
+            "Flood exposure": int(flood),
+            "No piped water connection": int(no_piped),
+            "No ₱5k emergency cushion": int(emergency_barrier),
+        }
+
+    def _income_rank(value):
+        match = re.search(r"\(Q([1-5])\)", str(value))
+        return int(match.group(1)) if match else np.nan
+
+    def _safe_or_rr(a, b, c, d):
+        # 2x2 table:
+        # exposed disease=a, exposed no disease=b, reference disease=c,
+        # reference no disease=d. Haldane correction for zero cells.
+        vals = [float(a), float(b), float(c), float(d)]
+        if any(v < 0 for v in vals):
+            return np.nan, np.nan
+        if min(vals) == 0:
+            vals = [v + 0.5 for v in vals]
+        a, b, c, d = vals
+        odds_exposed = a / b
+        odds_ref = c / d
+        risk_exposed = a / (a + b)
+        risk_ref = c / (c + d)
+        return odds_exposed / odds_ref, risk_exposed / risk_ref
+
+    def _kde_points(df, bandwidth_m=500, grid_n=55):
+        """Return KDE grid as lon/lat/intensity using a Gaussian kernel.
+        This is intentionally implemented with NumPy so Phase 5 does not
+        require an additional GIS/statistics package."""
+        if len(df) < 2:
+            return pd.DataFrame(columns=["lon", "lat", "weight"])
+        lat = pd.to_numeric(df["Lat"], errors="coerce").to_numpy()
+        lon = pd.to_numeric(df["Lon"], errors="coerce").to_numpy()
+        ok = np.isfinite(lat) & np.isfinite(lon)
+        lat, lon = lat[ok], lon[ok]
+        if len(lat) < 2:
+            return pd.DataFrame(columns=["lon", "lat", "weight"])
+        lat0 = np.mean(lat)
+        x = (lon - np.mean(lon)) * 111320 * np.cos(np.radians(lat0))
+        y = (lat - lat0) * 110540
+        span = max(np.ptp(x), np.ptp(y), bandwidth_m * 2)
+        pad = max(bandwidth_m, span * 0.12)
+        gx = np.linspace(x.min() - pad, x.max() + pad, grid_n)
+        gy = np.linspace(y.min() - pad, y.max() + pad, grid_n)
+        xx, yy = np.meshgrid(gx, gy)
+        dx = xx[..., None] - x
+        dy = yy[..., None] - y
+        density = np.exp(-(dx**2 + dy**2) / (2 * bandwidth_m**2)).sum(axis=2)
+        density = density / max(len(x) * 2 * np.pi * bandwidth_m**2, 1.0)
+        if np.nanmax(density) > 0:
+            density = density / np.nanmax(density)
+        out = pd.DataFrame({
+            "lon": np.mean(lon) + xx.ravel() / (111320 * np.cos(np.radians(lat0))),
+            "lat": lat0 + yy.ravel() / 110540,
+            "weight": density.ravel(),
+        })
+        return out[out["weight"] > 0.10].reset_index(drop=True)
+
+    def _parse_points(text):
+        """Parse 'lat,lon; lat,lon' into a DataFrame."""
+        rows = []
+        for token in str(text).split(";"):
+            token = token.strip()
+            if not token:
+                continue
+            try:
+                a, b = [float(x.strip()) for x in token.split(",")[:2]]
+                if -90 <= a <= 90 and -180 <= b <= 180:
+                    rows.append({"lat": a, "lon": b})
+            except (ValueError, TypeError):
+                continue
+        return pd.DataFrame(rows, columns=["lat", "lon"])
+
+    def _circle_polygon(lat, lon, radius_m, n=64):
+        angles = np.linspace(0, 2 * np.pi, n)
+        dlat = radius_m * np.cos(angles) / 110540
+        dlon = radius_m * np.sin(angles) / (
+            111320 * max(np.cos(np.radians(lat)), 0.1)
+        )
+        return [[lon + dx, lat + dy] for dx, dy in zip(dlon, dlat)]
+
+    def _lca_bernoulli(X, n_classes=3, max_iter=250, seed=42):
+        """Small self-contained Bernoulli latent class model using EM."""
+        X = np.asarray(X, dtype=float)
+        if len(X) < max(10, n_classes * 3):
+            return None
+        rng = np.random.default_rng(seed)
+        n, p = X.shape
+        best = None
+        for _ in range(4):
+            priors = rng.dirichlet(np.ones(n_classes))
+            probs = np.clip(rng.uniform(0.20, 0.80, size=(n_classes, p)), 0.05, 0.95)
+            for _it in range(max_iter):
+                log_prob = np.log(priors + 1e-12)[None, :] + (
+                    X[:, None, :] * np.log(probs[None, :, :] + 1e-12)
+                    + (1 - X[:, None, :]) * np.log(1 - probs[None, :, :] + 1e-12)
+                ).sum(axis=2)
+                mx = np.max(log_prob, axis=1, keepdims=True)
+                resp = np.exp(log_prob - mx)
+                resp = resp / np.maximum(resp.sum(axis=1, keepdims=True), 1e-12)
+                new_priors = resp.mean(axis=0)
+                new_probs = (resp.T @ X) / np.maximum(resp.sum(axis=0)[:, None], 1e-12)
+                new_probs = np.clip(new_probs, 0.02, 0.98)
+                if np.max(np.abs(new_probs - probs)) < 1e-5:
+                    probs, priors = new_probs, new_priors
+                    break
+                probs, priors = new_probs, new_priors
+            ll = float(np.sum(mx + np.log(np.maximum(resp.sum(axis=1, keepdims=True), 1e-12))))
+            # Recalculate stable observed-data log likelihood.
+            lp = np.log(priors + 1e-12)[None, :] + (
+                X[:, None, :] * np.log(probs[None, :, :] + 1e-12)
+                + (1 - X[:, None, :]) * np.log(1 - probs[None, :, :] + 1e-12)
+            ).sum(axis=2)
+            ll = float(np.sum(np.max(lp, axis=1) + np.log(np.exp(lp - np.max(lp, axis=1, keepdims=True)).sum(axis=1))))
+            if best is None or ll > best["ll"]:
+                best = {"priors": priors, "probs": probs, "resp": resp, "ll": ll}
+        return best
+
+    if len(hh_data) == 0:
+        st.info("No household survey data available for Phase 5 analytics.")
+    else:
+        total_hhs = len(hh_data)
+        all_adults = [a for hh in hh_data for a in hh.get("Adults", [])]
+        all_children = [c for hh in hh_data for c in hh.get("Children", [])]
+
+        st.markdown(
+            f"**Total Sample Size:** $N = {total_hhs}$ Households | $n ="
+            f" {len(all_adults)}$ Adults Profiled | $n = {len(all_children)}$"
+            " Children Profiled"
+        )
+
+        # 6.2 + 6.3 are integrated into the Phase 5 interface.
+        res_tab1, res_tab2, res_tab3, res_tab4, res_tab5 = st.tabs([
+            "📋 Full Research Frequency Tables",
+            "📊 Social Gradient & Effect Measures",
+            "🧩 Factor Analysis & Latent Classes",
+            "🗺️ 6.2 Multi-Layer GIS Visualization",
+            "📈 Automated Interpretation & Outputs",
+        ])
+
+        with res_tab1:
+            st.markdown(
+                "##### Research Analytics: Complete Itemized Frequency ($n$) &"
+                " Percentage ($\\%$) Table"
+            )
+            all_tables = []
+
+            all_tables.append(generate_research_table(
+                [r.get("Respondent_Role") for r in hh_data],
+                total_hhs, "Demographics: Respondent Role"))
+            all_tables.append(generate_research_table(
+                [r.get("Dialect") for r in hh_data],
+                total_hhs, "Demographics: Primary Spoken Dialect"))
+            all_tables.append(generate_research_table(
+                [r.get("Religion") for r in hh_data],
+                total_hhs, "Demographics: Household Religion"))
+            all_tables.append(generate_research_table(
+                [r.get("Income") for r in hh_data],
+                total_hhs, "Economics: Monthly Family Income Quintile"))
+            all_tables.append(generate_research_table(
+                [r.get("Livelihood") for r in hh_data],
+                total_hhs, "Economics: Primary Livelihood Source"))
+            all_tables.append(generate_research_table(
+                [r.get("Emergency_5k") for r in hh_data],
+                total_hhs, "Economics: ₱5k Emergency Cushion Access"))
+            all_tables.append(generate_research_table(
+                [r.get("Four_Ps") for r in hh_data],
+                total_hhs, "Economics: Active 4Ps Beneficiary"))
+            all_tables.append(generate_research_table(
+                [r.get("Food_Skip") for r in hh_data],
+                total_hhs, "Food Security: Skipped Meals / Reduced Portion"))
+            all_tables.append(generate_research_table(
+                [r.get("Food_Worry") for r in hh_data],
+                total_hhs, "Food Security: Worried About Food Outage"))
+            all_tables.append(generate_research_table(
+                [r.get("Food_FullDay") for r in hh_data],
+                total_hhs, "Food Security: Full Day Without Food"))
+            all_tables.append(generate_research_table(
+                [r.get("Tenure") for r in hh_data],
+                total_hhs, "WASH & Housing: Housing Tenurial Status"))
+            all_tables.append(generate_research_table(
+                [r.get("House_Type") for r in hh_data],
+                total_hhs, "WASH & Housing: Housing Structure Type"))
+            all_tables.append(generate_research_table(
+                [r.get("Cook_Fuel") for r in hh_data],
+                total_hhs, "WASH & Housing: Indoor Cooking Fuel Risk"))
+            all_tables.append(generate_research_table(
+                [r.get("Water") for r in hh_data],
+                total_hhs, "WASH & Housing: Drinking Water Source Level"))
+            all_tables.append(generate_research_table(
+                [r.get("Sanitation") for r in hh_data],
+                total_hhs, "WASH & Housing: Toilet / Sanitation Facility"))
+            all_tables.append(generate_research_table(
+                [r.get("Solid_Disposal") for r in hh_data],
+                total_hhs, "WASH & Housing: Solid Waste Disposal Method"))
+            all_tables.append(generate_research_table(
+                [r.get("Hypertension_Status") for r in hh_data],
+                total_hhs, "Morbidity: Hypertension Status & Med Adherence"))
+            all_tables.append(generate_research_table(
+                [r.get("Diabetes_Status") for r in hh_data],
+                total_hhs, "Morbidity: Diabetes Status & Med Adherence"))
+            all_tables.append(generate_research_table(
+                [r.get("TB_Status") for r in hh_data],
+                total_hhs, "Morbidity: Tuberculosis (TB-DOTS) History"))
+            all_tables.append(generate_research_table(
+                [r.get("Yakap") for r in hh_data],
+                total_hhs, "Health Systems: PhilHealth YAKAP Registration"))
+            all_tables.append(generate_research_table(
+                [r.get("Yakap_Availed") for r in hh_data],
+                total_hhs, "Health Systems: Availed First Patient Encounter (FPE)"))
+
+            full_res_table = pd.concat(all_tables, ignore_index=True)
+            st.dataframe(full_res_table, use_container_width=True)
+            st.download_button(
+                "📥 Download Publication-Ready Research Analytics (CSV)",
+                full_res_table.to_csv(index=False).encode("utf-8"),
+                "Master_Household_Survey_Research_Analytics.csv",
+                "text/csv",
+            )
+
+        # --------------------------------------------------------------
+        # 6.3 A. DESCRIPTIVE ANALYSIS — SOCIAL GRADIENT, OR AND RR
+        # --------------------------------------------------------------
+        with res_tab2:
+            st.markdown("### 6.3 Statistical Analysis — Measuring the Social Gradient")
+            st.caption(
+                "Household-level disease outcomes are automatically cross-tabulated "
+                "against income quintile and household educational attainment. "
+                "Q5/highest education is used as the reference category when "
+                "calculating OR and RR."
+            )
+
+            analytic_rows = []
+            for hh in hh_data:
+                edu = _household_education(hh)
+                analytic_rows.append({
+                    "HH_ID": hh.get("HH_ID"),
+                    "Purok": hh.get("Purok"),
+                    "Income_Q": _income_rank(hh.get("Income")),
+                    "Education_Score": edu,
+                    "Education": (
+                        {
+                            0: "No Formal Education",
+                            1: "Elementary Unfinished",
+                            2: "Elementary Graduate",
+                            3: "High School Unfinished",
+                            4: "High School Graduate",
+                            5: "Vocational / College Unfinished",
+                            6: "College Graduate",
+                            7: "Post-Graduate",
+                        }.get(int(edu), "Not recorded")
+                        if not pd.isna(edu) else "Not recorded"
+                    ),
+                    "Hypertension": int(_adult_disease(hh, "Hypertension_Status")),
+                    "Diabetes": int(_adult_disease(hh, "Diabetes_Status")),
+                })
+            analytic_df = pd.DataFrame(analytic_rows)
+
+            def gradient_table(group_col, label):
+                rows = []
+                valid = analytic_df.dropna(subset=[group_col]).copy()
+                if valid.empty:
+                    return pd.DataFrame()
+                groups = sorted(valid[group_col].unique())
+                ref = groups[-1]
+                for g in groups:
+                    sub = valid[valid[group_col] == g]
+                    row = {
+                        label: g,
+                        "Households (n)": len(sub),
+                        "HTN n (%)": f"{sub['Hypertension'].sum()} ({sub['Hypertension'].mean()*100:.1f}%)",
+                        "DM n (%)": f"{sub['Diabetes'].sum()} ({sub['Diabetes'].mean()*100:.1f}%)",
+                    }
+                    if g != ref:
+                        exp = valid[valid[group_col] == g]
+                        rr_htn = _safe_or_rr(
+                            exp["Hypertension"].sum(),
+                            len(exp) - exp["Hypertension"].sum(),
+                            valid.loc[valid[group_col] == ref, "Hypertension"].sum(),
+                            len(valid[valid[group_col] == ref]) - valid.loc[valid[group_col] == ref, "Hypertension"].sum(),
+                        )
+                        rr_dm = _safe_or_rr(
+                            exp["Diabetes"].sum(),
+                            len(exp) - exp["Diabetes"].sum(),
+                            valid.loc[valid[group_col] == ref, "Diabetes"].sum(),
+                            len(valid[valid[group_col] == ref]) - valid.loc[valid[group_col] == ref, "Diabetes"].sum(),
+                        )
+                        row["HTN OR vs reference"] = round(rr_htn[0], 3)
+                        row["HTN RR vs reference"] = round(rr_htn[1], 3)
+                        row["DM OR vs reference"] = round(rr_dm[0], 3)
+                        row["DM RR vs reference"] = round(rr_dm[1], 3)
+                    else:
+                        row["HTN OR vs reference"] = 1.0
+                        row["HTN RR vs reference"] = 1.0
+                        row["DM OR vs reference"] = 1.0
+                        row["DM RR vs reference"] = 1.0
+                    rows.append(row)
+                return pd.DataFrame(rows)
+
+            st.markdown("#### Income Quintiles × Chronic Disease")
+            income_table = gradient_table("Income_Q", "Income Quintile")
+            if income_table.empty:
+                st.info("Income quintile data are not available.")
+            else:
+                st.dataframe(income_table, use_container_width=True)
+                st.caption(
+                    "Reference = highest observed income quintile (normally Q5). "
+                    "OR > 1 or RR > 1 means greater disease burden than the reference."
+                )
+
+            st.markdown("#### Educational Attainment × Chronic Disease")
+            edu_table = gradient_table("Education_Score", "Highest Adult Education Score")
+            if edu_table.empty:
+                st.info("Educational attainment data are not available.")
+            else:
+                st.dataframe(edu_table, use_container_width=True)
+
+            # Purok social-gradient view.
+            purok_rows = []
+            for purok_name, sub in analytic_df.groupby("Purok", dropna=False):
+                purok_rows.append({
+                    "Purok": purok_name,
+                    "Households": len(sub),
+                    "HTN prevalence": f"{sub['Hypertension'].mean()*100:.1f}%",
+                    "Diabetes prevalence": f"{sub['Diabetes'].mean()*100:.1f}%",
+                    "Mean income quintile": round(sub["Income_Q"].mean(), 2) if sub["Income_Q"].notna().any() else np.nan,
+                })
+            st.markdown("#### Geographic Zone Comparison")
+            st.dataframe(pd.DataFrame(purok_rows), use_container_width=True)
+
+        # --------------------------------------------------------------
+        # 6.3 B. FACTOR ANALYSIS / PCA + LCA
+        # --------------------------------------------------------------
+        with res_tab3:
+            st.markdown("### 6.3 B. Advanced Multivariate Modeling")
+            st.markdown(
+                "**1. Principal Component & Factor Analysis:** correlated "
+                "economic/environmental variables are collapsed into a latent "
+                "**Household Deprivation Index (HDI)**."
+            )
+
+            factor_rows = []
+            for hh in hh_data:
+                ind = _binary_indicators(hh)
+                # Lower income is more deprivation; Q1=1 -> 1.0, Q5=5 -> 0.
+                q = _income_rank(hh.get("Income"))
+                ind["Low income burden"] = (
+                    1.0 - ((q - 1) / 4.0) if not pd.isna(q) else 0.5
+                )
+                factor_rows.append(ind)
+            factor_df = pd.DataFrame(factor_rows)
+
+            if len(factor_df) >= 3 and factor_df.shape[1] >= 2:
+                X = factor_df.astype(float).fillna(factor_df.mean()).to_numpy()
+                sd = X.std(axis=0, ddof=0)
+                keep = sd > 1e-9
+                Xk = X[:, keep]
+                cols = factor_df.columns[keep]
+                Z = (Xk - Xk.mean(axis=0)) / np.maximum(Xk.std(axis=0, ddof=0), 1e-9)
+                u, sv, vt = np.linalg.svd(Z, full_matrices=False)
+                pc1 = u[:, 0] * sv[0]
+                loadings = vt[0]
+                # Orient so positive scores mean more structural deprivation.
+                if np.mean(loadings) < 0:
+                    pc1 = -pc1
+                    loadings = -loadings
+                hdi = 50 + 10 * (pc1 - np.mean(pc1)) / max(np.std(pc1), 1e-9)
+                hdi = np.clip(hdi, 0, 100)
+
+                factor_loading_df = pd.DataFrame({
+                    "Variable": cols,
+                    "PC1 Loading": np.round(loadings, 3),
+                    "Interpretation": [
+                        "Positive loading = contributes to greater household deprivation"
+                        if x >= 0 else
+                        "Negative loading = relatively protective / lower deprivation"
+                        for x in loadings
+                    ],
+                })
+                st.markdown("#### PCA Factor Loadings")
+                st.dataframe(factor_loading_df, use_container_width=True)
+
+                hdi_df = pd.DataFrame({
+                    "HH_ID": [h.get("HH_ID") for h in hh_data],
+                    "Purok": [h.get("Purok") for h in hh_data],
+                    "Household Deprivation Index (0–100)": np.round(hdi, 1),
+                    "Hypertension": [
+                        int(_adult_disease(h, "Hypertension_Status")) for h in hh_data
+                    ],
+                    "Diabetes": [
+                        int(_adult_disease(h, "Diabetes_Status")) for h in hh_data
+                    ],
+                })
+                st.markdown("#### Automatically Generated Household Deprivation Index")
+                st.dataframe(hdi_df, use_container_width=True)
+
+                mean_hdi = float(np.mean(hdi))
+                st.metric("Community Mean Deprivation Index", f"{mean_hdi:.1f}/100")
+                if mean_hdi >= 67:
+                    st.warning(
+                        "Interpretation: high structural vulnerability. Multiple "
+                        "economic, WASH, food-security, housing or access risks are "
+                        "co-occurring and should be addressed as an integrated package."
+                    )
+                elif mean_hdi >= 34:
+                    st.info(
+                        "Interpretation: moderate structural vulnerability. "
+                        "Target the highest-scoring households and Puroks first."
+                    )
+                else:
+                    st.success(
+                        "Interpretation: lower aggregate deprivation. Continue "
+                        "surveillance while maintaining services for high-risk households."
+                    )
+
+                st.download_button(
+                    "📥 Download Household Deprivation Index",
+                    hdi_df.to_csv(index=False).encode("utf-8"),
+                    "Household_Deprivation_Index.csv",
+                    "text/csv",
+                )
+            else:
+                st.info("PCA requires at least 3 household records with variable variation.")
+
+            st.markdown("---")
+            st.markdown(
+                "**2. Latent Class Analysis (LCA):** households are automatically "
+                "grouped into discrete vulnerability classes based on overlapping "
+                "social risks."
+            )
+            lca_cols = [
+                "Food insecurity",
+                "Unsafe water",
+                "Poor sanitation",
+                "Open/unsafe waste disposal",
+                "Housing vulnerability",
+                "Indoor cooking-fuel risk",
+                "Flood exposure",
+                "No piped water connection",
+                "No ₱5k emergency cushion",
+            ]
+            if len(factor_df) >= 10 and factor_df[lca_cols].nunique().gt(1).sum() >= 3:
+                lca_input = factor_df[lca_cols].astype(float)
+                variable_keep = lca_input.nunique() > 1
+                lca_input = lca_input.loc[:, variable_keep]
+                model = _lca_bernoulli(lca_input.to_numpy(), n_classes=3)
+                if model is not None:
+                    assigned = np.argmax(model["resp"], axis=1) + 1
+                    class_sizes = pd.Series(assigned).value_counts().sort_index()
+                    class_risk = []
+                    for k in range(3):
+                        mask = assigned == (k + 1)
+                        prevalence_htn = np.mean([
+                            _adult_disease(hh_data[i], "Hypertension_Status")
+                            for i in range(len(hh_data)) if mask[i]
+                        ]) if mask.any() else np.nan
+                        prevalence_dm = np.mean([
+                            _adult_disease(hh_data[i], "Diabetes_Status")
+                            for i in range(len(hh_data)) if mask[i]
+                        ]) if mask.any() else np.nan
+                        class_risk.append({
+                            "Latent Class": k + 1,
+                            "Households": int(class_sizes.get(k + 1, 0)),
+                            "Share": f"{class_sizes.get(k + 1, 0)/len(hh_data)*100:.1f}%",
+                            "HTN prevalence": f"{prevalence_htn*100:.1f}%" if not pd.isna(prevalence_htn) else "N/A",
+                            "Diabetes prevalence": f"{prevalence_dm*100:.1f}%" if not pd.isna(prevalence_dm) else "N/A",
+                            "Estimated class profile": "",
+                        })
+
+                    # Describe each class using the highest-probability risks.
+                    for k in range(3):
+                        top_idx = np.argsort(model["probs"][k])[::-1][:3]
+                        profile = ", ".join(
+                            [str(lca_input.columns[i]) for i in top_idx]
+                        )
+                        class_risk[k]["Estimated class profile"] = profile
+
+                    lca_summary = pd.DataFrame(class_risk)
+                    st.dataframe(lca_summary, use_container_width=True)
+
+                    household_lca = pd.DataFrame({
+                        "HH_ID": [h.get("HH_ID") for h in hh_data],
+                        "Purok": [h.get("Purok") for h in hh_data],
+                        "Latent Vulnerability Class": assigned,
+                        "Posterior Probability": np.round(model["resp"].max(axis=1), 3),
+                    })
+                    st.markdown("#### Household Class Assignment")
+                    st.dataframe(household_lca, use_container_width=True)
+
+                    highest_class = int(
+                        lca_summary.assign(
+                            htn=lca_summary["HTN prevalence"].str.rstrip("%").astype(float),
+                            dm=lca_summary["Diabetes prevalence"].str.rstrip("%").astype(float),
+                        ).sort_values(["htn", "dm"], ascending=False).iloc[0]["Latent Class"]
+                    )
+                    profile_text = lca_summary.loc[
+                        lca_summary["Latent Class"] == highest_class,
+                        "Estimated class profile"
+                    ].iloc[0]
+                    st.info(
+                        f"Automatic interpretation: **Latent Class {highest_class}** "
+                        f"has the highest combined chronic-disease burden. Its dominant "
+                        f"social-risk profile is **{profile_text}**. Prioritize this "
+                        "class for integrated LGU social protection, WASH, nutrition, "
+                        "transport/access and chronic-care interventions."
+                    )
+                    st.download_button(
+                        "📥 Download LCA Household Classes",
+                        household_lca.to_csv(index=False).encode("utf-8"),
+                        "Latent_Class_Household_Vulnerability.csv",
+                        "text/csv",
+                    )
+                else:
+                    st.info("LCA could not converge on the available sample.")
+            else:
+                st.info(
+                    "LCA requires at least 10 households and at least 3 varying "
+                    "social-risk indicators."
+                )
+
+        # --------------------------------------------------------------
+        # 6.2 MULTI-LAYER GIS VISUALIZATION
+        # --------------------------------------------------------------
+        with res_tab4:
+            st.markdown("### 6.2 Multi-Layer GIS Visualization Framework")
+            st.caption(
+                "Toggle layers to combine disease hotspots, environmental SDOH, "
+                "food access and health-facility accessibility."
+            )
+
+            valid_hh = pd.DataFrame(hh_data)
+            for col in ["Lat", "Lon"]:
+                valid_hh[col] = pd.to_numeric(valid_hh.get(col), errors="coerce")
+            valid_hh = valid_hh.dropna(subset=["Lat", "Lon"]).copy()
+
+            controls = st.columns(4)
+            with controls[0]:
+                show_disease = st.checkbox("Layer 1: Disease KDE", True)
+                disease_choice = st.multiselect(
+                    "Disease hotspots",
+                    ["Hypertension", "Diabetes", "Active TB"],
+                    default=["Hypertension", "Diabetes", "Active TB"],
+                )
+            with controls[1]:
+                show_env = st.checkbox("Layer 2: Environmental SDOH", True)
+                show_flood = st.checkbox("Flood-risk households", True)
+                show_water = st.checkbox("Unsafe water households", True)
+                show_dump = st.checkbox("Open-dumping households", True)
+            with controls[2]:
+                show_food = st.checkbox("Layer 3: Food Desert", True)
+                market_text = st.text_input(
+                    "Fresh food market coordinates (lat,lon; ...)",
+                    "",
+                    help="Enter mapped market points from field/GIS data."
+                )
+                sari_text = st.text_input(
+                    "Sari-sari store coordinates (lat,lon; ...)",
+                    "",
+                    help="Enter mapped sari-sari store points from field/GIS data."
+                )
+            with controls[3]:
+                show_access = st.checkbox("Layer 4: Catchment", True)
+                facility_type = st.selectbox(
+                    "Facility center",
+                    ["BHS / Barangay Health Station", "RHU / Health Center"],
+                )
+                facility_lat = st.number_input(
+                    "Facility latitude", value=float(valid_hh["Lat"].mean()) if len(valid_hh) else 11.1560,
+                    format="%.6f"
+                )
+                facility_lon = st.number_input(
+                    "Facility longitude", value=float(valid_hh["Lon"].mean()) if len(valid_hh) else 124.9920,
+                    format="%.6f"
+                )
+
+            # Layer 1: disease point sets + KDE.
+            disease_frames = {}
+            disease_frames["Hypertension"] = valid_hh[
+                valid_hh.apply(lambda r: _adult_disease(r, "Hypertension_Status"), axis=1)
+            ].copy()
+            disease_frames["Diabetes"] = valid_hh[
+                valid_hh.apply(lambda r: _adult_disease(r, "Diabetes_Status"), axis=1)
+            ].copy()
+            disease_frames["Active TB"] = valid_hh[
+                valid_hh["TB_Status"].astype(str).str.contains(
+                    "currently enrolled|defaulted|interrupted", case=False, regex=True
+                )
+            ].copy()
+
+            layers = []
+            layer_summaries = []
+
+            if show_disease:
+                for disease in disease_choice:
+                    ddf = disease_frames[disease]
+                    if len(ddf) >= 2:
+                        kde = _kde_points(ddf, bandwidth_m=500)
+                        if len(kde):
+                            kde["radius"] = 250
+                            layers.append(
+                                pdk.Layer(
+                                    "HeatmapLayer",
+                                    data=kde,
+                                    get_position="[lon, lat]",
+                                    get_weight="weight",
+                                    radius_pixels=55,
+                                    intensity=1.0,
+                                    threshold=0.05,
+                                    opacity=0.65,
+                                )
+                            )
+                    layer_summaries.append({
+                        "Layer": f"KDE — {disease}",
+                        "Cases/households": len(ddf),
+                        "Status": "Rendered" if len(ddf) >= 2 else "Need ≥2 mapped cases",
+                    })
+
+            # Layer 2: environmental overlays from existing household fields.
+            env_df = valid_hh.copy()
+            env_df["UnsafeWater"] = env_df["Water"].astype(str).str.contains(
+                "unsafe|unprotected|shallow well|river|surface", case=False, regex=True
+            )
+            env_df["OpenDumping"] = env_df["Solid_Disposal"].astype(str).str.contains(
+                "open dumping|river disposal", case=False, regex=True
+            )
+            env_df["Flood"] = env_df["Flood_Prone"].astype(str).str.lower().eq("yes")
+
+            if show_env:
+                if show_flood:
+                    flood_df = env_df[env_df["Flood"]]
+                    if len(flood_df):
+                        layers.append(
+                            pdk.Layer(
+                                "ScatterplotLayer",
+                                data=flood_df,
+                                get_position="[Lon, Lat]",
+                                get_radius=35,
+                                get_fill_color="[30, 144, 255, 150]",
+                                pickable=True,
+                            )
+                        )
+                if show_water:
+                    water_df = env_df[env_df["UnsafeWater"]]
+                    if len(water_df):
+                        layers.append(
+                            pdk.Layer(
+                                "ScatterplotLayer",
+                                data=water_df,
+                                get_position="[Lon, Lat]",
+                                get_radius=25,
+                                get_fill_color="[255, 165, 0, 190]",
+                                pickable=True,
+                            )
+                        )
+                if show_dump:
+                    dump_df = env_df[env_df["OpenDumping"]]
+                    if len(dump_df):
+                        layers.append(
+                            pdk.Layer(
+                                "ScatterplotLayer",
+                                data=dump_df,
+                                get_position="[Lon, Lat]",
+                                get_radius=28,
+                                get_fill_color="[90, 90, 90, 210]",
+                                pickable=True,
+                            )
+                        )
+
+            layer_summaries.extend([
+                {"Layer": "Environmental — Flood", "Cases/HHs": int(env_df["Flood"].sum()), "Status": "Mapped"},
+                {"Layer": "Environmental — Unsafe Water", "Cases/HHs": int(env_df["UnsafeWater"].sum()), "Status": "Mapped"},
+                {"Layer": "Environmental — Open Dumping", "Cases/HHs": int(env_df["OpenDumping"].sum()), "Status": "Mapped"},
+            ])
+
+            # Layer 3: fresh-food markets vs sari-sari stores.
+            markets = _parse_points(market_text)
+            stores = _parse_points(sari_text)
+            if show_food:
+                if len(markets):
+                    layers.append(
+                        pdk.Layer(
+                            "ScatterplotLayer",
+                            data=markets,
+                            get_position="[lon, lat]",
+                            get_radius=45,
+                            get_fill_color="[34, 139, 34, 230]",
+                            pickable=True,
+                        )
+                    )
+                if len(stores):
+                    layers.append(
+                        pdk.Layer(
+                            "ScatterplotLayer",
+                            data=stores,
+                            get_position="[lon, lat]",
+                            get_radius=18,
+                            get_fill_color="[160, 82, 45, 190]",
+                            pickable=True,
+                        )
+                    )
+
+                # 500-metre straight-line service buffers around fresh-food markets.
+                # This is a GIS proximity proxy; walking-network distance requires
+                # an external road-network dataset.
+                if len(markets):
+                    market_polys = pd.DataFrame({
+                        "polygon": [
+                            _circle_polygon(row["lat"], row["lon"], 500)
+                            for _, row in markets.iterrows()
+                        ]
+                    })
+                    layers.append(
+                        pdk.Layer(
+                            "PolygonLayer",
+                            data=market_polys,
+                            get_polygon="polygon",
+                            get_fill_color="[34, 139, 34, 35]",
+                            get_line_color="[34, 139, 34, 180]",
+                            get_line_width=2,
+                            stroked=True,
+                            filled=True,
+                        )
+                    )
+
+                food_rows = []
+                child_hh_ids = {
+                    hh.get("HH_ID")
+                    for hh in hh_data
+                    if any(
+                        "Wasted" in str(c.get("Nutr", {}).get("Wasting", ""))
+                        or "Stunted" in str(c.get("Nutr", {}).get("Stunting", ""))
+                        or "Underweight" in str(c.get("Nutr", {}).get("Underweight", ""))
+                        for c in hh.get("Children", [])
+                    )
+                }
+                if len(markets):
+                    for _, hh in valid_hh.iterrows():
+                        dist_m = min(
+                            np.sqrt(
+                                (((markets["lon"] - hh["Lon"]) * 111320 * np.cos(np.radians(hh["Lat"]))) ** 2)
+                                + (((markets["lat"] - hh["Lat"]) * 110540) ** 2)
+                            )
+                        )
+                        # Sari-sari store density within a 500-metre local buffer.
+                        if len(stores):
+                            store_dist = np.sqrt(
+                                (((stores["lon"] - hh["Lon"]) * 111320 * np.cos(np.radians(hh["Lat"]))) ** 2)
+                                + (((stores["lat"] - hh["Lat"]) * 110540) ** 2)
+                            )
+                            nearby_stores = int((store_dist <= 500).sum())
+                            local_area_km2 = np.pi * (0.5 ** 2)
+                            store_density = nearby_stores / local_area_km2
+                        else:
+                            nearby_stores = 0
+                            store_density = np.nan
+
+                        if dist_m > 500:
+                            food_rows.append({
+                                "HH_ID": hh.get("HH_ID"),
+                                "Purok": hh.get("Purok"),
+                                "Lat": hh["Lat"],
+                                "Lon": hh["Lon"],
+                                "Distance_to_fresh_food_m": round(float(dist_m), 1),
+                                "Sari_sari_stores_within_500m": nearby_stores,
+                                "Sari_sari_density_per_km2": (
+                                    round(float(store_density), 2)
+                                    if not pd.isna(store_density) else "Not mapped"
+                                ),
+                                "Child_malnutrition": "Yes" if hh.get("HH_ID") in child_hh_ids else "No",
+                            })
+                    food_desert_df = pd.DataFrame(food_rows)
+                    if len(food_desert_df):
+                        layers.append(
+                            pdk.Layer(
+                                "ScatterplotLayer",
+                                data=food_desert_df,
+                                get_position="[Lon, Lat]",
+                                get_radius=20,
+                                get_fill_color="[178, 34, 34, 190]",
+                                pickable=True,
+                            )
+                        )
+                        maln_desert = int(
+                            food_desert_df["Child_malnutrition"].eq("Yes").sum()
+                        )
+                        st.metric(
+                            "Food-desert households",
+                            len(food_desert_df),
+                            delta=f"{maln_desert} with child malnutrition indicators",
+                        )
+                elif show_food:
+                    st.info(
+                        "Add fresh-food market coordinates to calculate the 500-metre "
+                        "food-access buffer and automatically identify food-desert households."
+                    )
+
+            # Layer 4: 15- and 30-minute catchment contours.
+            if show_access:
+                catchment_df = pd.DataFrame([
+                    {
+                        "polygon": _circle_polygon(facility_lat, facility_lon, 15 * 80),
+                        "minutes": 15,
+                    },
+                    {
+                        "polygon": _circle_polygon(facility_lat, facility_lon, 30 * 80),
+                        "minutes": 30,
+                    },
+                ])
+                layers.append(
+                    pdk.Layer(
+                        "PolygonLayer",
+                        data=catchment_df,
+                        get_polygon="polygon",
+                        get_fill_color="[123, 17, 19, 35]",
+                        get_line_color="[123, 17, 19, 200]",
+                        get_line_width=3,
+                        stroked=True,
+                        filled=True,
+                        pickable=True,
+                    )
+                )
+
+                access_rows = []
+                for _, hh in valid_hh.iterrows():
+                    dist_m = np.sqrt(
+                        (((hh["Lon"] - facility_lon) * 111320 * np.cos(np.radians(facility_lat))) ** 2)
+                        + (((hh["Lat"] - facility_lat) * 110540) ** 2)
+                    )
+                    walk_min = dist_m / 80.0
+                    zone = "≤15 min" if walk_min <= 15 else ("16–30 min" if walk_min <= 30 else ">30 min")
+                    access_rows.append({
+                        "HH_ID": hh.get("HH_ID"),
+                        "Purok": hh.get("Purok"),
+                        "Straight-line distance (m)": round(float(dist_m), 1),
+                        "Estimated walking time (min)": round(float(walk_min), 1),
+                        "Catchment": zone,
+                        "GIDA accessibility proxy": "Potentially geographically disadvantaged" if walk_min > 30 else "Within 30-min proxy",
+                    })
+                access_df = pd.DataFrame(access_rows)
+                st.markdown(f"#### {facility_type} Catchment")
+                st.dataframe(
+                    access_df.groupby("Catchment", dropna=False)
+                    .size()
+                    .reset_index(name="Households"),
+                    use_container_width=True,
+                )
+                st.caption(
+                    "Accessibility model uses 80 m/min (~4.8 km/h) and straight-line "
+                    "distance. These are proximity isochrone proxies, not road-network "
+                    "travel times; replace with network-based routing data for formal GIDA classification."
+                )
+
+            if valid_hh.empty:
+                st.warning("No valid household latitude/longitude records are available.")
+            else:
+                view = pdk.ViewState(
+                    latitude=float(valid_hh["Lat"].mean()),
+                    longitude=float(valid_hh["Lon"].mean()),
+                    zoom=14,
+                    pitch=35,
+                )
+                st.pydeck_chart(
+                    pdk.Deck(
+                        layers=layers,
+                        initial_view_state=view,
+                        tooltip={
+                            "html": "<b>HH:</b> {HH_ID}<br/><b>Purok:</b> {Purok}"
+                        },
+                    ),
+                    use_container_width=True,
+                )
+
+            st.markdown("#### GIS Layer Processing Status")
+            st.dataframe(pd.DataFrame(layer_summaries), use_container_width=True)
+
+        # --------------------------------------------------------------
+        # AUTOMATED INTERPRETATION / PUBLIC HEALTH OUTPUT
+        # --------------------------------------------------------------
+        with res_tab5:
+            st.markdown("### 🤖 Automatic Calculation & Interpretation Engine")
+            st.caption(
+                "The following findings are recalculated every time Phase 5 is opened "
+                "from the current persistent household/PERI dataset."
+            )
+
+            interpretations = []
+
+            htn_prev = np.mean([
+                _adult_disease(h, "Hypertension_Status") for h in hh_data
+            ])
+            dm_prev = np.mean([
+                _adult_disease(h, "Diabetes_Status") for h in hh_data
+            ])
+            tb_active = np.mean([
+                "currently enrolled" in str(h.get("TB_Status", "")).lower()
+                or "defaulted" in str(h.get("TB_Status", "")).lower()
+                for h in hh_data
+            ])
+
+            if htn_prev >= 0.20:
+                interpretations.append(
+                    f"🚨 Hypertension burden is high at **{htn_prev*100:.1f}%** of households "
+                    "with a household-level hypertension signal. Prioritize BP confirmation, "
+                    "continuity of care and adherence monitoring."
+                )
+            else:
+                interpretations.append(
+                    f"Hypertension signal: **{htn_prev*100:.1f}%** of households."
+                )
+
+            if dm_prev >= 0.10:
+                interpretations.append(
+                    f"⚠️ Diabetes signal is **{dm_prev*100:.1f}%**. Strengthen screening, "
+                    "risk-factor counseling and chronic-care linkage."
+                )
+            else:
+                interpretations.append(
+                    f"Diabetes signal: **{dm_prev*100:.1f}%** of households."
+                )
+
+            unsafe_pct = np.mean([
+                "unsafe" in str(h.get("Water", "")).lower()
+                for h in hh_data
+            ])
+            flood_pct = np.mean([_yes(h.get("Flood_Prone")) for h in hh_data])
+            food_pct = np.mean([
+                _yes(h.get("Food_Skip")) or _yes(h.get("Food_Worry")) or _yes(h.get("Food_FullDay"))
+                for h in hh_data
+            ])
+            dump_pct = np.mean([
+                "open dumping" in str(h.get("Solid_Disposal", "")).lower()
+                or "river disposal" in str(h.get("Solid_Disposal", "")).lower()
+                for h in hh_data
+            ])
+
+            interpretations.extend([
+                f"🚰 Unsafe-water exposure: **{unsafe_pct*100:.1f}%** of households.",
+                f"🌊 Flood exposure: **{flood_pct*100:.1f}%** of households.",
+                f"🍚 Food-insecurity signal: **{food_pct*100:.1f}%** of households.",
+                f"🗑️ Open/river waste-disposal signal: **{dump_pct*100:.1f}%** of households.",
+            ])
+
+            for item in interpretations:
+                st.markdown(item)
+
+            st.markdown("---")
+            st.markdown("### Public Health Interpretation Rules")
+            st.markdown(
+                "- **OR/RR > 1:** higher disease burden than the reference group.\n"
+                "- **OR/RR = 1:** same observed burden as the reference group.\n"
+                "- **OR/RR < 1:** lower observed burden than the reference group.\n"
+                "- **PCA/HDI:** higher scores indicate more overlapping structural deprivation.\n"
+                "- **LCA:** classes describe co-occurring risk patterns; they are not diagnoses.\n"
+                "- **KDE hotspots:** higher intensity indicates greater spatial concentration of mapped cases.\n"
+                "- **Food desert:** household lies >500 m straight-line from an entered fresh-food market; "
+                "child malnutrition is overlaid when a child record contains wasting, stunting or underweight signals.\n"
+                "- **Catchment:** 15/30-minute zones are walking-time proxies based on straight-line distance."
+            )
+
+            output_df = pd.DataFrame({
+                "Automated Indicator": [
+                    "Hypertension household signal",
+                    "Diabetes household signal",
+                    "Active/current TB-DOTS signal",
+                    "Unsafe water",
+                    "Flood exposure",
+                    "Food insecurity",
+                    "Open/river waste disposal",
+                ],
+                "Value": [
+                    f"{htn_prev*100:.1f}%",
+                    f"{dm_prev*100:.1f}%",
+                    f"{tb_active*100:.1f}%",
+                    f"{unsafe_pct*100:.1f}%",
+                    f"{flood_pct*100:.1f}%",
+                    f"{food_pct*100:.1f}%",
+                    f"{dump_pct*100:.1f}%",
+                ],
+            })
+            st.dataframe(output_df, use_container_width=True)
+            st.download_button(
+                "📥 Download Phase 5 Automated Summary",
+                output_df.to_csv(index=False).encode("utf-8"),
+                "Phase_5_Automated_Analytics_Summary.csv",
+                "text/csv",
+            )
+
+# MODULE 7: PHASE 6 COMMUNITY DIAGNOSIS & ACTION PLAN
+elif menu == "📋 Phase 6: Community Diagnosis & Action Plan":
+    st.subheader("Phase 6: Community Diagnosis & COPAR Action Planning Portal")
+
+    with st.form("phase6_action_form"):
+        st.markdown("### 🎯 Formulate Priority Community Health Action Plan")
+        c1, c2 = st.columns(2)
+        target_brgy = c1.text_input("Barangay Target Name")
+        plan_date = c2.date_input("Planning Date")
+
+        prio_problem = st.text_input(
+            "Priority Diagnosed Health / Environmental Problem",
+            "High Adult Hypertensive Risk (32.4%) & Unsafe Drinking Water",
+        )
+
+        c1, c2 = st.columns(2)
+        target_pop = c1.text_input(
+            "Target Population / Beneficiaries", "Adults >40 yrs & Flood HHs"
+        )
+        lead_dept = c2.text_input(
+            "Lead Implementing Agency / Committee", "BHB & BHS Midwife/BHWs"
+        )
+
+        st.markdown("---")
+        st.markdown("#### 🛠️ COPAR Strategic Intervention Matrix")
+        strat_obj = st.text_area(
+            "1. Strategic Objectives & Key Performance Indicators (KPIs):"
+        )
+        activities = st.text_area(
+            "2. Concrete Community Mobilization Activities:"
+        )
+
+        c1, c2 = st.columns(2)
+        budget_req = c1.number_input(
+            "Required Budget Allocation (₱)", 0, 1000000, 25000
+        )
+        timeframe = c2.text_input("Implementation Timeframe", "3 Months (Q4)")
+
+        if st.form_submit_button("💾 Save & Finalize Action Plan"):
+            st.session_state.diag_records.append({
+                "Barangay": target_brgy,
+                "Date": str(plan_date),
+                "Problem": prio_problem,
+                "Target": target_pop,
+                "Lead": lead_dept,
+                "Objectives": strat_obj,
+                "Activities": activities,
+                "Budget": budget_req,
+                "Timeframe": timeframe,
+            })
+            save_session_to_disk()
+            st.success("Community Action Plan Saved Permanently!")
+
+    st.markdown("---")
+    st.markdown("### 📂 Saved Community Action Plans")
+    if len(st.session_state.diag_records) == 0:
+        st.info("No action plans created yet.")
+    else:
+        for i, plan in enumerate(st.session_state.diag_records):
+            with st.expander(
+                f"🎯 Plan #{i+1}: {plan.get('Barangay')} -"
+                f" {plan.get('Problem')}"
+            ):
+                st.write(f"**Lead:** {plan.get('Lead')}")
+                st.write(f"**Budget:** ₱{plan.get('Budget'):,}")
+                st.write(f"**Objectives:** {plan.get('Objectives')}")
+                st.write(f"**Activities:** {plan.get('Activities')}")
+                if st.button("🗑️ Delete Plan", key=f"del_plan_{i}"):
+                    st.session_state.diag_records.pop(i)
+                    save_session_to_disk()
+                    st.success("Plan deleted!")
+                    st.rerun()
+
+# MODULE 8: DATA MANAGEMENT & EXPORT
+elif menu == "💾 Data Management & Export":
+    st.subheader("💾 Persistent Data Storage & Multi-Format Export Engine")
+
+    st.markdown("### 📊 Current Database Record Counts")
+    c1, c2, c3, c4, c5 = st.columns(5)
+    c1.metric("Governance Scorecards", len(st.session_state.gov_records))
+    c2.metric("Household Surveys", len(st.session_state.hh_records))
+    c3.metric("Qualitative Notes", len(st.session_state.qual_records))
+    c4.metric("PERI Windshield", len(st.session_state.windshield_records))
+    c5.metric("Action Plans", len(st.session_state.diag_records))
+
+    st.markdown("---")
+    st.markdown("### 📥 Download Shared Persistent Data")
+
+    col1, col2 = st.columns(2)
+    with col1:
+        full_json_str = json.dumps(load_shared_data(), indent=4)
+        st.download_button(
+            "📥 Download Complete System JSON Backup",
+            data=full_json_str,
+            file_name="UPManila_Clerks_Portal_Master_Backup.json",
+            mime="application/json",
+            use_container_width=True,
+        )
+
+    with col2:
+        if len(st.session_state.hh_records) > 0:
+            df_hh_export = pd.DataFrame(st.session_state.hh_records)
+            csv_hh = df_hh_export.to_csv(index=False).encode("utf-8")
+            st.download_button(
+                "📥 Download Master Household Survey CSV",
+                data=csv_hh,
+                file_name="Master_Household_Survey_Records.csv",
+                mime="text/csv",
+                use_container_width=True,
+            )
+        else:
+            st.info("No household records available for CSV export.")
