@@ -177,6 +177,71 @@ def classify_patient_condition(bp=None, spo2=None, rr=None, symptoms=None):
     }
 
 
+
+
+# ================= MASTER HOUSEHOLD SDOH RESEARCH ENGINE =================
+
+def master_household_sdoh_report(records):
+    """Research presentation engine for Master Household Survey data."""
+    if not records:
+        return {}
+
+    def table_for(key):
+        values = []
+        for record in records:
+            value = record.get(key)
+            if value not in [None, "", []]:
+                values.append(str(value))
+
+        counts = Counter(values)
+        total = len(values)
+
+        return [
+            {
+                "Indicator": item,
+                "Frequency (n)": count,
+                "Percentage (%)": round((count / total) * 100, 2) if total else 0
+            }
+            for item, count in counts.items()
+        ]
+
+    return {
+        "Demographics": table_for("Sex"),
+        "Socioeconomic Status": table_for("Income"),
+        "Education": table_for("Education"),
+        "Environmental Health": {
+            "Water Source": table_for("Water"),
+            "Sanitation": table_for("Sanitation"),
+            "Waste Disposal": table_for("Waste_Disposal"),
+            "Flood Exposure": table_for("Flood_Prone")
+        },
+        "Healthcare Seeking Behavior": {
+            "Health Facility": table_for("Health_Facility"),
+            "Health Seeking Pattern": table_for("Health_Seeking"),
+            "Healthcare Barriers": table_for("Healthcare_Barrier")
+        },
+        "Health Profile": {
+            "Hypertension": sum(1 for x in records if x.get("Hypertension_Status")),
+            "Diabetes": sum(1 for x in records if x.get("Diabetes_Status"))
+        },
+        "Interpretation": (
+            f"The community assessment analyzed {len(records)} households. "
+            "The findings describe demographic characteristics, socioeconomic "
+            "conditions, environmental determinants, healthcare access, and "
+            "health-related vulnerabilities requiring targeted interventions."
+        )
+    }
+
+
+def generate_patient_risk_assessment(bp, spo2, rr, symptoms):
+    return run_clinical_risk_engine(
+        bp=bp,
+        spo2=spo2,
+        rr=rr,
+        symptoms=symptoms
+    )
+
+
 # ================= SOCIAL DETERMINANTS OF HEALTH ENGINE =================
 
 
@@ -444,7 +509,7 @@ if not st.session_state["authenticated"]:
 def show_sdoh_module():
     st.subheader("📊 Social Determinants of Health Data Presentation & Interpretation")
 
-    sdoh = generate_full_sdoh_presentation(st.session_state.get("hh_records", []))
+    sdoh = master_household_sdoh_report(st.session_state.get("hh_records", []))
 
     if not sdoh:
         st.info("No household survey records available for SDOH analysis.")
