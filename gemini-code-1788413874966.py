@@ -27,6 +27,25 @@ except Exception:
 
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY) if SUPABASE_URL and SUPABASE_KEY else None
 
+
+
+# ================= PALO LEYTE FIELD CONFIGURATION =================
+PALO_BARANGAYS = [
+    "Anahaway","Arado","Baras","Barayong","Buri","Cabarasan Daku",
+    "Cabarasan Guti","Campetic","Candahug","Cangumbang","Canhidoc",
+    "Capirawan","Castilla","Cavite East","Cavite West","Cogon",
+    "Gacao","Guindapunan","Libertad","Luntad","Naga-Naga","Pawing",
+    "Salvacion","San Agustin","San Antonio","San Fernando",
+    "San Isidro","San Joaquin","San Jose","San Miguel","Santa Cruz",
+    "Tacuranga","Teraza"
+]
+
+ENUMERATORS = {
+    "E1": "Jan Art A. Serna, RMT",
+    "E2": "Leila Projimo, PTRP",
+    "E3": "Aubrey Maye Arrieta"
+}
+
 DEFAULT_DATA = {
     "hh_records": [],
     "gov_records": [],
@@ -517,7 +536,8 @@ menu = st.sidebar.radio(
         "🏠 Phase 2: Master Household Survey",
         "🗣️ Phase 3: Qualitative Field Tools",
         "🔍 Phase 4: Expanded PERI Windshield Tool",
-        "📈 Phase 5: Spatial & Statistical Analytics",
+         "📈 Phase 5: Spatial & Statistical Analytics",
+        "📊 Social Determinants of Health Presentation & Interpretation",
         "📋 Phase 6: Community Diagnosis & Action Plan",
         "💾 Data Management & Export",
     ],
@@ -1397,9 +1417,9 @@ elif menu == "🏠 Phase 2: Master Household Survey":
         enum_select = c_e1.selectbox(
             "👤 Enumerator Identifier",
             [
-                "Enumerator 1 (Code: E1)",
-                "Enumerator 2 (Code: E2)",
-                "Enumerator 3 (Code: E3)",
+                "E1 - Jan Art A. Serna, RMT",
+                "E2 - Leila Projimo, PTRP",
+                "E3 - Aubrey Maye Arrieta",
             ],
             index=0,
         )
@@ -1444,7 +1464,7 @@ elif menu == "🏠 Phase 2: Master Household Survey":
                 hh_id = c1.text_input(
                     "Household ID (Enumerator Prefixed)", value=auto_suggested_id
                 )
-                brgy = c2.text_input("Barangay Name")
+                brgy = c2.selectbox("Barangay Name", PALO_BARANGAYS)
                 purok = c3.selectbox(
                     "Purok / Zone", [f"Purok {i}" for i in range(1, 8)]
                 )
@@ -1464,8 +1484,12 @@ elif menu == "🏠 Phase 2: Master Household Survey":
                 lon = c2.number_input(
                     "Longitude", value=124.9920, format="%.4f"
                 )
+
+                if st.button("📍 Capture Current Location"):
+                    st.info("GPS capture requires browser location permission. Current coordinates fields are ready for live GPS integration.")
+
                 enum_name = c3.text_input(
-                    "Enumerator Full Name", f"Field Enumerator ({enum_code})"
+                    "Enumerator Full Name", ENUMERATORS.get(enum_code, "")
                 )
                 resp_role = c4.selectbox(
                     "Respondent Role",
