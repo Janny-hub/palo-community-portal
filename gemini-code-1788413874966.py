@@ -17,6 +17,83 @@ st.set_page_config(
 
 
 
+
+
+def run_clinical_risk_engine(bp=None, spo2=None, rr=None, symptoms=""):
+    """Runs automatic screening tags after patient assessment."""
+    results = []
+    recommendations = []
+
+    try:
+        if bp and "/" in str(bp):
+            sbp, dbp = map(int, str(bp).split("/"))
+            if sbp >= 180 or dbp >= 120:
+                results.append("🔴 Severe Hypertension Alert")
+                recommendations.append("Urgent clinical evaluation.")
+            elif sbp >= 140 or dbp >= 90:
+                results.append("🟠 Hypertension Risk")
+                recommendations.append("Repeat BP and cardiovascular risk assessment.")
+            else:
+                results.append("🟢 Blood Pressure Within Normal Screening Range")
+    except:
+        pass
+
+    try:
+        if spo2 is not None and str(spo2) != "":
+            oxygen = float(spo2)
+            if oxygen < 90:
+                results.append("🔴 Critical Oxygen Desaturation")
+                recommendations.append("Immediate oxygenation assessment.")
+            elif oxygen < 95:
+                results.append("🟡 Low Oxygen Saturation")
+    except:
+        pass
+
+    try:
+        if rr is not None and str(rr) != "":
+            rate = int(rr)
+            if rate > 30:
+                results.append("🔴 Severe Tachypnea")
+            elif rate > 20:
+                results.append("🟠 Tachypnea")
+    except:
+        pass
+
+    symptom_text = str(symptoms).lower()
+
+    if "chest pain" in symptom_text:
+        results.append("🟠 Cardiovascular Warning")
+
+    if "difficulty breathing" in symptom_text or "shortness of breath" in symptom_text:
+        results.append("🟠 Respiratory Warning")
+
+    if "weakness" in symptom_text or "slurred speech" in symptom_text:
+        results.append("🔴 Possible Neurologic Warning")
+
+    return {
+        "Risk Tags": results,
+        "Recommended Actions": recommendations
+    }
+
+
+def build_sdoh_presentation(records):
+    """Creates automatic SDOH presentation from household records."""
+    if not records:
+        return {"message": "No household survey records available."}
+
+    total = len(records)
+
+    return {
+        "Survey Coverage": {
+            "Households Surveyed": total
+        },
+        "Community Interpretation": (
+            f"Based on {total} surveyed households, the system will summarize "
+            "available demographic, environmental, socioeconomic, and healthcare access indicators."
+        )
+    }
+
+
 # ================= CLINICAL INTELLIGENCE TAGGING ENGINE =================
 
 def classify_patient_condition(bp=None, spo2=None, rr=None, symptoms=None):
@@ -5324,3 +5401,10 @@ elif menu == "💾 Data Management & Export":
             )
         else:
             st.info("No household records available for CSV export.")
+
+
+# Automatic SDOH refresh helper
+if "sdoh_auto_summary" not in st.session_state:
+    st.session_state.sdoh_auto_summary = build_sdoh_presentation(
+        st.session_state.get("hh_records", [])
+    )
