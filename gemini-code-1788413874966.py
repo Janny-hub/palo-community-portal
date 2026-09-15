@@ -11,226 +11,47 @@ from supabase import create_client, Client
 # Page Configuration (Must be first Streamlit command)
 st.set_page_config(
     page_title="UP Manila - Community Clerks Portal",
-    page_icon="",
+    page_icon="🩺",
     layout="wide",
 )
 
+# ================= PERMANENT MULTI-ENUMERATOR DATA PERSISTENCE =================
+# Supabase cloud database storage. Data remains available even when the app server restarts.
+
+try:
+    SUPABASE_URL = st.secrets["SUPABASE_URL"]
+    SUPABASE_KEY = st.secrets["SUPABASE_KEY"]
+except Exception:
+    SUPABASE_URL = os.getenv("SUPABASE_URL", "")
+    SUPABASE_KEY = os.getenv("SUPABASE_KEY", "")
+
+supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY) if SUPABASE_URL and SUPABASE_KEY else None
 
 
 
+# ================= PALO LEYTE FIELD CONFIGURATION =================
+PALO_BARANGAYS = [
+    "Anahaway","Arado","Baras","Barayong","Buri","Cabarasan Daku",
+    "Cabarasan Guti","Campetic","Candahug","Cangumbang","Canhidoc",
+    "Capirawan","Castilla","Cavite East","Cavite West","Cogon",
+    "Gacao","Guindapunan","Libertad","Luntad","Naga-Naga","Pawing",
+    "Salvacion","San Agustin","San Antonio","San Fernando",
+    "San Isidro","San Joaquin","San Jose","San Miguel","Santa Cruz",
+    "Tacuranga","Teraza"
+]
 
-def run_clinical_risk_engine(bp=None, spo2=None, rr=None, symptoms=""):
-    """Runs automatic screening tags after patient assessment."""
-    results = []
-    recommendations = []
+ENUMERATORS = {
+    "E1": "Jan Art A. Serna, RMT",
+    "E2": "Leila Projimo, PTRP",
+    "E3": "Aubrey Maye Arrieta"
+}
 
-    try:
-        if bp and "/" in str(bp):
-            sbp, dbp = map(int, str(bp).split("/"))
-            if sbp >= 180 or dbp >= 120:
-                results.append(" Severe Hypertension Alert")
-                recommendations.append("Urgent clinical evaluation.")
-            elif sbp >= 140 or dbp >= 90:
-                results.append(" Hypertension Risk")
-                recommendations.append("Repeat BP and cardiovascular risk assessment.")
-            else:
-                results.append(" Blood Pressure Within Normal Screening Range")
-    except:
-        pass
-
-    try:
-        if spo2 is not None and str(spo2) != "":
-            oxygen = float(spo2)
-            if oxygen < 90:
-                results.append(" Critical Oxygen Desaturation")
-                recommendations.append("Immediate oxygenation assessment.")
-            elif oxygen < 95:
-                results.append(" Low Oxygen Saturation")
-    except:
-        pass
-
-    try:
-        if rr is not None and str(rr) != "":
-            rate = int(rr)
-            if rate > 30:
-                results.append(" Severe Tachypnea")
-            elif rate > 20:
-                results.append(" Tachypnea")
-    except:
-        pass
-
-    symptom_text = str(symptoms).lower()
-
-    if "chest pain" in symptom_text:
-        results.append(" Cardiovascular Warning")
-
-    if "difficulty breathing" in symptom_text or "shortness of breath" in symptom_text:
-        results.append(" Respiratory Warning")
-
-    if "weakness" in symptom_text or "slurred speech" in symptom_text:
-        results.append(" Possible Neurologic Warning")
-
-    return {
-        "Risk Tags": results,
-        "Recommended Actions": recommendations
-    }
-
-
-
-def build_sdoh_presentation(records):
-    """Automatic Analytics & Community Interpretation generated from all household fields."""
-    if not records:
-        return {"status": "No household survey records available."}
-
-    df = pd.DataFrame(records)
-    report = {}
-
-    for col in df.columns:
-        if col in ["id", "created_at", "updated_at"]:
-            continue
-
-        values = df[col].dropna()
-
-        if len(values) == 0:
-            continue
-
-        if pd.api.types.is_numeric_dtype(values):
-            report[col] = {
-                "type": "numeric",
-                "average": round(float(values.mean()), 2),
-                "minimum": float(values.min()),
-                "maximum": float(values.max())
-            }
-        else:
-            counts = values.astype(str).value_counts()
-            report[col] = [
-                {
-                    "Response": k,
-                    "Frequency (n)": int(v),
-                    "Percentage (%)": round((v / len(values))*100, 2)
-                }
-                for k, v in counts.items()
-            ]
-
-    report["Interpretation"] = (
-        f"The community health report analyzed {len(records)} household records. "
-        "The results summarize demographic characteristics, social conditions, "
-        "health behaviors, environmental factors, and healthcare-related indicators."
-    )
-
-    return report
-
-
-
-# ================= CLINICAL INTELLIGENCE TAGGING ENGINE =================
-
-def classify_patient_condition(bp=None, spo2=None, rr=None, symptoms=None):
-    """
-    Automated screening tags based on clinical screening thresholds.
-    This is a screening support tool and does not replace clinical diagnosis.
-    """
-
-    tags = []
-    actions = []
-
-    # Blood pressure
-    try:
-        if bp:
-            parts = str(bp).replace(" ", "").split("/")
-            sbp = int(parts[0])
-            dbp = int(parts[1])
-
-            if sbp >= 180 or dbp >= 120:
-                tags.append(" Severe Hypertension Alert")
-                actions.append("Urgent clinical assessment recommended.")
-            elif sbp >= 140 or dbp >= 90:
-                tags.append(" Hypertension Risk")
-                actions.append("Repeat BP measurement and assess cardiovascular risk.")
-            elif sbp >= 120 or dbp >= 80:
-                tags.append(" Elevated / Borderline BP")
-            else:
-                tags.append(" Normal BP")
-
-    except Exception:
-        pass
-
-    # Oxygen saturation
-    try:
-        if spo2 is not None:
-            spo2 = float(spo2)
-
-            if spo2 < 90:
-                tags.append(" Critical Oxygen Alert")
-                actions.append("Immediate evaluation for hypoxemia.")
-            elif spo2 < 92:
-                tags.append(" Moderate Oxygen Desaturation")
-            elif spo2 < 95:
-                tags.append(" Mild Oxygen Desaturation")
-            else:
-                tags.append(" Normal Oxygenation")
-    except Exception:
-        pass
-
-    # Respiratory rate
-    try:
-        if rr is not None:
-            rr = int(rr)
-
-            if rr > 30:
-                tags.append(" Severe Tachypnea Alert")
-            elif rr > 20:
-                tags.append(" Tachypnea")
-            elif rr < 12:
-                tags.append(" Bradypnea")
-            else:
-                tags.append(" Normal Respiratory Rate")
-    except Exception:
-        pass
-
-    # Symptoms
-    symptom_text = str(symptoms).lower()
-
-    if "chest pain" in symptom_text:
-        tags.append(" Cardiovascular Warning")
-
-    if "difficulty breathing" in symptom_text or "shortness of breath" in symptom_text:
-        tags.append(" Respiratory Warning")
-
-    if any(x in symptom_text for x in ["facial weakness", "slurred speech", "one-sided weakness"]):
-        tags.append(" Possible Stroke Warning")
-
-    return {
-        "Clinical Tags": tags,
-        "Recommended Actions": actions
-    }
-
-
-
-
-# ================= MASTER HOUSEHOLD Analytics & Community Interpretation RESEARCH ENGINE =================
-
-
-def generate_patient_risk_assessment(bp, spo2, rr, symptoms):
-    return run_clinical_risk_engine(
-        bp=bp,
-        spo2=spo2,
-        rr=rr,
-        symptoms=symptoms
-    )
-
-
-# ================= SOCIAL DETERMINANTS OF HEALTH ENGINE =================
-
-
-
-
-
-# Default shared storage structure
 DEFAULT_DATA = {
-    "households": [],
-    "assessments": [],
-    "users": [],
-    "locations": []
+    "hh_records": [],
+    "gov_records": [],
+    "qual_records": [],
+    "windshield_records": [],
+    "diag_records": [],
 }
 
 
@@ -249,7 +70,7 @@ def load_shared_data():
     except Exception:
         pass
 
-    return DEFAULT_DATA.copy() if 'DEFAULT_DATA' in globals() else {}
+    return DEFAULT_DATA.copy()
 
 
 def save_shared_data(data):
@@ -264,43 +85,6 @@ def save_shared_data(data):
             st.error("Supabase connection missing. Add SUPABASE_URL and SUPABASE_KEY.")
     except Exception as e:
         st.error(f"Error persisting shared data: {e}")
-
-
-
-
-def generate_sdoh_analysis(hh_records):
-    """Generates Community Health Factors summaries from household survey data."""
-    if not hh_records:
-        return {}
-
-    total = len(hh_records)
-
-    def count_yes(key, value="Yes"):
-        return sum(1 for x in hh_records if str(x.get(key, "")).lower() == value.lower())
-
-    summary = {
-        "Total Households Surveyed": total,
-        "Environmental": {
-            "Flood Exposed Households": count_yes("Flood_Prone"),
-            "Unsafe Water Households": count_yes("Water", "Unsafe"),
-        },
-        "Healthcare Access": {
-            "Households Recorded": total,
-        },
-    }
-
-    return summary
-
-
-def display_sdoh_interpretation(sdoh):
-    if not sdoh:
-        return "No Analytics & Community Interpretation data available yet. Complete household surveys first."
-
-    return (
-        "The Community Health Factors analysis is generated from surveyed "
-        "household conditions. Results should guide priority interventions "
-        "for environmental health, healthcare access, and community support."
-    )
 
 
 def sync_session_from_disk():
@@ -371,7 +155,7 @@ def show_login_screen():
 
     st.markdown('<div class="login-box">', unsafe_allow_html=True)
     st.markdown(
-        '<div class="login-title"> UP Manila Clerks Portal</div>',
+        '<div class="login-title">🩺 UP Manila Clerks Portal</div>',
         unsafe_allow_html=True,
     )
     st.markdown(
@@ -397,30 +181,6 @@ def show_login_screen():
 if not st.session_state["authenticated"]:
     show_login_screen()
     st.stop()
-
-
-
-# ================= SOCIAL DETERMINANTS OF HEALTH ANALYTICS =================
-def show_sdoh_module():
-    st.subheader(" Community Health Factors Data Presentation & Interpretation")
-
-    sdoh = master_household_sdoh_report(st.session_state.get("hh_records", []))
-
-    if not sdoh:
-        st.info("No household survey records available for Analytics & Community Interpretation analysis.")
-        return
-
-    st.metric("Surveyed Households", sdoh.get("Demographic Profile", {}).get("Households Surveyed", 0))
-
-    st.markdown("### Environmental Determinants")
-    st.write(sdoh.get("Environmental Determinants", {}))
-
-    st.markdown("### Healthcare Access Determinants")
-    st.write(sdoh.get("Healthcare Access", {}))
-
-    st.markdown("### Interpretation")
-    st.info(sdoh.get("Interpretation", "No interpretation available."))
-
 
 # ================= MAROON & YELLOW STYLING =================
 
@@ -621,7 +381,7 @@ with col_header:
 with col_logout:
     st.write("")
     st.write("")
-    if st.button(" Log Out", use_container_width=True, type="secondary"):
+    if st.button("🚪 Log Out", use_container_width=True, type="secondary"):
         st.session_state["authenticated"] = False
         st.rerun()
 
@@ -721,7 +481,7 @@ overall_progress_pct = int((completed_phases / 6) * 100)
 st.sidebar.markdown(
     f"""
 <div class="sticky-progress-container">
-    <div style="font-weight: 700; color: #0F172A; font-size: 14px; margin-bottom: 4px;"> Phase Completion Tracker</div>
+    <div style="font-weight: 700; color: #0F172A; font-size: 14px; margin-bottom: 4px;">📊 Phase Completion Tracker</div>
     <div style="font-weight: 800; color: #7B1113; font-size: 20px; margin-bottom: 4px;">{overall_progress_pct}% Completed</div>
 </div>
 """,
@@ -731,7 +491,7 @@ st.sidebar.markdown(
 st.sidebar.progress(overall_progress_pct / 100)
 
 if st.sidebar.button(
-    " Sync / Refresh Shared Data",
+    "🔄 Sync / Refresh Shared Data",
     use_container_width=True,
     help="Fetch live submissions from persistent storage",
 ):
@@ -739,59 +499,59 @@ if st.sidebar.button(
     st.sidebar.success("Data synced with persistent storage!")
     st.rerun()
 
-with st.sidebar.expander(" View Detailed Phase Status", expanded=False):
+with st.sidebar.expander("🔍 View Detailed Phase Status", expanded=False):
     st.write(
-        f"{'' if p1_status else ''} **Phase 1 (Governance):**"
+        f"{'✅' if p1_status else '🔴'} **Phase 1 (Governance):**"
         f" {'100%' if p1_status else '0%'}"
     )
     st.write(
-        f"{'' if p2_status else ''} **Phase 2 (Master Survey):**"
+        f"{'✅' if p2_status else '🔴'} **Phase 2 (Master Survey):**"
         f" {'100%' if p2_status else '0%'}"
     )
     st.write(
-        f"{'' if p3_status else ''} **Phase 3 (Qualitative):**"
+        f"{'✅' if p3_status else '🔴'} **Phase 3 (Qualitative):**"
         f" {'100%' if p3_status else '0%'}"
     )
     st.write(
-        f"{'' if p4_status else ''} **Phase 4 (Expanded PERI):**"
+        f"{'✅' if p4_status else '🔴'} **Phase 4 (Expanded PERI):**"
         f" {'100%' if p4_status else '0%'}"
     )
     st.write(
-        f"{'' if p5_status else ''} **Phase 5 (Analytics):**"
+        f"{'✅' if p5_status else '🔴'} **Phase 5 (Analytics):**"
         f" {'100%' if p5_status else '0%'}"
     )
     st.write(
-        f"{'' if p6_status else ''} **Phase 6 (Action Plan):**"
+        f"{'✅' if p6_status else '🔴'} **Phase 6 (Action Plan):**"
         f" {'100%' if p6_status else '0%'}"
     )
 
 st.sidebar.markdown("---")
-st.sidebar.markdown("###  Navigation Menu")
+st.sidebar.markdown("### 🌐 Navigation Menu")
 menu = st.sidebar.radio(
     "Select Field Module",
     [
-        " Executive Health Dashboard & Smart Risk Engine",
-        "️ Interactive Spot Map",
-        " Phase 1: Full Governance Scorecard",
-        " Phase 2: Master Household Survey",
-        "️ Phase 3: Qualitative Field Tools",
-        " Phase 4: Expanded PERI Windshield Tool",
-         " Phase 5: Spatial & Statistical Analytics",
-        " Analytics & Community Interpretation",
-        " Phase 6: Community Diagnosis & Action Plan",
-        " Data Management & Export",
+        "📊 Executive Health Dashboard & Smart Risk Engine",
+        "🗺️ Interactive Spot Map",
+        "📋 Phase 1: Full Governance Scorecard",
+        "🏠 Phase 2: Master Household Survey",
+        "🗣️ Phase 3: Qualitative Field Tools",
+        "🔍 Phase 4: Expanded PERI Windshield Tool",
+         "📈 Phase 5: Spatial & Statistical Analytics",
+        "📊 Social Determinants of Health Presentation & Interpretation",
+        "📋 Phase 6: Community Diagnosis & Action Plan",
+        "💾 Data Management & Export",
     ],
 )
 
 st.sidebar.markdown("---")
-if st.sidebar.button(" Logout Account", use_container_width=True):
+if st.sidebar.button("🔒 Logout Account", use_container_width=True):
     st.session_state["authenticated"] = False
     st.rerun()
 
 # ================= MODULE 0: EXECUTIVE DASHBOARD & SMART RISK ENGINE =================
-if menu == " Executive Health Dashboard & Smart Risk Engine":
+if menu == "📊 Executive Health Dashboard & Smart Risk Engine":
     st.subheader(
-        " Executive Field Intelligence Dashboard & Automated Risk Engine"
+        "📊 Executive Field Intelligence Dashboard & Automated Risk Engine"
     )
     st.caption(
         "Real-Time Multi-Phase Field Analytics, Epidemiological Insights &"
@@ -864,7 +624,7 @@ if menu == " Executive Health Dashboard & Smart Risk Engine":
 
     st.markdown("---")
 
-    st.markdown("###  Automated Community Health Risk & Vulnerability Predictor")
+    st.markdown("### 🤖 Automated Community Health Risk & Vulnerability Predictor")
     st.caption(
         "Dynamically evaluates multi-phase field vectors and generates priority"
         " public health interventions."
@@ -875,7 +635,7 @@ if menu == " Executive Health Dashboard & Smart Risk Engine":
     if htn_rate > 25.0:
         risk_triggers.append({
             "type": "high",
-            "title": " Severe Adult Cardiovascular & Hypertension Surge",
+            "title": "🚨 Severe Adult Cardiovascular & Hypertension Surge",
             "desc": (
                 f"Hyper-prevalence detected: **{htn_rate:.1f}%** of screened"
                 " adults present with high BP (≥140/90 mmHg). Urgent community"
@@ -891,7 +651,7 @@ if menu == " Executive Health Dashboard & Smart Risk Engine":
     if tot_hh > 0 and (flood_hhs / tot_hh) >= 0.3:
         risk_triggers.append({
             "type": "high",
-            "title": " Critical Climate & Flood Vector Exposure",
+            "title": "🌊 Critical Climate & Flood Vector Exposure",
             "desc": (
                 f"**{(flood_hhs/tot_hh*100):.1f}%** of surveyed households are"
                 " located directly within severe flood-prone zones."
@@ -910,7 +670,7 @@ if menu == " Executive Health Dashboard & Smart Risk Engine":
     if len(all_children) > 0 and (stunted_cnt / len(all_children)) >= 0.2:
         risk_triggers.append({
             "type": "warn",
-            "title": " Elevated Child Malnutrition & Stunting Cluster",
+            "title": "👶 Elevated Child Malnutrition & Stunting Cluster",
             "desc": (
                 "Child anthropometric screening reveals"
                 f" **{(stunted_cnt/len(all_children)*100):.1f}%** stunting rate"
@@ -928,7 +688,7 @@ if menu == " Executive Health Dashboard & Smart Risk Engine":
     if unsafe_water > 0:
         risk_triggers.append({
             "type": "warn",
-            "title": " Environmental WASH Vulnerability (Unsafe Water)",
+            "title": "🚰 Environmental WASH Vulnerability (Unsafe Water)",
             "desc": (
                 f"**{unsafe_water}** household(s) rely on shallow wells or"
                 " unprotected water sources, heightening diarrheal disease"
@@ -943,7 +703,7 @@ if menu == " Executive Health Dashboard & Smart Risk Engine":
     if not risk_triggers:
         st.markdown(
             """<div class="insight-alert-good">
-            <strong> Low Baseline Risk Detected:</strong> Current field data indicates manageable community health indicators. Continue quarterly monitoring and standard BHS preventive interventions.
+            <strong>✅ Low Baseline Risk Detected:</strong> Current field data indicates manageable community health indicators. Continue quarterly monitoring and standard BHS preventive interventions.
             </div>""",
             unsafe_allow_html=True,
         )
@@ -958,7 +718,7 @@ if menu == " Executive Health Dashboard & Smart Risk Engine":
                 f"""<div class="{box_cls}">
                 <strong>{trig['title']}</strong><br>
                 {trig['desc']}<br>
-                <em> Recommended Action: {trig['action']}</em>
+                <em>🎯 Recommended Action: {trig['action']}</em>
                 </div>""",
                 unsafe_allow_html=True,
             )
@@ -966,9 +726,9 @@ if menu == " Executive Health Dashboard & Smart Risk Engine":
     st.markdown("---")
 
     dash_tab1, dash_tab2, dash_tab3 = st.tabs([
-        " Disease & Vitals Analytics",
-        " Environmental & PERI Breakdown",
-        " Real-Time Master Household Roster",
+        "📈 Disease & Vitals Analytics",
+        "🌍 Environmental & PERI Breakdown",
+        "🔍 Real-Time Master Household Roster",
     ])
 
     with dash_tab1:
@@ -1057,7 +817,7 @@ if menu == " Executive Health Dashboard & Smart Risk Engine":
         st.markdown("**Live Master Household Explorer**")
         if tot_hh > 0:
             search_query = st.text_input(
-                " Search by Household ID, Barangay, or Head Name", ""
+                "🔎 Search by Household ID, Barangay, or Head Name", ""
             )
             flat_hhs = []
             for h in hh_data:
@@ -1083,41 +843,10 @@ if menu == " Executive Health Dashboard & Smart Risk Engine":
         else:
             st.info("No household data logged.")
 
-
-# MODULE: SOCIAL DETERMINANTS OF HEALTH PRESENTATION
-elif menu == " Analytics & Community Interpretation":
-    st.subheader("Analytics & Community Interpretation")
-
-    records = st.session_state.get("hh_records", [])
-
-    if not records:
-        st.warning("No household survey records found. Save household surveys first.")
-    else:
-        report = build_sdoh_presentation(records)
-
-        for section, data in report.items():
-            st.markdown(f"### {section}")
-
-            if isinstance(data, list):
-                st.dataframe(
-                    pd.DataFrame(data),
-                    use_container_width=True,
-                    hide_index=True
-                )
-            elif isinstance(data, dict):
-                st.dataframe(
-                    pd.DataFrame([data]),
-                    use_container_width=True,
-                    hide_index=True
-                )
-            else:
-                st.info(data)
-
-
 # MODULE 1: INTERACTIVE SPOT MAP
-elif menu == "️ Interactive Spot Map":
+elif menu == "🗺️ Interactive Spot Map":
     st.subheader(
-        " Interactive Barangay Health & Environmental Hazard Spot Map"
+        "📍 Interactive Barangay Health & Environmental Hazard Spot Map"
     )
 
     if len(st.session_state.hh_records) == 0:
@@ -1186,10 +915,10 @@ elif menu == "️ Interactive Spot Map":
 
         st.markdown("---")
         st.markdown("**Map Marker Legend:**")
-        st.markdown(" **Blue:** Flood-Prone Zone Only")
-        st.markdown(" **Maroon:** Hypertensive Health Risk Only")
-        st.markdown(" **Purple:** Dual Hazard (Flood + Health Risk)")
-        st.markdown(" **Green:** Normal / Low Risk")
+        st.markdown("🔵 **Blue:** Flood-Prone Zone Only")
+        st.markdown("🔴 **Maroon:** Hypertensive Health Risk Only")
+        st.markdown("🟣 **Purple:** Dual Hazard (Flood + Health Risk)")
+        st.markdown("🟢 **Green:** Normal / Low Risk")
 
     filt_df = map_df[map_df["Purok"].isin(sel_puroks)]
     if flood_filter == "Flood-Prone Zones Only":
@@ -1203,7 +932,7 @@ elif menu == "️ Interactive Spot Map":
     )
 
     st.markdown(
-        f" **Detected Summary:** Showing **{total_map_hh}** households | ⚠️"
+        f"📊 **Detected Summary:** Showing **{total_map_hh}** households | ⚠️"
         f" **{flood_detected}** located in detected **Flood-Prone Zones**."
     )
 
@@ -1236,14 +965,14 @@ elif menu == "️ Interactive Spot Map":
         )
 
 # MODULE 2: PHASE 1 BHB GOVERNANCE SCORECARD
-elif menu == " Phase 1: Full Governance Scorecard":
+elif menu == "📋 Phase 1: Full Governance Scorecard":
     st.subheader(
         "Phase 1: Barangay Health Board (BHB) Governance Scorecard (100-Point"
         " Instrument)"
     )
 
     with st.expander(
-        " View Formal Scoring Criteria Matrix & Governance Categorization"
+        "📖 View Formal Scoring Criteria Matrix & Governance Categorization"
         " Guide",
         expanded=False,
     ):
@@ -1285,19 +1014,19 @@ elif menu == " Phase 1: Full Governance Scorecard":
     mode_p1 = st.radio(
         "Select Operation",
         [
-            " New Scorecard Entry",
-            " Review, Edit & Delete Submitted Scorecards",
+            "➕ New Scorecard Entry",
+            "📂 Review, Edit & Delete Submitted Scorecards",
         ],
         horizontal=True,
     )
 
-    if mode_p1 == " New Scorecard Entry":
+    if mode_p1 == "➕ New Scorecard Entry":
         with st.form("phase1_full_form"):
             t1, t2, t3, t4 = st.tabs([
-                " Metadata & Leadership",
-                "️ Legal, Meetings & Ordinances",
-                " AIP Budgeting & Reports",
-                " Committee, Gaps & Action Plan",
+                "📌 Metadata & Leadership",
+                "🏛️ Legal, Meetings & Ordinances",
+                "💰 AIP Budgeting & Reports",
+                "🎯 Committee, Gaps & Action Plan",
             ])
 
             with t1:
@@ -1550,7 +1279,7 @@ elif menu == " Phase 1: Full Governance Scorecard":
                 )
 
     else:
-        st.markdown("###  Submitted Governance Scorecards")
+        st.markdown("### 📂 Submitted Governance Scorecards")
         if len(st.session_state.gov_records) == 0:
             st.info("No governance scorecard records found.")
         else:
@@ -1595,7 +1324,7 @@ elif menu == " Phase 1: Full Governance Scorecard":
 
                 col_btn1, col_btn2 = st.columns(2)
                 with col_btn1:
-                    if st.form_submit_button(" Save Changes"):
+                    if st.form_submit_button("💾 Save Changes"):
                         rec.update({
                             "Barangay": e_brgy,
                             "City": e_city,
@@ -1610,14 +1339,14 @@ elif menu == " Phase 1: Full Governance Scorecard":
                         st.success("Record updated successfully!")
                         st.rerun()
                 with col_btn2:
-                    if st.form_submit_button("️ Delete Record"):
+                    if st.form_submit_button("🗑️ Delete Record"):
                         st.session_state.gov_records.pop(selected_idx)
                         save_session_to_disk()
                         st.success("Record deleted successfully!")
                         st.rerun()
 
 # MODULE 3: PHASE 2 MASTER HOUSEHOLD SURVEY
-elif menu == " Phase 2: Master Household Survey":
+elif menu == "🏠 Phase 2: Master Household Survey":
     st.subheader(
         "Phase 2: Master Household Survey Instrument (Dynamic Profile Entry &"
         " Cross-Module Interpretation)"
@@ -1626,23 +1355,23 @@ elif menu == " Phase 2: Master Household Survey":
     mode_p2 = st.radio(
         "Select Operation",
         [
-            " New Household Survey Entry",
+            "➕ New Household Survey Entry",
             (
-                " Phase 2 Interpreted Data & Research Analytics Table"
+                "📊 Phase 2 Interpreted Data & Research Analytics Table"
                 " Inspector"
             ),
-            " Review, Edit & Delete Submitted Household Surveys",
+            "📂 Review, Edit & Delete Submitted Household Surveys",
         ],
         horizontal=True,
     )
 
-    if mode_p2 == " New Household Survey Entry":
+    if mode_p2 == "➕ New Household Survey Entry":
         st.markdown(
             "#### ⚙️ Enumerator Identification & Profile Roster Count"
             " Configuration"
         )
         st.info(
-            " **Multi-Enumerator Collision Prevention:** Select your"
+            "💡 **Multi-Enumerator Collision Prevention:** Select your"
             " Enumerator ID below. The Household ID automatically uses an"
             " enumerator-specific prefix (e.g., HH-E1-001, HH-E2-001) so all 3"
             " enumerators can collect data concurrently without duplicate ID"
@@ -1664,7 +1393,7 @@ elif menu == " Phase 2: Master Household Survey":
                 step=1,
             )
         with c_cnt2:
-            if st.button(" Add Adult Form", use_container_width=True):
+            if st.button("➕ Add Adult Form", use_container_width=True):
                 st.session_state.adult_count += 1
                 st.rerun()
         with c_cnt3:
@@ -1676,7 +1405,7 @@ elif menu == " Phase 2: Master Household Survey":
                 step=1,
             )
         with c_cnt4:
-            if st.button(" Add Child Form", use_container_width=True):
+            if st.button("➕ Add Child Form", use_container_width=True):
                 st.session_state.child_count += 1
                 st.rerun()
 
@@ -1686,7 +1415,7 @@ elif menu == " Phase 2: Master Household Survey":
         # Enumerator selection outside form to calculate dynamic prefix
         c_e1, c_e2 = st.columns(2)
         enum_select = c_e1.selectbox(
-            " Enumerator Identifier",
+            "👤 Enumerator Identifier",
             [
                 "E1 - Jan Art A. Serna, RMT",
                 "E2 - Leila Projimo, PTRP",
@@ -1717,14 +1446,14 @@ elif menu == " Phase 2: Master Household Survey":
         with st.form("phase2_complete_form"):
             t_meta, t_vitals, t_socio, t_dec, t_morb, t_mch, t_child, t_yakap = (
                 st.tabs([
-                    " Metadata & Roster",
-                    " Dynamic Adult Profiling & Vitals",
-                    " Socio-Econ, Food Security, Housing & WASH",
-                    " Decision-Making Patterns",
-                    " Morbidity & Chronic Care",
-                    " Maternal, FP & Mortality",
-                    " Dynamic Child Profiling & Immunization",
-                    " Health-Seeking Behavior & PhilHealth YAKAP",
+                    "📋 Metadata & Roster",
+                    "🩺 Dynamic Adult Profiling & Vitals",
+                    "🌾 Socio-Econ, Food Security, Housing & WASH",
+                    "🤝 Decision-Making Patterns",
+                    "🤒 Morbidity & Chronic Care",
+                    "👩 Maternal, FP & Mortality",
+                    "👶 Dynamic Child Profiling & Immunization",
+                    "🏥 Health-Seeking Behavior & PhilHealth YAKAP",
                 ])
             )
 
@@ -1756,7 +1485,7 @@ elif menu == " Phase 2: Master Household Survey":
                     "Longitude", value=124.9920, format="%.4f"
                 )
 
-                if st.form_submit_button(" Capture Current Location"):
+                if st.form_submit_button("📍 Capture Current Location"):
                     st.info("GPS capture requires browser location permission. Current coordinates fields are ready for live GPS integration.")
 
                 enum_name = c3.text_input(
@@ -1921,7 +1650,7 @@ elif menu == " Phase 2: Master Household Survey":
                     )
 
                     a_action = st.multiselect(
-                        f" Adult {i} Action Taken",
+                        f"🩺 Adult {i} Action Taken",
                         [
                             "Referral to RHU / MHO Physician",
                             "Referral to BHS / Barangay Midwife",
@@ -1956,12 +1685,6 @@ elif menu == " Phase 2: Master Household Survey":
                             "Complaints": a_symptoms,
                             "Risk": a_risk,
                             "Action_Taken": a_action,
-                            "Clinical_Tags": classify_patient_condition(
-                                bp=f"{a_sys}/{a_dia}",
-                                spo2=a_spo2,
-                                rr=a_rr if "a_rr" in locals() else None,
-                                symptoms=a_symptoms
-                            ),
                         })
 
             # --- TAB 3: SOCIO-ECON, FOOD INSECURITY, HOUSING & WASH ---
@@ -2098,7 +1821,7 @@ elif menu == " Phase 2: Master Household Survey":
 
                 c1, c2 = st.columns(2)
                 is_flood_prone = c1.selectbox(
-                    " Is Household Located in a Flood-Prone Zone?",
+                    "🌊 Is Household Located in a Flood-Prone Zone?",
                     ["No", "Yes"],
                 )
 
@@ -2298,7 +2021,7 @@ elif menu == " Phase 2: Master Household Survey":
                 children_records = []
                 for c_i in range(1, int(num_children) + 1):
                     st.markdown(
-                        f"<div class='child-card'><strong> Child Member {c_i}"
+                        f"<div class='child-card'><strong>👶 Child Member {c_i}"
                         " Profile & Immunization Screening</strong></div>",
                         unsafe_allow_html=True,
                     )
@@ -2331,14 +2054,14 @@ elif menu == " Phase 2: Master Household Survey":
 
                     c_nutr = compute_child_nutrition(c_age_m, c_wt_kg, c_ht_cm)
                     st.caption(
-                        f" **Outcome:** BMI: {c_nutr['BMI']} | Wasting:"
+                        f"📊 **Outcome:** BMI: {c_nutr['BMI']} | Wasting:"
                         f" **{c_nutr['Wasting']}** | Stunting:"
                         f" **{c_nutr['Stunting']}** | Underweight:"
                         f" **{c_nutr['Underweight']}**"
                     )
 
                     st.markdown(
-                        f"** Child {c_i} Immunization Card Check:**"
+                        f"**💉 Child {c_i} Immunization Card Check:**"
                     )
                     ic1, ic2, ic3, ic4, ic5, ic6 = st.columns(6)
                     imm_bcg = ic1.checkbox("BCG", key=f"bcg_{c_i}")
@@ -2363,7 +2086,7 @@ elif menu == " Phase 2: Master Household Survey":
                     )
 
                     c_action = st.multiselect(
-                        f" Child {c_i} Action Taken",
+                        f"👶 Child {c_i} Action Taken",
                         [
                             "Referral to RHU / Nutrition Officer",
                             "Referral for Supplementary Feeding",
@@ -2593,10 +2316,10 @@ elif menu == " Phase 2: Master Household Survey":
 
     elif (
         mode_p2
-        == " Phase 2 Interpreted Data & Research Analytics Table Inspector"
+        == "📊 Phase 2 Interpreted Data & Research Analytics Table Inspector"
     ):
         st.markdown(
-            "###  Comprehensive Summary Interpretation & Master Survey"
+            "### 📊 Comprehensive Research Interpretation & Master Survey"
             " Variable Tables"
         )
 
@@ -2607,9 +2330,9 @@ elif menu == " Phase 2: Master Household Survey":
             )
         else:
             tab_interp, tab_research, tab_indiv = st.tabs([
-                " Aggregated Cross-Module Dashboard",
-                " Master Survey Questions Research Tables (n & %)",
-                " Individual Response Inspector",
+                "📈 Aggregated Cross-Module Dashboard",
+                "🔬 Master Survey Questions Research Tables (n & %)",
+                "🔍 Individual Response Inspector",
             ])
 
             with tab_interp:
@@ -2626,7 +2349,7 @@ elif menu == " Phase 2: Master Household Survey":
                 ]
 
                 st.markdown(
-                    f"####  Overview: Aggregate Coverage ({total_hhs}"
+                    f"#### 🌐 Overview: Aggregate Coverage ({total_hhs}"
                     f" Households | {len(all_adults)} Adults Profiled |"
                     f" {len(all_children)} Children Profiled)"
                 )
@@ -2673,7 +2396,7 @@ elif menu == " Phase 2: Master Household Survey":
 
             with tab_research:
                 st.markdown(
-                    "####  Complete Summary Interpretation Tables (All"
+                    "#### 🔬 Complete Research Interpretation Tables (All"
                     " Master Survey Variables)"
                 )
                 st.caption(
@@ -2995,16 +2718,16 @@ elif menu == " Phase 2: Master Household Survey":
                 selected_record = st.session_state.hh_records[sel_hh_idx]
 
                 st.markdown(
-                    "###  Inspection for Record:"
+                    "### 🏠 Inspection for Record:"
                     f" `{selected_record.get('HH_ID', 'N/A')}`"
                 )
 
                 i_t1, i_t2, i_t3, i_t4, i_t5 = st.tabs([
-                    " Profile & Metadata",
-                    " Adult Profiling Data",
-                    " Child Profiling Data",
-                    " WASH & Housing",
-                    " Health-Seeking & YAKAP",
+                    "📌 Profile & Metadata",
+                    "🩺 Adult Profiling Data",
+                    "👶 Child Profiling Data",
+                    "🌾 WASH & Housing",
+                    "🏥 Health-Seeking & YAKAP",
                 ])
 
                 with i_t1:
@@ -3035,7 +2758,7 @@ elif menu == " Phase 2: Master Household Survey":
                     )
 
                 with i_t2:
-                    st.markdown("####  Dynamic Adult Profiling Data")
+                    st.markdown("#### 🩺 Dynamic Adult Profiling Data")
                     adults_list = selected_record.get("Adults", [])
                     if len(adults_list) == 0:
                         st.info(
@@ -3049,7 +2772,7 @@ elif menu == " Phase 2: Master Household Survey":
 
                 with i_t3:
                     st.markdown(
-                        "####  Dynamic Child Profiling & Immunization Data"
+                        "#### 👶 Dynamic Child Profiling & Immunization Data"
                     )
                     children_list = selected_record.get("Children", [])
                     if len(children_list) == 0:
@@ -3090,7 +2813,7 @@ elif menu == " Phase 2: Master Household Survey":
                     )
 
     else:
-        st.markdown("###  Submitted Household Survey Records")
+        st.markdown("### 📂 Submitted Household Survey Records")
         if len(st.session_state.hh_records) == 0:
             st.info("No household records found.")
         else:
@@ -3117,7 +2840,7 @@ elif menu == " Phase 2: Master Household Survey":
 
                 col_btn1, col_btn2 = st.columns(2)
                 with col_btn1:
-                    if st.form_submit_button(" Save Household Edits"):
+                    if st.form_submit_button("💾 Save Household Edits"):
                         rec.update({
                             "HH_ID": e_hh_id,
                             "Barangay": e_brgy,
@@ -3128,14 +2851,14 @@ elif menu == " Phase 2: Master Household Survey":
                         st.success("Household record updated successfully!")
                         st.rerun()
                 with col_btn2:
-                    if st.form_submit_button("️ Delete Household Record"):
+                    if st.form_submit_button("🗑️ Delete Household Record"):
                         st.session_state.hh_records.pop(selected_idx)
                         save_session_to_disk()
                         st.success("Household record deleted successfully!")
                         st.rerun()
 
 # MODULE 4: PHASE 3 QUALITATIVE FIELD TOOLS
-elif menu == "️ Phase 3: Qualitative Field Tools":
+elif menu == "🗣️ Phase 3: Qualitative Field Tools":
     st.subheader(
         "Phase 3: Qualitative Field Tools (KII & FGD Structured Guides)"
     )
@@ -3164,7 +2887,7 @@ elif menu == "️ Phase 3: Qualitative Field Tools":
         " LEADERSHIP"
     ):
         st.markdown(
-            "### ️ TOOL 3.1: KEY INFORMANT INTERVIEW (KII) GUIDE — GOVERNANCE"
+            "### 🏛️ TOOL 3.1: KEY INFORMANT INTERVIEW (KII) GUIDE — GOVERNANCE"
             " & LEADERSHIP"
         )
         st.caption(
@@ -3178,7 +2901,7 @@ elif menu == "️ Phase 3: Qualitative Field Tools":
         )
 
         with st.form("kii_gov_form"):
-            st.markdown("####  Respondent & Interview Administrative Metadata")
+            st.markdown("#### 📋 Respondent & Interview Administrative Metadata")
             c1, c2 = st.columns(2)
             resp_name = c1.text_input("Respondent Name")
             pos_desig = c2.multiselect(
@@ -3209,7 +2932,7 @@ elif menu == "️ Phase 3: Qualitative Field Tools":
 
             st.markdown("---")
             st.markdown(
-                "#### ️ Qualitative Interview Domains & Probing Prompts"
+                "#### 🗣️ Qualitative Interview Domains & Probing Prompts"
             )
 
             st.markdown("**1. Resource Allocation & AIP Prioritization**")
@@ -3303,7 +3026,7 @@ elif menu == "️ Phase 3: Qualitative Field Tools":
                 "Qualitative Notes / Key Quotations (Domain 5)", key="kii_g_q5"
             )
 
-            if st.form_submit_button(" Save TOOL 3.1 Interview Record"):
+            if st.form_submit_button("💾 Save TOOL 3.1 Interview Record"):
                 st.session_state.qual_records.append({
                     "Tool": "TOOL 3.1: KII — Governance & Leadership",
                     "Respondent": resp_name,
@@ -3330,7 +3053,7 @@ elif menu == "️ Phase 3: Qualitative Field Tools":
         == "TOOL 3.2: KEY INFORMANT INTERVIEW (KII) GUIDE — FRONTLINE PERSONNEL"
     ):
         st.markdown(
-            "### ‍⚕️ TOOL 3.2: KEY INFORMANT INTERVIEW (KII) GUIDE — FRONTLINE"
+            "### 👩‍⚕️ TOOL 3.2: KEY INFORMANT INTERVIEW (KII) GUIDE — FRONTLINE"
             " PERSONNEL"
         )
         st.caption(
@@ -3345,7 +3068,7 @@ elif menu == "️ Phase 3: Qualitative Field Tools":
         )
 
         with st.form("kii_frontline_form"):
-            st.markdown("####  Respondent & Administrative Metadata")
+            st.markdown("#### 📋 Respondent & Administrative Metadata")
             c1, c2 = st.columns(2)
             resp_name = c1.text_input("Respondent Name")
             role = c2.multiselect(
@@ -3374,7 +3097,7 @@ elif menu == "️ Phase 3: Qualitative Field Tools":
 
             st.markdown("---")
             st.markdown(
-                "#### ️ Qualitative Interview Domains & Probing Prompts"
+                "#### 🗣️ Qualitative Interview Domains & Probing Prompts"
             )
 
             st.markdown("**1. Clinical Workload & Essential Supply Deficits**")
@@ -3450,7 +3173,7 @@ elif menu == "️ Phase 3: Qualitative Field Tools":
                 "Qualitative Notes / Key Quotations (Domain 4)", key="kii_f_q4"
             )
 
-            if st.form_submit_button(" Save TOOL 3.2 Interview Record"):
+            if st.form_submit_button("💾 Save TOOL 3.2 Interview Record"):
                 st.session_state.qual_records.append({
                     "Tool": "TOOL 3.2: KII — Frontline Personnel",
                     "Respondent": resp_name,
@@ -3476,7 +3199,7 @@ elif menu == "️ Phase 3: Qualitative Field Tools":
         == "TOOL 3.3: FOCUS GROUP DISCUSSION (FGD) GUIDE — COMMUNITY MEMBERS"
     ):
         st.markdown(
-            "###  TOOL 3.3: FOCUS GROUP DISCUSSION (FGD) GUIDE — COMMUNITY"
+            "### 👥 TOOL 3.3: FOCUS GROUP DISCUSSION (FGD) GUIDE — COMMUNITY"
             " MEMBERS"
         )
         st.caption(
@@ -3490,7 +3213,7 @@ elif menu == "️ Phase 3: Qualitative Field Tools":
             " quality, and grassroots priorities."
         )
 
-        with st.expander(" GROUND RULES FOR FACILITATOR", expanded=True):
+        with st.expander("📜 GROUND RULES FOR FACILITATOR", expanded=True):
             st.markdown("""
             1. Welcome participants, explain session purpose, and ensure all participants sign the informed consent form.
             2. Emphasize confidentiality: *'There are no right or wrong answers. What is shared here stays in this room.'*
@@ -3500,7 +3223,7 @@ elif menu == "️ Phase 3: Qualitative Field Tools":
 
         with st.form("fgd_community_form"):
             st.markdown(
-                "####  Session Administrative & Group Composition Metadata"
+                "#### 📋 Session Administrative & Group Composition Metadata"
             )
             c1, c2 = st.columns(2)
             brgy_loc = c1.text_input("Barangay / Location")
@@ -3530,7 +3253,7 @@ elif menu == "️ Phase 3: Qualitative Field Tools":
 
             st.markdown("---")
             st.markdown(
-                "#### ️ FGD Discussion Domains & Probing Prompts"
+                "#### 🗣️ FGD Discussion Domains & Probing Prompts"
             )
 
             st.markdown("**1. Health Seeking Decision Dynamics**")
@@ -3604,7 +3327,7 @@ elif menu == "️ Phase 3: Qualitative Field Tools":
                 "Qualitative Notes / Key Quotations (Domain 4)", key="fgd_q4"
             )
 
-            if st.form_submit_button(" Save TOOL 3.3 FGD Record"):
+            if st.form_submit_button("💾 Save TOOL 3.3 FGD Record"):
                 st.session_state.qual_records.append({
                     "Tool": "TOOL 3.3: FGD — Community Members",
                     "Barangay": brgy_loc,
@@ -3626,7 +3349,7 @@ elif menu == "️ Phase 3: Qualitative Field Tools":
                 st.success("TOOL 3.3 FGD Record Saved Successfully!")
 
     st.markdown("---")
-    st.markdown("###  Review Submitted Qualitative Records")
+    st.markdown("### 📂 Review Submitted Qualitative Records")
     if len(st.session_state.qual_records) == 0:
         st.info("No qualitative records logged yet.")
     else:
@@ -3643,28 +3366,28 @@ elif menu == "️ Phase 3: Qualitative Field Tools":
         q_rec = st.session_state.qual_records[sel_q_idx]
 
         st.json(q_rec)
-        if st.button("️ Delete This Qualitative Record", key="del_qual"):
+        if st.button("🗑️ Delete This Qualitative Record", key="del_qual"):
             st.session_state.qual_records.pop(sel_q_idx)
             save_session_to_disk()
             st.success("Qualitative record deleted!")
             st.rerun()
 
 # MODULE 5: PHASE 4 EXPANDED PERI WINDSHIELD TOOL
-elif menu == " Phase 4: Expanded PERI Windshield Tool":
+elif menu == "🔍 Phase 4: Expanded PERI Windshield Tool":
     st.subheader(
         "Phase 4: Separated & Expanded Environmental Observation Matrices &"
         " PERI Index Manual"
     )
 
     p4_tab1, p4_tab2, p4_tab3 = st.tabs([
-        " Field Survey Assessment Matrix",
-        " Comprehensive Result Interpretation & Manual",
-        " Review & Delete Saved Field Assessments",
+        "📋 Field Survey Assessment Matrix",
+        "📖 Comprehensive Result Interpretation & Manual",
+        "📂 Review & Delete Saved Field Assessments",
     ])
 
     with p4_tab1:
         with st.form("phase4_expanded_observation_form"):
-            st.markdown("###  Field Survey Metadata")
+            st.markdown("### 📌 Field Survey Metadata")
             c1, c2, c3 = st.columns(3)
             purok_eval = c1.selectbox(
                 "Target Purok Evaluated", [f"Purok {i}" for i in range(1, 8)]
@@ -4165,22 +3888,22 @@ elif menu == " Phase 4: Expanded PERI Windshield Tool":
                 )
 
     with p4_tab2:
-        st.markdown("###  PERI Score Interpretation Manual & Action Thresholds")
+        st.markdown("### 📖 PERI Score Interpretation Manual & Action Thresholds")
         st.markdown("""
-        ####  Rating Scale & Mathematical Index Construction
+        #### 📊 Rating Scale & Mathematical Index Construction
         * **1.00 – 1.49 (Category A: Low Environmental Risk / Sanitary):** Environment is generally well-maintained. Standard preventive monitoring recommended.
         * **1.50 – 2.29 (Category B: Moderate Environmental Risk / Concern):** Noticeable environmental degradation or infrastructure bottlenecks. Targeted sanitation and WASH interventions required.
         * **2.30 – 3.00 (Category C: Critical High Environmental Risk):** Severe environmental hazards, uncontrolled vector breeding, or flood vulnerability. Immediate inter-agency remediation mandated.
         """)
 
     with p4_tab3:
-        st.markdown("###  Saved Field Observations")
+        st.markdown("### 📂 Saved Field Observations")
         if len(st.session_state.windshield_records) == 0:
             st.info("No windshield assessment records stored.")
         else:
             for i, p_rec in enumerate(st.session_state.windshield_records):
                 with st.expander(
-                    f" [{p_rec.get('Purok')}] - Evaluation Date:"
+                    f"📌 [{p_rec.get('Purok')}] - Evaluation Date:"
                     f" {p_rec.get('Date')} (PERI Index:"
                     f" {p_rec.get('PERI_Index', 0):.2f})"
                 ):
@@ -4196,14 +3919,14 @@ elif menu == " Phase 4: Expanded PERI Windshield Tool":
                         "DRR & Climate (D5)": p_rec.get("DS5_DRR"),
                         "Vector Exposure (D6)": p_rec.get("DS6_Vector"),
                     })
-                    if st.button("️ Delete Assessment", key=f"del_peri_{i}"):
+                    if st.button("🗑️ Delete Assessment", key=f"del_peri_{i}"):
                         st.session_state.windshield_records.pop(i)
                         save_session_to_disk()
                         st.success("Assessment deleted!")
                         st.rerun()
 
 # MODULE 6: PHASE 5 SPATIAL & STATISTICAL ANALYTICS
-elif menu == " Phase 5: Spatial & Statistical Analytics":
+elif menu == "📈 Phase 5: Spatial & Statistical Analytics":
     st.subheader(
         "Phase 5: Integrated Spatial, Epidemiological & Research Analytics"
         " Engine"
@@ -4427,11 +4150,11 @@ elif menu == " Phase 5: Spatial & Statistical Analytics":
 
         # 6.2 + 6.3 are integrated into the Phase 5 interface.
         res_tab1, res_tab2, res_tab3, res_tab4, res_tab5 = st.tabs([
-            " Full Research Frequency Tables",
-            " Social Gradient & Effect Measures",
-            " Factor Analysis & Latent Classes",
-            "️ 6.2 Multi-Layer GIS Visualization",
-            " Automated Interpretation & Outputs",
+            "📋 Full Research Frequency Tables",
+            "📊 Social Gradient & Effect Measures",
+            "🧩 Factor Analysis & Latent Classes",
+            "🗺️ 6.2 Multi-Layer GIS Visualization",
+            "📈 Automated Interpretation & Outputs",
         ])
 
         with res_tab1:
@@ -4508,7 +4231,7 @@ elif menu == " Phase 5: Spatial & Statistical Analytics":
             full_res_table = pd.concat(all_tables, ignore_index=True)
             st.dataframe(full_res_table, use_container_width=True)
             st.download_button(
-                " Download Publication-Ready Research Analytics (CSV)",
+                "📥 Download Publication-Ready Research Analytics (CSV)",
                 full_res_table.to_csv(index=False).encode("utf-8"),
                 "Master_Household_Survey_Research_Analytics.csv",
                 "text/csv",
@@ -4710,7 +4433,7 @@ elif menu == " Phase 5: Spatial & Statistical Analytics":
                     )
 
                 st.download_button(
-                    " Download Household Deprivation Index",
+                    "📥 Download Household Deprivation Index",
                     hdi_df.to_csv(index=False).encode("utf-8"),
                     "Household_Deprivation_Index.csv",
                     "text/csv",
@@ -4801,7 +4524,7 @@ elif menu == " Phase 5: Spatial & Statistical Analytics":
                         "transport/access and chronic-care interventions."
                     )
                     st.download_button(
-                        " Download LCA Household Classes",
+                        "📥 Download LCA Household Classes",
                         household_lca.to_csv(index=False).encode("utf-8"),
                         "Latent_Class_Household_Vulnerability.csv",
                         "text/csv",
@@ -4820,7 +4543,7 @@ elif menu == " Phase 5: Spatial & Statistical Analytics":
         with res_tab4:
             st.markdown("### 6.2 Multi-Layer GIS Visualization Framework")
             st.caption(
-                "Toggle layers to combine disease hotspots, environmental Analytics & Community Interpretation, "
+                "Toggle layers to combine disease hotspots, environmental SDOH, "
                 "food access and health-facility accessibility."
             )
 
@@ -4838,7 +4561,7 @@ elif menu == " Phase 5: Spatial & Statistical Analytics":
                     default=["Hypertension", "Diabetes", "Active TB"],
                 )
             with controls[1]:
-                show_env = st.checkbox("Layer 2: Environmental Analytics & Community Interpretation", True)
+                show_env = st.checkbox("Layer 2: Environmental SDOH", True)
                 show_flood = st.checkbox("Flood-risk households", True)
                 show_water = st.checkbox("Unsafe water households", True)
                 show_dump = st.checkbox("Open-dumping households", True)
@@ -5173,7 +4896,7 @@ elif menu == " Phase 5: Spatial & Statistical Analytics":
         # AUTOMATED INTERPRETATION / PUBLIC HEALTH OUTPUT
         # --------------------------------------------------------------
         with res_tab5:
-            st.markdown("###  Automatic Calculation & Interpretation Engine")
+            st.markdown("### 🤖 Automatic Calculation & Interpretation Engine")
             st.caption(
                 "The following findings are recalculated every time Phase 5 is opened "
                 "from the current persistent household/PERI dataset."
@@ -5195,7 +4918,7 @@ elif menu == " Phase 5: Spatial & Statistical Analytics":
 
             if htn_prev >= 0.20:
                 interpretations.append(
-                    f" Hypertension burden is high at **{htn_prev*100:.1f}%** of households "
+                    f"🚨 Hypertension burden is high at **{htn_prev*100:.1f}%** of households "
                     "with a household-level hypertension signal. Prioritize BP confirmation, "
                     "continuity of care and adherence monitoring."
                 )
@@ -5230,10 +4953,10 @@ elif menu == " Phase 5: Spatial & Statistical Analytics":
             ])
 
             interpretations.extend([
-                f" Unsafe-water exposure: **{unsafe_pct*100:.1f}%** of households.",
-                f" Flood exposure: **{flood_pct*100:.1f}%** of households.",
-                f" Food-insecurity signal: **{food_pct*100:.1f}%** of households.",
-                f"️ Open/river waste-disposal signal: **{dump_pct*100:.1f}%** of households.",
+                f"🚰 Unsafe-water exposure: **{unsafe_pct*100:.1f}%** of households.",
+                f"🌊 Flood exposure: **{flood_pct*100:.1f}%** of households.",
+                f"🍚 Food-insecurity signal: **{food_pct*100:.1f}%** of households.",
+                f"🗑️ Open/river waste-disposal signal: **{dump_pct*100:.1f}%** of households.",
             ])
 
             for item in interpretations:
@@ -5275,18 +4998,18 @@ elif menu == " Phase 5: Spatial & Statistical Analytics":
             })
             st.dataframe(output_df, use_container_width=True)
             st.download_button(
-                " Download Phase 5 Automated Summary",
+                "📥 Download Phase 5 Automated Summary",
                 output_df.to_csv(index=False).encode("utf-8"),
                 "Phase_5_Automated_Analytics_Summary.csv",
                 "text/csv",
             )
 
 # MODULE 7: PHASE 6 COMMUNITY DIAGNOSIS & ACTION PLAN
-elif menu == " Phase 6: Community Diagnosis & Action Plan":
+elif menu == "📋 Phase 6: Community Diagnosis & Action Plan":
     st.subheader("Phase 6: Community Diagnosis & COPAR Action Planning Portal")
 
     with st.form("phase6_action_form"):
-        st.markdown("###  Formulate Priority Community Health Action Plan")
+        st.markdown("### 🎯 Formulate Priority Community Health Action Plan")
         c1, c2 = st.columns(2)
         target_brgy = c1.text_input("Barangay Target Name")
         plan_date = c2.date_input("Planning Date")
@@ -5305,7 +5028,7 @@ elif menu == " Phase 6: Community Diagnosis & Action Plan":
         )
 
         st.markdown("---")
-        st.markdown("#### ️ COPAR Strategic Intervention Matrix")
+        st.markdown("#### 🛠️ COPAR Strategic Intervention Matrix")
         strat_obj = st.text_area(
             "1. Strategic Objectives & Key Performance Indicators (KPIs):"
         )
@@ -5319,7 +5042,7 @@ elif menu == " Phase 6: Community Diagnosis & Action Plan":
         )
         timeframe = c2.text_input("Implementation Timeframe", "3 Months (Q4)")
 
-        if st.form_submit_button(" Save & Finalize Action Plan"):
+        if st.form_submit_button("💾 Save & Finalize Action Plan"):
             st.session_state.diag_records.append({
                 "Barangay": target_brgy,
                 "Date": str(plan_date),
@@ -5335,30 +5058,30 @@ elif menu == " Phase 6: Community Diagnosis & Action Plan":
             st.success("Community Action Plan Saved Permanently!")
 
     st.markdown("---")
-    st.markdown("###  Saved Community Action Plans")
+    st.markdown("### 📂 Saved Community Action Plans")
     if len(st.session_state.diag_records) == 0:
         st.info("No action plans created yet.")
     else:
         for i, plan in enumerate(st.session_state.diag_records):
             with st.expander(
-                f" Plan #{i+1}: {plan.get('Barangay')} -"
+                f"🎯 Plan #{i+1}: {plan.get('Barangay')} -"
                 f" {plan.get('Problem')}"
             ):
                 st.write(f"**Lead:** {plan.get('Lead')}")
                 st.write(f"**Budget:** ₱{plan.get('Budget'):,}")
                 st.write(f"**Objectives:** {plan.get('Objectives')}")
                 st.write(f"**Activities:** {plan.get('Activities')}")
-                if st.button("️ Delete Plan", key=f"del_plan_{i}"):
+                if st.button("🗑️ Delete Plan", key=f"del_plan_{i}"):
                     st.session_state.diag_records.pop(i)
                     save_session_to_disk()
                     st.success("Plan deleted!")
                     st.rerun()
 
 # MODULE 8: DATA MANAGEMENT & EXPORT
-elif menu == " Data Management & Export":
-    st.subheader(" Persistent Data Storage & Multi-Format Export Engine")
+elif menu == "💾 Data Management & Export":
+    st.subheader("💾 Persistent Data Storage & Multi-Format Export Engine")
 
-    st.markdown("###  Current Database Record Counts")
+    st.markdown("### 📊 Current Database Record Counts")
     c1, c2, c3, c4, c5 = st.columns(5)
     c1.metric("Governance Scorecards", len(st.session_state.gov_records))
     c2.metric("Household Surveys", len(st.session_state.hh_records))
@@ -5367,13 +5090,13 @@ elif menu == " Data Management & Export":
     c5.metric("Action Plans", len(st.session_state.diag_records))
 
     st.markdown("---")
-    st.markdown("###  Download Shared Persistent Data")
+    st.markdown("### 📥 Download Shared Persistent Data")
 
     col1, col2 = st.columns(2)
     with col1:
         full_json_str = json.dumps(load_shared_data(), indent=4)
         st.download_button(
-            " Download Complete System JSON Backup",
+            "📥 Download Complete System JSON Backup",
             data=full_json_str,
             file_name="UPManila_Clerks_Portal_Master_Backup.json",
             mime="application/json",
@@ -5385,7 +5108,7 @@ elif menu == " Data Management & Export":
             df_hh_export = pd.DataFrame(st.session_state.hh_records)
             csv_hh = df_hh_export.to_csv(index=False).encode("utf-8")
             st.download_button(
-                " Download Master Household Survey CSV",
+                "📥 Download Master Household Survey CSV",
                 data=csv_hh,
                 file_name="Master_Household_Survey_Records.csv",
                 mime="text/csv",
@@ -5393,386 +5116,3 @@ elif menu == " Data Management & Export":
             )
         else:
             st.info("No household records available for CSV export.")
-
-
-# Automatic Analytics & Community Interpretation refresh helper
-if "sdoh_auto_summary" not in st.session_state:
-    st.session_state.sdoh_auto_summary = build_sdoh_presentation(
-        st.session_state.get("hh_records", [])
-    )
-
-
-def display_patient_risk_summary(record):
-    tags = record.get("Clinical_Tags", {})
-    if not tags:
-        return "No automated clinical tags available."
-
-    return "\n".join(tags.get("Risk Tags", []))
-
-
-# ================= MASTER HOUSEHOLD Analytics & Community Interpretation RESEARCH REPORT =================
-
-def create_modern_sdoh_report(records):
-    """
-    Research-style Analytics & Community Interpretation presentation engine.
-    Uses all available Master Household Survey records.
-    """
-
-    if not records:
-        return {}
-
-    total = len(records)
-
-    def frequency(key):
-        result = {}
-        for r in records:
-            value = r.get(key)
-            if value not in [None, "", []]:
-                value = str(value)
-                result[value] = result.get(value, 0) + 1
-        return result
-
-    def percentage(value):
-        return round((value / total) * 100, 1) if total else 0
-
-    report = {
-        "Demographic Profile": {
-            "Total Households": total,
-            "Age/Sex Distribution": frequency("Sex"),
-        },
-
-        "Socioeconomic Determinants": {
-            "Income Profile": frequency("Income"),
-            "Employment Profile": frequency("Employment"),
-        },
-
-        "Education Determinants": {
-            "Educational Attainment": frequency("Education"),
-        },
-
-        "Environmental Determinants": {
-            "Water Source": frequency("Water"),
-            "Sanitation": frequency("Sanitation"),
-            "Waste Management": frequency("Waste_Disposal"),
-            "Flood Exposure": frequency("Flood_Prone"),
-        },
-
-        "Healthcare Access and Seeking Behavior": {
-            "Health Facility Preference": frequency("Health_Facility"),
-            "Consultation Behavior": frequency("Health_Seeking"),
-            "Healthcare Barriers": frequency("Healthcare_Barrier"),
-        },
-
-        "Health Risk Profile": {
-            "Hypertension": frequency("Hypertension_Status"),
-            "Diabetes": frequency("Diabetes_Status"),
-            "Smoking": frequency("Smoking_Status"),
-        },
-
-        "Summary Interpretation":
-            "The community assessment highlights the relationship between "
-            "demographic characteristics, socioeconomic conditions, environmental "
-            "exposures, healthcare access, and health outcomes. Findings should "
-            "guide targeted primary healthcare interventions."
-    }
-
-    return report
-
-
-def display_modern_sdoh_report(report):
-    st.markdown("##  Master Household Community Health Factors Report")
-
-    for section, data in report.items():
-
-        if section == "Summary Interpretation":
-            st.markdown("###  Overall Interpretation")
-            st.info(data)
-            continue
-
-        st.markdown(f"### {section}")
-
-        if isinstance(data, dict):
-            rows = []
-            for key, value in data.items():
-                if isinstance(value, dict):
-                    for item, count in value.items():
-                        rows.append({
-                            "Indicator": item,
-                            "Frequency": count
-                        })
-                else:
-                    rows.append({
-                        "Indicator": key,
-                        "Frequency": value
-                    })
-
-            if rows:
-                st.dataframe(
-                    rows,
-                    use_container_width=True,
-                    hide_index=True
-                )
-            else:
-                st.info("No available data for this indicator.")
-
-
-
-# ================= UNIVERSAL MASTER HOUSEHOLD AUTO ANALYZER =================
-
-def automatic_master_household_analyzer(records):
-    """
-    Automatically summarizes ALL Master Household Survey fields.
-    No manual field mapping required.
-    """
-
-    import pandas as pd
-
-    if not records:
-        return {}
-
-    df = pd.DataFrame(records)
-
-    report = {}
-
-    for column in df.columns:
-
-        # Skip technical/system fields
-        if column.lower() in [
-            "id", "created_at", "updated_at"
-        ]:
-            continue
-
-        series = df[column].dropna()
-
-        if len(series) == 0:
-            continue
-
-        # Numerical summary
-        if pd.api.types.is_numeric_dtype(series):
-            report[column] = {
-                "type": "numeric",
-                "count": int(series.count()),
-                "mean": round(float(series.mean()), 2),
-                "minimum": float(series.min()),
-                "maximum": float(series.max())
-            }
-
-        # Categorical summary
-        else:
-            counts = series.astype(str).value_counts()
-
-            table = []
-            for response, count in counts.items():
-                table.append({
-                    "Response": response,
-                    "Frequency (n)": int(count),
-                    "Percentage (%)": round(
-                        (count / len(series)) * 100, 2
-                    )
-                })
-
-            report[column] = {
-                "type": "categorical",
-                "table": table
-            }
-
-    return report
-
-
-def generate_research_interpretation(report):
-    if not report:
-        return "No household data available for analysis."
-
-    return (
-        "The Master Household Survey data were analyzed across demographic, "
-        "social, environmental, economic, healthcare access, and health-related "
-        "indicators. The distribution of responses provides an overview of "
-        "community conditions and priority areas for intervention planning."
-    )
-
-
-
-def show_master_sdoh_auto_report():
-    st.markdown("##  Household Summary Report")
-
-    records = st.session_state.get("hh_records", [])
-
-    if not records:
-        st.warning("No Master Household records available.")
-        return
-
-    report = automatic_master_household_analyzer(records)
-
-    for variable, data in report.items():
-
-        st.markdown(f"### {variable}")
-
-        if data.get("type") == "categorical":
-            st.dataframe(
-                pd.DataFrame(data["table"]),
-                use_container_width=True,
-                hide_index=True
-            )
-
-        else:
-            st.metric(
-                "Average",
-                data.get("mean")
-            )
-
-    st.markdown("### Summary Interpretation")
-    st.info(generate_research_interpretation(report))
-
-
-
-# ================= PHASE 5 COMMUNITY HEALTH INTERPRETATION ENGINE =================
-
-def generate_phase5_interpretation(records):
-    """
-    Generates research-style community health interpretation
-    directly from Master Household records.
-    """
-
-    if not records:
-        return {
-            "status": "No assessment data available."
-        }
-
-    total = len(records)
-
-    def count_contains(keys):
-        count = 0
-        for r in records:
-            data = " ".join([str(v).lower() for v in r.values()])
-            if any(k.lower() in data for k in keys):
-                count += 1
-        return count
-
-    hypertension = count_contains(["hypertension", "high blood", "yes"])
-    diabetes = count_contains(["diabetes"])
-    smoking = count_contains(["smoker", "smoking"])
-    access = count_contains(["barrier", "cannot afford", "distance"])
-    environment = count_contains(["flood", "poor sanitation", "unsafe water"])
-
-    return {
-
-        "Community Health Profile":
-            f"A total of {total} household records were analyzed. "
-            "The assessment describes the community's demographic profile, "
-            "health conditions, healthcare behavior, and environmental factors.",
-
-        "Social Gradient Analysis":
-            "Health outcomes may be influenced by differences in socioeconomic "
-            "conditions, education, healthcare accessibility, and living environment. "
-            "Households experiencing social disadvantage may have increased vulnerability "
-            "to preventable health problems.",
-
-        "Health Status Analysis":
-            f"Recorded indicators identified possible health concerns including "
-            f"{hypertension} households with hypertension-related indicators and "
-            f"{diabetes} diabetes-related indicators. Preventive screening and monitoring "
-            "are recommended.",
-
-        "Health-Seeking Behavior Analysis":
-            f"{access} records showed possible healthcare access concerns. "
-            "Improving primary healthcare awareness, accessibility, and referral pathways "
-            "may improve early consultation.",
-
-        "Environmental Health Analysis":
-            f"{environment} records showed possible environmental concerns. "
-            "Community interventions should prioritize sanitation, safe water practices, "
-            "and environmental risk reduction.",
-
-        "Priority Concerns": [
-            "Cardiovascular risk screening",
-            "Chronic disease prevention",
-            "Healthcare access improvement",
-            "Environmental health promotion"
-        ],
-
-        "Recommended Actions": [
-            "Regular blood pressure and health screening",
-            "Health education activities",
-            "Strengthening Barangay Health Station services",
-            "Targeted interventions for vulnerable households"
-        ]
-    }
-
-
-def show_phase5_interpretation():
-    st.markdown("##  Analytics & Community Interpretation")
-
-    records = st.session_state.get("hh_records", [])
-
-    if not records:
-        st.warning("No household assessment records available.")
-        return
-
-    report = generate_phase5_interpretation(records)
-
-    for section, content in report.items():
-        st.markdown(f"### {section}")
-
-        if isinstance(content, list):
-            for item in content:
-                st.write("• " + item)
-        else:
-            st.info(content)
-
-
-
-# ================= MODERN UI STYLE =================
-
-def apply_modern_ui():
-    st.markdown("""
-    <style>
-    .block-container {
-        padding-top: 2rem;
-        padding-bottom: 2rem;
-    }
-
-    h1, h2, h3 {
-        font-weight: 600;
-    }
-
-    div[data-testid="stMetric"] {
-        border: 1px solid #e5e7eb;
-        padding: 15px;
-        border-radius: 12px;
-        background: white;
-    }
-
-    div[data-testid="stDataFrame"] {
-        border-radius: 12px;
-        overflow: hidden;
-    }
-    </style>
-    """, unsafe_allow_html=True)
-
-
-# ================= ANALYTICS & COMMUNITY INTERPRETATION =================
-
-def generate_community_interpretation(records):
-    if not records:
-        return {
-            "summary": "No assessment data available."
-        }
-
-    total = len(records)
-
-    text = {
-        "Community Profile":
-            f"A total of {total} household records were reviewed. "
-            "The analysis summarizes population characteristics, health indicators, "
-            "environmental conditions, and healthcare-related factors.",
-
-        "Health Priority Interpretation":
-            "Health priorities are identified based on recorded conditions, "
-            "risk factors, vital signs, and reported symptoms.",
-
-        "Community Action Recommendation":
-            "Priority actions should focus on preventive screening, health education, "
-            "early consultation, and strengthening community healthcare services."
-    }
-
-    return text
