@@ -103,24 +103,58 @@ def classify_patient_condition(bp=None, spo2=None, rr=None, symptoms=None):
 # ================= SOCIAL DETERMINANTS OF HEALTH ENGINE =================
 
 def generate_full_sdoh_presentation(records):
+    """Generates SDOH presentation from actual household survey fields."""
     if not records:
-        return {
-            "status": "No survey records available"
-        }
+        return {}
 
     total = len(records)
 
-    return {
-        "Population Profile": {
-            "Total Households": total
-        },
-        "Environmental Determinants": {},
-        "Healthcare Access": {},
-        "Economic Determinants": {},
-        "Interpretation":
-            "Community SDOH interpretation will be generated from available household survey indicators."
-    }
+    flood = 0
+    water = {}
+    toilet = {}
+    income = {}
+    adults = 0
+    children = 0
 
+    for hh in records:
+        if str(hh.get("Flood_Prone", "")).lower() == "yes":
+            flood += 1
+
+        for key, store in [
+            ("Water", water),
+            ("Income", income),
+            ("Toilet", toilet)
+        ]:
+            val = hh.get(key)
+            if val:
+                store[str(val)] = store.get(str(val), 0) + 1
+
+        adults += len(hh.get("Adults", []))
+        children += len(hh.get("Children", []))
+
+    def pct(v):
+        return round((v / total) * 100, 2) if total else 0
+
+    return {
+        "Demographic Profile": {
+            "Households Surveyed": total,
+            "Adults Profiled": adults,
+            "Children Profiled": children,
+        },
+        "Environmental Determinants": {
+            "Flood Exposed Households": f"{flood} ({pct(flood)}%)",
+            "Water Sources": water,
+            "Sanitation/Toilet": toilet,
+        },
+        "Economic Determinants": {
+            "Income Distribution": income,
+        },
+        "Interpretation": (
+            f"Analysis of {total} surveyed households indicates that "
+            "community health priorities should be based on identified "
+            "environmental, socioeconomic, and healthcare access conditions."
+        )
+    }
 
 # ================= PERMANENT MULTI-ENUMERATOR DATA PERSISTENCE =================
 # Supabase cloud database storage. Data remains available even when the app server restarts.
@@ -1853,6 +1887,12 @@ elif menu == "🏠 Phase 2: Master Household Survey":
                             "Complaints": a_symptoms,
                             "Risk": a_risk,
                             "Action_Taken": a_action,
+                            "Clinical_Tags": classify_patient_condition(
+                                bp=f"{a_sys}/{a_dia}",
+                                spo2=a_spo2,
+                                rr=None,
+                                symptoms=a_symptoms
+                            ),
                         })
 
             # --- TAB 3: SOCIO-ECON, FOOD INSECURITY, HOUSING & WASH ---
