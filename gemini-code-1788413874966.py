@@ -87,6 +87,43 @@ def save_shared_data(data):
         st.error(f"Error persisting shared data: {e}")
 
 
+
+
+def generate_sdoh_analysis(hh_records):
+    """Generates Social Determinants of Health summaries from household survey data."""
+    if not hh_records:
+        return {}
+
+    total = len(hh_records)
+
+    def count_yes(key, value="Yes"):
+        return sum(1 for x in hh_records if str(x.get(key, "")).lower() == value.lower())
+
+    summary = {
+        "Total Households Surveyed": total,
+        "Environmental": {
+            "Flood Exposed Households": count_yes("Flood_Prone"),
+            "Unsafe Water Households": count_yes("Water", "Unsafe"),
+        },
+        "Healthcare Access": {
+            "Households Recorded": total,
+        },
+    }
+
+    return summary
+
+
+def display_sdoh_interpretation(sdoh):
+    if not sdoh:
+        return "No SDOH data available yet. Complete household surveys first."
+
+    return (
+        "The Social Determinants of Health analysis is generated from surveyed "
+        "household conditions. Results should guide priority interventions "
+        "for environmental health, healthcare access, and community support."
+    )
+
+
 def sync_session_from_disk():
     """Syncs Streamlit session state with Supabase storage."""
     shared = load_shared_data()
@@ -181,6 +218,30 @@ def show_login_screen():
 if not st.session_state["authenticated"]:
     show_login_screen()
     st.stop()
+
+
+
+# ================= SOCIAL DETERMINANTS OF HEALTH ANALYTICS =================
+def show_sdoh_module():
+    st.subheader("📊 Social Determinants of Health Data Presentation & Interpretation")
+
+    sdoh = generate_sdoh_analysis(st.session_state.get("hh_records", []))
+
+    if not sdoh:
+        st.info("No household survey records available for SDOH analysis.")
+        return
+
+    st.metric("Surveyed Households", sdoh.get("Total Households Surveyed", 0))
+
+    st.markdown("### Environmental Determinants")
+    st.write(sdoh.get("Environmental", {}))
+
+    st.markdown("### Healthcare Access Determinants")
+    st.write(sdoh.get("Healthcare Access", {}))
+
+    st.markdown("### Interpretation")
+    st.info(display_sdoh_interpretation(sdoh))
+
 
 # ================= MAROON & YELLOW STYLING =================
 
