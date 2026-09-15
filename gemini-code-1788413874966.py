@@ -179,59 +179,60 @@ def classify_patient_condition(bp=None, spo2=None, rr=None, symptoms=None):
 
 # ================= SOCIAL DETERMINANTS OF HEALTH ENGINE =================
 
+
 def generate_full_sdoh_presentation(records):
-    """Generates SDOH presentation from actual household survey fields."""
+    """Generate SDOH presentation using actual household survey fields."""
     if not records:
-        return {}
+        return {
+            "status": "No household survey records available"
+        }
 
     total = len(records)
 
-    flood = 0
-    water = {}
-    toilet = {}
+    def count_value(key, value):
+        return sum(1 for r in records if str(r.get(key, "")).lower() == str(value).lower())
+
     income = {}
-    adults = 0
-    children = 0
+    water = {}
+    sanitation = {}
 
-    for hh in records:
-        if str(hh.get("Flood_Prone", "")).lower() == "yes":
-            flood += 1
+    for r in records:
+        for key, target in [("Income", income), ("Water", water), ("Sanitation", sanitation)]:
+            value = r.get(key)
+            if value:
+                target[str(value)] = target.get(str(value), 0) + 1
 
-        for key, store in [
-            ("Water", water),
-            ("Income", income),
-            ("Toilet", toilet)
-        ]:
-            val = hh.get(key)
-            if val:
-                store[str(val)] = store.get(str(val), 0) + 1
+    flood = count_value("Flood_Prone", "Yes")
 
-        adults += len(hh.get("Adults", []))
-        children += len(hh.get("Children", []))
-
-    def pct(v):
-        return round((v / total) * 100, 2) if total else 0
+    adults = sum(len(r.get("Adults", [])) for r in records)
+    children = sum(len(r.get("Children", [])) for r in records)
 
     return {
         "Demographic Profile": {
             "Households Surveyed": total,
             "Adults Profiled": adults,
-            "Children Profiled": children,
-        },
-        "Environmental Determinants": {
-            "Flood Exposed Households": f"{flood} ({pct(flood)}%)",
-            "Water Sources": water,
-            "Sanitation/Toilet": toilet,
+            "Children Profiled": children
         },
         "Economic Determinants": {
             "Income Distribution": income,
+            "Livelihood": "Available in household records"
+        },
+        "Environmental Determinants": {
+            "Water Sources": water,
+            "Sanitation": sanitation,
+            "Flood Exposed Households": flood
+        },
+        "Health Determinants": {
+            "Hypertension Records": count_value("Hypertension_Status", "Diagnosed"),
+            "Diabetes Records": count_value("Diabetes_Status", "Diagnosed")
         },
         "Interpretation": (
-            f"Analysis of {total} surveyed households indicates that "
-            "community health priorities should be based on identified "
-            "environmental, socioeconomic, and healthcare access conditions."
+            f"Based on {total} surveyed households, the system identified "
+            "community-level social determinants affecting health including "
+            "environmental conditions, socioeconomic factors, and chronic disease indicators."
         )
     }
+
 
 # ================= PERMANENT MULTI-ENUMERATOR DATA PERSISTENCE =================
 # Supabase cloud database storage. Data remains available even when the app server restarts.
@@ -5436,3 +5437,11 @@ if "sdoh_auto_summary" not in st.session_state:
     st.session_state.sdoh_auto_summary = build_sdoh_presentation(
         st.session_state.get("hh_records", [])
     )
+
+
+def display_patient_risk_summary(record):
+    tags = record.get("Clinical_Tags", {})
+    if not tags:
+        return "No automated clinical tags available."
+
+    return "\n".join(tags.get("Risk Tags", []))
