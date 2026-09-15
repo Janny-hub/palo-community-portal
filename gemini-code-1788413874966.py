@@ -1122,6 +1122,34 @@ if menu == "📊 Executive Health Dashboard & Smart Risk Engine":
         else:
             st.info("No household data logged.")
 
+
+# MODULE: SOCIAL DETERMINANTS OF HEALTH PRESENTATION
+elif menu == "📊 Social Determinants of Health Presentation":
+    st.subheader("📊 Social Determinants of Health Data Presentation & Interpretation")
+
+    records = st.session_state.get("hh_records", [])
+
+    if len(records) == 0:
+        st.warning("No household survey records found. Save household surveys first.")
+    else:
+        sdoh = generate_full_sdoh_presentation(records)
+
+        st.markdown("### Demographic Profile")
+        st.write(sdoh.get("Demographic Profile", {}))
+
+        st.markdown("### Environmental Determinants")
+        st.write(sdoh.get("Environmental Determinants", {}))
+
+        st.markdown("### Economic Determinants")
+        st.write(sdoh.get("Economic Determinants", {}))
+
+        st.markdown("### Healthcare Access")
+        st.write(sdoh.get("Healthcare Access", {}))
+
+        st.markdown("### Interpretation")
+        st.info(sdoh.get("Interpretation", "No interpretation generated."))
+
+
 # MODULE 1: INTERACTIVE SPOT MAP
 elif menu == "🗺️ Interactive Spot Map":
     st.subheader(
@@ -1967,7 +1995,7 @@ elif menu == "🏠 Phase 2: Master Household Survey":
                             "Clinical_Tags": classify_patient_condition(
                                 bp=f"{a_sys}/{a_dia}",
                                 spo2=a_spo2,
-                                rr=None,
+                                rr=a_rr if "a_rr" in locals() else None,
                                 symptoms=a_symptoms
                             ),
                         })
