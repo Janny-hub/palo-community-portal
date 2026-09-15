@@ -223,6 +223,17 @@ def generate_patient_risk_assessment(bp, spo2, rr, symptoms):
 
 
 
+
+
+# Default shared storage structure
+DEFAULT_DATA = {
+    "households": [],
+    "assessments": [],
+    "users": [],
+    "locations": []
+}
+
+
 def load_shared_data():
     """Reads survey records from Supabase permanent cloud storage."""
     try:
@@ -238,7 +249,7 @@ def load_shared_data():
     except Exception:
         pass
 
-    return DEFAULT_DATA.copy()
+    return DEFAULT_DATA.copy() if 'DEFAULT_DATA' in globals() else {}
 
 
 def save_shared_data(data):
