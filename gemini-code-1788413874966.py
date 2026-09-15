@@ -76,22 +76,50 @@ def run_clinical_risk_engine(bp=None, spo2=None, rr=None, symptoms=""):
     }
 
 
+
 def build_sdoh_presentation(records):
-    """Creates automatic SDOH presentation from household records."""
+    """Automatic Community Health Report generated from all household fields."""
     if not records:
-        return {"message": "No household survey records available."}
+        return {"status": "No household survey records available."}
 
-    total = len(records)
+    df = pd.DataFrame(records)
+    report = {}
 
-    return {
-        "Survey Coverage": {
-            "Households Surveyed": total
-        },
-        "Community Interpretation": (
-            f"Based on {total} surveyed households, the system will summarize "
-            "available demographic, environmental, socioeconomic, and healthcare access indicators."
-        )
-    }
+    for col in df.columns:
+        if col in ["id", "created_at", "updated_at"]:
+            continue
+
+        values = df[col].dropna()
+
+        if len(values) == 0:
+            continue
+
+        if pd.api.types.is_numeric_dtype(values):
+            report[col] = {
+                "type": "numeric",
+                "average": round(float(values.mean()), 2),
+                "minimum": float(values.min()),
+                "maximum": float(values.max())
+            }
+        else:
+            counts = values.astype(str).value_counts()
+            report[col] = [
+                {
+                    "Response": k,
+                    "Frequency (n)": int(v),
+                    "Percentage (%)": round((v / len(values))*100, 2)
+                }
+                for k, v in counts.items()
+            ]
+
+    report["Interpretation"] = (
+        f"The community health report analyzed {len(records)} household records. "
+        "The results summarize demographic characteristics, social conditions, "
+        "health behaviors, environmental factors, and healthcare-related indicators."
+    )
+
+    return report
+
 
 
 # ================= CLINICAL INTELLIGENCE TAGGING ENGINE =================
@@ -1191,29 +1219,32 @@ if menu == " Executive Health Dashboard & Smart Risk Engine":
 
 # MODULE: SOCIAL DETERMINANTS OF HEALTH PRESENTATION
 elif menu == " Community Health Factors Presentation":
-    st.subheader(" Community Health Factors Data Presentation & Interpretation")
+    st.subheader("Community Health Report")
 
     records = st.session_state.get("hh_records", [])
 
-    if len(records) == 0:
+    if not records:
         st.warning("No household survey records found. Save household surveys first.")
     else:
-        sdoh = generate_full_sdoh_presentation(records)
+        report = build_sdoh_presentation(records)
 
-        st.markdown("### Demographic Profile")
-        st.write(sdoh.get("Demographic Profile", {}))
+        for section, data in report.items():
+            st.markdown(f"### {section}")
 
-        st.markdown("### Environmental Determinants")
-        st.write(sdoh.get("Environmental Determinants", {}))
-
-        st.markdown("### Economic Determinants")
-        st.write(sdoh.get("Economic Determinants", {}))
-
-        st.markdown("### Healthcare Access")
-        st.write(sdoh.get("Healthcare Access", {}))
-
-        st.markdown("### Interpretation")
-        st.info(sdoh.get("Interpretation", "No interpretation generated."))
+            if isinstance(data, list):
+                st.dataframe(
+                    pd.DataFrame(data),
+                    use_container_width=True,
+                    hide_index=True
+                )
+            elif isinstance(data, dict):
+                st.dataframe(
+                    pd.DataFrame([data]),
+                    use_container_width=True,
+                    hide_index=True
+                )
+            else:
+                st.info(data)
 
 
 # MODULE 1: INTERACTIVE SPOT MAP
