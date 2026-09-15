@@ -1485,7 +1485,7 @@ elif menu == "🏠 Phase 2: Master Household Survey":
                     "Longitude", value=124.9920, format="%.4f"
                 )
 
-                if st.button("📍 Capture Current Location"):
+                if st.form_submit_button("📍 Capture Current Location"):
                     st.info("GPS capture requires browser location permission. Current coordinates fields are ready for live GPS integration.")
 
                 enum_name = c3.text_input(
