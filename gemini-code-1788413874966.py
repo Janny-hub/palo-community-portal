@@ -78,7 +78,7 @@ def run_clinical_risk_engine(bp=None, spo2=None, rr=None, symptoms=""):
 
 
 def build_sdoh_presentation(records):
-    """Automatic Community Health Report generated from all household fields."""
+    """Automatic Analytics & Community Interpretation generated from all household fields."""
     if not records:
         return {"status": "No household survey records available."}
 
@@ -207,58 +207,7 @@ def classify_patient_condition(bp=None, spo2=None, rr=None, symptoms=None):
 
 
 
-# ================= MASTER HOUSEHOLD SDOH RESEARCH ENGINE =================
-
-def master_household_sdoh_report(records):
-    """Research presentation engine for Master Household Survey data."""
-    if not records:
-        return {}
-
-    def table_for(key):
-        values = []
-        for record in records:
-            value = record.get(key)
-            if value not in [None, "", []]:
-                values.append(str(value))
-
-        counts = Counter(values)
-        total = len(values)
-
-        return [
-            {
-                "Indicator": item,
-                "Frequency (n)": count,
-                "Percentage (%)": round((count / total) * 100, 2) if total else 0
-            }
-            for item, count in counts.items()
-        ]
-
-    return {
-        "Demographics": table_for("Sex"),
-        "Socioeconomic Status": table_for("Income"),
-        "Education": table_for("Education"),
-        "Environmental Health": {
-            "Water Source": table_for("Water"),
-            "Sanitation": table_for("Sanitation"),
-            "Waste Disposal": table_for("Waste_Disposal"),
-            "Flood Exposure": table_for("Flood_Prone")
-        },
-        "Healthcare Seeking Behavior": {
-            "Health Facility": table_for("Health_Facility"),
-            "Health Seeking Pattern": table_for("Health_Seeking"),
-            "Healthcare Barriers": table_for("Healthcare_Barrier")
-        },
-        "Health Profile": {
-            "Hypertension": sum(1 for x in records if x.get("Hypertension_Status")),
-            "Diabetes": sum(1 for x in records if x.get("Diabetes_Status"))
-        },
-        "Interpretation": (
-            f"The community assessment analyzed {len(records)} households. "
-            "The findings describe demographic characteristics, socioeconomic "
-            "conditions, environmental determinants, healthcare access, and "
-            "health-related vulnerabilities requiring targeted interventions."
-        )
-    }
+# ================= MASTER HOUSEHOLD Analytics & Community Interpretation RESEARCH ENGINE =================
 
 
 def generate_patient_risk_assessment(bp, spo2, rr, symptoms):
@@ -272,99 +221,6 @@ def generate_patient_risk_assessment(bp, spo2, rr, symptoms):
 
 # ================= SOCIAL DETERMINANTS OF HEALTH ENGINE =================
 
-
-def generate_full_sdoh_presentation(records):
-    """Generate SDOH presentation using actual household survey fields."""
-    if not records:
-        return {
-            "status": "No household survey records available"
-        }
-
-    total = len(records)
-
-    def count_value(key, value):
-        return sum(1 for r in records if str(r.get(key, "")).lower() == str(value).lower())
-
-    income = {}
-    water = {}
-    sanitation = {}
-
-    for r in records:
-        for key, target in [("Income", income), ("Water", water), ("Sanitation", sanitation)]:
-            value = r.get(key)
-            if value:
-                target[str(value)] = target.get(str(value), 0) + 1
-
-    flood = count_value("Flood_Prone", "Yes")
-
-    adults = sum(len(r.get("Adults", [])) for r in records)
-    children = sum(len(r.get("Children", [])) for r in records)
-
-    return {
-        "Demographic Profile": {
-            "Households Surveyed": total,
-            "Adults Profiled": adults,
-            "Children Profiled": children
-        },
-        "Economic Determinants": {
-            "Income Distribution": income,
-            "Livelihood": "Available in household records"
-        },
-        "Environmental Determinants": {
-            "Water Sources": water,
-            "Sanitation": sanitation,
-            "Flood Exposed Households": flood
-        },
-        "Health Determinants": {
-            "Hypertension Records": count_value("Hypertension_Status", "Diagnosed"),
-            "Diabetes Records": count_value("Diabetes_Status", "Diagnosed")
-        },
-        "Interpretation": (
-            f"Based on {total} surveyed households, the system identified "
-            "community-level social determinants affecting health including "
-            "environmental conditions, socioeconomic factors, and chronic disease indicators."
-        )
-    }
-
-
-# ================= PERMANENT MULTI-ENUMERATOR DATA PERSISTENCE =================
-# Supabase cloud database storage. Data remains available even when the app server restarts.
-
-try:
-    SUPABASE_URL = st.secrets["SUPABASE_URL"]
-    SUPABASE_KEY = st.secrets["SUPABASE_KEY"]
-except Exception:
-    SUPABASE_URL = os.getenv("SUPABASE_URL", "")
-    SUPABASE_KEY = os.getenv("SUPABASE_KEY", "")
-
-supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY) if SUPABASE_URL and SUPABASE_KEY else None
-
-
-
-# ================= PALO LEYTE FIELD CONFIGURATION =================
-PALO_BARANGAYS = [
-    "Anahaway","Arado","Baras","Barayong","Buri","Cabarasan Daku",
-    "Cabarasan Guti","Campetic","Candahug","Cangumbang","Canhidoc",
-    "Capirawan","Castilla","Cavite East","Cavite West","Cogon",
-    "Gacao","Guindapunan","Libertad","Luntad","Naga-Naga","Pawing",
-    "Salvacion","San Agustin","San Antonio","San Fernando",
-    "San Isidro","San Joaquin","San Jose","San Miguel","Santa Cruz",
-    "Tacuranga","Teraza"
-]
-
-ENUMERATORS = {
-    "E1": "Jan Art A. Serna, RMT",
-    "E2": "Leila Projimo, PTRP",
-    "E3": "Aubrey Maye Arrieta"
-}
-
-DEFAULT_DATA = {
-    "hh_records": [],
-    "gov_records": [],
-    "qual_records": [],
-    "windshield_records": [],
-    "diag_records": [],
-}
 
 
 def load_shared_data():
@@ -427,7 +283,7 @@ def generate_sdoh_analysis(hh_records):
 
 def display_sdoh_interpretation(sdoh):
     if not sdoh:
-        return "No SDOH data available yet. Complete household surveys first."
+        return "No Analytics & Community Interpretation data available yet. Complete household surveys first."
 
     return (
         "The Community Health Factors analysis is generated from surveyed "
@@ -540,7 +396,7 @@ def show_sdoh_module():
     sdoh = master_household_sdoh_report(st.session_state.get("hh_records", []))
 
     if not sdoh:
-        st.info("No household survey records available for SDOH analysis.")
+        st.info("No household survey records available for Analytics & Community Interpretation analysis.")
         return
 
     st.metric("Surveyed Households", sdoh.get("Demographic Profile", {}).get("Households Surveyed", 0))
@@ -910,7 +766,7 @@ menu = st.sidebar.radio(
         "️ Phase 3: Qualitative Field Tools",
         " Phase 4: Expanded PERI Windshield Tool",
          " Phase 5: Spatial & Statistical Analytics",
-        " Community Health Report",
+        " Analytics & Community Interpretation",
         " Phase 6: Community Diagnosis & Action Plan",
         " Data Management & Export",
     ],
@@ -1218,8 +1074,8 @@ if menu == " Executive Health Dashboard & Smart Risk Engine":
 
 
 # MODULE: SOCIAL DETERMINANTS OF HEALTH PRESENTATION
-elif menu == " Community Health Factors Presentation":
-    st.subheader("Community Health Report")
+elif menu == " Analytics & Community Interpretation":
+    st.subheader("Analytics & Community Interpretation")
 
     records = st.session_state.get("hh_records", [])
 
@@ -4953,7 +4809,7 @@ elif menu == " Phase 5: Spatial & Statistical Analytics":
         with res_tab4:
             st.markdown("### 6.2 Multi-Layer GIS Visualization Framework")
             st.caption(
-                "Toggle layers to combine disease hotspots, environmental SDOH, "
+                "Toggle layers to combine disease hotspots, environmental Analytics & Community Interpretation, "
                 "food access and health-facility accessibility."
             )
 
@@ -4971,7 +4827,7 @@ elif menu == " Phase 5: Spatial & Statistical Analytics":
                     default=["Hypertension", "Diabetes", "Active TB"],
                 )
             with controls[1]:
-                show_env = st.checkbox("Layer 2: Environmental SDOH", True)
+                show_env = st.checkbox("Layer 2: Environmental Analytics & Community Interpretation", True)
                 show_flood = st.checkbox("Flood-risk households", True)
                 show_water = st.checkbox("Unsafe water households", True)
                 show_dump = st.checkbox("Open-dumping households", True)
@@ -5528,7 +5384,7 @@ elif menu == " Data Management & Export":
             st.info("No household records available for CSV export.")
 
 
-# Automatic SDOH refresh helper
+# Automatic Analytics & Community Interpretation refresh helper
 if "sdoh_auto_summary" not in st.session_state:
     st.session_state.sdoh_auto_summary = build_sdoh_presentation(
         st.session_state.get("hh_records", [])
@@ -5543,11 +5399,11 @@ def display_patient_risk_summary(record):
     return "\n".join(tags.get("Risk Tags", []))
 
 
-# ================= MASTER HOUSEHOLD SDOH RESEARCH REPORT =================
+# ================= MASTER HOUSEHOLD Analytics & Community Interpretation RESEARCH REPORT =================
 
 def create_modern_sdoh_report(records):
     """
-    Research-style SDOH presentation engine.
+    Research-style Analytics & Community Interpretation presentation engine.
     Uses all available Master Household Survey records.
     """
 
@@ -5833,7 +5689,7 @@ def generate_phase5_interpretation(records):
 
 
 def show_phase5_interpretation():
-    st.markdown("##  Community Health Report")
+    st.markdown("##  Analytics & Community Interpretation")
 
     records = st.session_state.get("hh_records", [])
 
@@ -5881,3 +5737,31 @@ def apply_modern_ui():
     }
     </style>
     """, unsafe_allow_html=True)
+
+
+# ================= ANALYTICS & COMMUNITY INTERPRETATION =================
+
+def generate_community_interpretation(records):
+    if not records:
+        return {
+            "summary": "No assessment data available."
+        }
+
+    total = len(records)
+
+    text = {
+        "Community Profile":
+            f"A total of {total} household records were reviewed. "
+            "The analysis summarizes population characteristics, health indicators, "
+            "environmental conditions, and healthcare-related factors.",
+
+        "Health Priority Interpretation":
+            "Health priorities are identified based on recorded conditions, "
+            "risk factors, vital signs, and reported symptoms.",
+
+        "Community Action Recommendation":
+            "Priority actions should focus on preventive screening, health education, "
+            "early consultation, and strengthening community healthcare services."
+    }
+
+    return text
