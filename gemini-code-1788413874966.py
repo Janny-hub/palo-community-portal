@@ -366,22 +366,22 @@ if not st.session_state["authenticated"]:
 def show_sdoh_module():
     st.subheader("📊 Social Determinants of Health Data Presentation & Interpretation")
 
-    sdoh = generate_sdoh_analysis(st.session_state.get("hh_records", []))
+    sdoh = generate_full_sdoh_presentation(st.session_state.get("hh_records", []))
 
     if not sdoh:
         st.info("No household survey records available for SDOH analysis.")
         return
 
-    st.metric("Surveyed Households", sdoh.get("Total Households Surveyed", 0))
+    st.metric("Surveyed Households", sdoh.get("Demographic Profile", {}).get("Households Surveyed", 0))
 
     st.markdown("### Environmental Determinants")
-    st.write(sdoh.get("Environmental", {}))
+    st.write(sdoh.get("Environmental Determinants", {}))
 
     st.markdown("### Healthcare Access Determinants")
     st.write(sdoh.get("Healthcare Access", {}))
 
     st.markdown("### Interpretation")
-    st.info(display_sdoh_interpretation(sdoh))
+    st.info(sdoh.get("Interpretation", "No interpretation available."))
 
 
 # ================= MAROON & YELLOW STYLING =================
