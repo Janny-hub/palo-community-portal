@@ -5617,3 +5617,111 @@ def display_modern_sdoh_report(report):
             else:
                 st.info("No available data for this indicator.")
 
+
+
+# ================= UNIVERSAL MASTER HOUSEHOLD AUTO ANALYZER =================
+
+def automatic_master_household_analyzer(records):
+    """
+    Automatically summarizes ALL Master Household Survey fields.
+    No manual field mapping required.
+    """
+
+    import pandas as pd
+
+    if not records:
+        return {}
+
+    df = pd.DataFrame(records)
+
+    report = {}
+
+    for column in df.columns:
+
+        # Skip technical/system fields
+        if column.lower() in [
+            "id", "created_at", "updated_at"
+        ]:
+            continue
+
+        series = df[column].dropna()
+
+        if len(series) == 0:
+            continue
+
+        # Numerical summary
+        if pd.api.types.is_numeric_dtype(series):
+            report[column] = {
+                "type": "numeric",
+                "count": int(series.count()),
+                "mean": round(float(series.mean()), 2),
+                "minimum": float(series.min()),
+                "maximum": float(series.max())
+            }
+
+        # Categorical summary
+        else:
+            counts = series.astype(str).value_counts()
+
+            table = []
+            for response, count in counts.items():
+                table.append({
+                    "Response": response,
+                    "Frequency (n)": int(count),
+                    "Percentage (%)": round(
+                        (count / len(series)) * 100, 2
+                    )
+                })
+
+            report[column] = {
+                "type": "categorical",
+                "table": table
+            }
+
+    return report
+
+
+def generate_research_interpretation(report):
+    if not report:
+        return "No Master Household data available for analysis."
+
+    return (
+        "The Master Household Survey data were analyzed across demographic, "
+        "social, environmental, economic, healthcare access, and health-related "
+        "indicators. The distribution of responses provides an overview of "
+        "community conditions and priority areas for intervention planning."
+    )
+
+
+
+def show_master_sdoh_auto_report():
+    st.markdown("## 📊 Master Household SDOH Automated Research Presentation")
+
+    records = st.session_state.get("hh_records", [])
+
+    if not records:
+        st.warning("No Master Household records available.")
+        return
+
+    report = automatic_master_household_analyzer(records)
+
+    for variable, data in report.items():
+
+        st.markdown(f"### {variable}")
+
+        if data.get("type") == "categorical":
+            st.dataframe(
+                pd.DataFrame(data["table"]),
+                use_container_width=True,
+                hide_index=True
+            )
+
+        else:
+            st.metric(
+                "Average",
+                data.get("mean")
+            )
+
+    st.markdown("### Research Interpretation")
+    st.info(generate_research_interpretation(report))
+
