@@ -15,6 +15,113 @@ st.set_page_config(
     layout="wide",
 )
 
+
+
+# ================= CLINICAL INTELLIGENCE TAGGING ENGINE =================
+
+def classify_patient_condition(bp=None, spo2=None, rr=None, symptoms=None):
+    """
+    Automated screening tags based on clinical screening thresholds.
+    This is a screening support tool and does not replace clinical diagnosis.
+    """
+
+    tags = []
+    actions = []
+
+    # Blood pressure
+    try:
+        if bp:
+            parts = str(bp).replace(" ", "").split("/")
+            sbp = int(parts[0])
+            dbp = int(parts[1])
+
+            if sbp >= 180 or dbp >= 120:
+                tags.append("🔴 Severe Hypertension Alert")
+                actions.append("Urgent clinical assessment recommended.")
+            elif sbp >= 140 or dbp >= 90:
+                tags.append("🟠 Hypertension Risk")
+                actions.append("Repeat BP measurement and assess cardiovascular risk.")
+            elif sbp >= 120 or dbp >= 80:
+                tags.append("🟡 Elevated / Borderline BP")
+            else:
+                tags.append("🟢 Normal BP")
+
+    except Exception:
+        pass
+
+    # Oxygen saturation
+    try:
+        if spo2 is not None:
+            spo2 = float(spo2)
+
+            if spo2 < 90:
+                tags.append("🔴 Critical Oxygen Alert")
+                actions.append("Immediate evaluation for hypoxemia.")
+            elif spo2 < 92:
+                tags.append("🟠 Moderate Oxygen Desaturation")
+            elif spo2 < 95:
+                tags.append("🟡 Mild Oxygen Desaturation")
+            else:
+                tags.append("🟢 Normal Oxygenation")
+    except Exception:
+        pass
+
+    # Respiratory rate
+    try:
+        if rr is not None:
+            rr = int(rr)
+
+            if rr > 30:
+                tags.append("🔴 Severe Tachypnea Alert")
+            elif rr > 20:
+                tags.append("🟠 Tachypnea")
+            elif rr < 12:
+                tags.append("🟡 Bradypnea")
+            else:
+                tags.append("🟢 Normal Respiratory Rate")
+    except Exception:
+        pass
+
+    # Symptoms
+    symptom_text = str(symptoms).lower()
+
+    if "chest pain" in symptom_text:
+        tags.append("🟠 Cardiovascular Warning")
+
+    if "difficulty breathing" in symptom_text or "shortness of breath" in symptom_text:
+        tags.append("🟠 Respiratory Warning")
+
+    if any(x in symptom_text for x in ["facial weakness", "slurred speech", "one-sided weakness"]):
+        tags.append("🔴 Possible Stroke Warning")
+
+    return {
+        "Clinical Tags": tags,
+        "Recommended Actions": actions
+    }
+
+
+# ================= SOCIAL DETERMINANTS OF HEALTH ENGINE =================
+
+def generate_full_sdoh_presentation(records):
+    if not records:
+        return {
+            "status": "No survey records available"
+        }
+
+    total = len(records)
+
+    return {
+        "Population Profile": {
+            "Total Households": total
+        },
+        "Environmental Determinants": {},
+        "Healthcare Access": {},
+        "Economic Determinants": {},
+        "Interpretation":
+            "Community SDOH interpretation will be generated from available household survey indicators."
+    }
+
+
 # ================= PERMANENT MULTI-ENUMERATOR DATA PERSISTENCE =================
 # Supabase cloud database storage. Data remains available even when the app server restarts.
 
