@@ -5445,3 +5445,110 @@ def display_patient_risk_summary(record):
         return "No automated clinical tags available."
 
     return "\n".join(tags.get("Risk Tags", []))
+
+
+# ================= MASTER HOUSEHOLD SDOH RESEARCH REPORT =================
+
+def create_modern_sdoh_report(records):
+    """
+    Research-style SDOH presentation engine.
+    Uses all available Master Household Survey records.
+    """
+
+    if not records:
+        return {}
+
+    total = len(records)
+
+    def frequency(key):
+        result = {}
+        for r in records:
+            value = r.get(key)
+            if value not in [None, "", []]:
+                value = str(value)
+                result[value] = result.get(value, 0) + 1
+        return result
+
+    def percentage(value):
+        return round((value / total) * 100, 1) if total else 0
+
+    report = {
+        "Demographic Profile": {
+            "Total Households": total,
+            "Age/Sex Distribution": frequency("Sex"),
+        },
+
+        "Socioeconomic Determinants": {
+            "Income Profile": frequency("Income"),
+            "Employment Profile": frequency("Employment"),
+        },
+
+        "Education Determinants": {
+            "Educational Attainment": frequency("Education"),
+        },
+
+        "Environmental Determinants": {
+            "Water Source": frequency("Water"),
+            "Sanitation": frequency("Sanitation"),
+            "Waste Management": frequency("Waste_Disposal"),
+            "Flood Exposure": frequency("Flood_Prone"),
+        },
+
+        "Healthcare Access and Seeking Behavior": {
+            "Health Facility Preference": frequency("Health_Facility"),
+            "Consultation Behavior": frequency("Health_Seeking"),
+            "Healthcare Barriers": frequency("Healthcare_Barrier"),
+        },
+
+        "Health Risk Profile": {
+            "Hypertension": frequency("Hypertension_Status"),
+            "Diabetes": frequency("Diabetes_Status"),
+            "Smoking": frequency("Smoking_Status"),
+        },
+
+        "Research Interpretation":
+            "The community assessment highlights the relationship between "
+            "demographic characteristics, socioeconomic conditions, environmental "
+            "exposures, healthcare access, and health outcomes. Findings should "
+            "guide targeted primary healthcare interventions."
+    }
+
+    return report
+
+
+def display_modern_sdoh_report(report):
+    st.markdown("## 📊 Master Household Social Determinants of Health Report")
+
+    for section, data in report.items():
+
+        if section == "Research Interpretation":
+            st.markdown("### 📝 Overall Interpretation")
+            st.info(data)
+            continue
+
+        st.markdown(f"### {section}")
+
+        if isinstance(data, dict):
+            rows = []
+            for key, value in data.items():
+                if isinstance(value, dict):
+                    for item, count in value.items():
+                        rows.append({
+                            "Indicator": item,
+                            "Frequency": count
+                        })
+                else:
+                    rows.append({
+                        "Indicator": key,
+                        "Frequency": value
+                    })
+
+            if rows:
+                st.dataframe(
+                    rows,
+                    use_container_width=True,
+                    hide_index=True
+                )
+            else:
+                st.info("No available data for this indicator.")
+
